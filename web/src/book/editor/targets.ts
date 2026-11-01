@@ -51,7 +51,10 @@ export function unrotate(W: number, H: number, deg: number): { w: number; h: num
   return { w: (W * c - H * s) / det, h: (H * c - W * s) / det };
 }
 
-/** The targets of one page kind in draw order: the template's elements first, then the items in array order (later on top). */
+/**
+ * The targets of one page kind in draw order, bottom first: the template's own elements, then the elements the student moved (each is drawn in a box of its
+ * own, appended to the page, so their order is the order of the page's DOM: `order` lists the layout ids in that order), then the items in array order.
+ */
 export function targetsOf(
   doc: LayoutDoc,
   kind: string,
@@ -59,12 +62,16 @@ export function targetsOf(
   page: PageBox,
   /** The place of an element the template draws itself, as measured on the stage (design px); absent: the template's own natural place. */
   measured: Readonly<Record<string, Rect | undefined>> = {},
+  /** The layout ids of the elements the stage found, in the page's DOM order (draw order); an id it did not find yet is drawn last. */
+  order: readonly string[] = [],
 ): Target[] {
   const out: Target[] = [];
+  const moved = new Set<string>();
   for (const [id, nat] of Object.entries(spec?.natural ?? {})) {
     if (kindOf(id) !== kind) continue;
     const ov = overrideOf(doc, id);
     const box = elementBox(nat, ov);
+    if (isMoved(ov)) moved.add(id);
     const m = isMoved(ov) ? undefined : measured[id];
     out.push({
       id,
@@ -74,6 +81,15 @@ export function targetsOf(
       hidden: !!ov?.hidden,
     });
   }
+  const rank = (x: Target) => {
+    const i = order.indexOf(x.id);
+    return i < 0 ? order.length : i;
+  };
+  out.sort(
+    (a, b) =>
+      Number(moved.has(a.id)) - Number(moved.has(b.id)) ||
+      (moved.has(a.id) ? rank(a) - rank(b) : 0),
+  ); // stable: unmoved keep the template's order
   for (const item of doc.pages[kind]?.items ?? [])
     out.push({ id: item.id, kind, item, rect: place(item, page), r: item.r ?? 0, hidden: false });
   return out;

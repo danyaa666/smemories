@@ -181,16 +181,13 @@ describe("selection", () => {
   it("draws the handles of the selection outside the page's clip, as focusable shapes", async () => {
     await mount();
     await userEvent.click(hit("Sticker"));
-    const handles = screen.getAllByRole("button", { name: /^(Resize from|Rotate)/ });
-    expect(handles.map((h) => h.getAttribute("aria-label"))).toEqual([
-      "Resize from top left",
-      "Resize from top",
-      "Resize from top right",
-      "Resize from right",
-      "Resize from bottom right",
-      "Resize from bottom",
+    const handles = screen.getAllByRole("button", { name: /^(Resize from|Rotate$)/ });
+    // this sticker is smaller than a hit area on this stage, so only the corner handles and the rotate handle are drawn (the panel and the keys resize it)
+    expect(handles.map((h) => h.getAttribute("aria-label")).sort()).toEqual([
       "Resize from bottom left",
-      "Resize from left",
+      "Resize from bottom right",
+      "Resize from top left",
+      "Resize from top right",
       "Rotate",
     ]);
     for (const h of handles) {
@@ -198,7 +195,10 @@ describe("selection", () => {
       h.focus();
       expect(h).toHaveFocus();
     }
-    expect(screen.getAllByRole("button", { name: /^Resize from/ })).toHaveLength(8);
+    expect(screen.getAllByRole("button", { name: /^Resize from/ })).toHaveLength(4);
+    await userEvent.click(hit("Text: Xin chào lớp 12A1"));
+    // a box wide enough for them keeps the top and bottom handles
+    expect(screen.getAllByRole("button", { name: /^Resize from (top|bottom)$/ })).toHaveLength(2);
     fireEvent.click(document.querySelector(".ed-scroll")!);
     expect(screen.queryByRole("button", { name: "Rotate" })).toBeNull();
   });
@@ -376,6 +376,269 @@ describe("property panel", () => {
     await mount({ v: 1, pages: { cover: { bg: { color: "paper" } } } });
     await userEvent.click(screen.getByRole("button", { name: "Clear background" }));
     expect(screen.queryByRole("button", { name: "Clear background" })).toBeNull();
+  });
+});
+
+/** The stage is 408 px wide on this screen: half a screen px per design px, so a pointer delta is double in design px. */
+const stubStage = () => {
+  const pagebox = document.querySelector<HTMLElement>(".ed-pagebox")!;
+  pagebox.getBoundingClientRect = () =>
+    ({ left: 0, top: 0, right: 408, bottom: 578, width: 408, height: 578, x: 0, y: 0 }) as DOMRect;
+};
+const pointer = (type: string, x: number, y: number, init: PointerEventInit = {}) =>
+  new PointerEvent(type, {
+    pointerId: 1,
+    pointerType: "mouse",
+    button: 0,
+    clientX: x,
+    clientY: y,
+    bubbles: true,
+    cancelable: true,
+    ...init,
+  });
+const drag = (
+  target: Element,
+  from: [number, number],
+  to: [number, number],
+  init: PointerEventInit = {},
+) => {
+  fireEvent(target, pointer("pointerdown", ...from, init));
+  fireEvent(window, pointer("pointermove", ...to, init));
+  return () => fireEvent(window, pointer("pointerup", ...to, init));
+};
+const undoable = () =>
+  !(screen.getByRole("button", { name: "Undo" }) as HTMLButtonElement).disabled;
+
+describe("gestures (pointer)", () => {
+  it("a drag moves the item by the pointer distance at the stage's scale and is one undo step", async () => {
+    await mount();
+    await userEvent.click(hit("Sticker"));
+    stubStage();
+    expect(field("Left")).toHaveValue(60);
+    const up = drag(hit("Sticker"), [100, 100], [140, 100], { altKey: true }); // 40 screen px = 80 design px = 9.8 % of the page
+    up();
+    expect(field("Left")).toHaveValue(69.8);
+    expect(field("Top")).toHaveValue(field("Top").valueAsNumber); // unchanged by a horizontal drag
+    expect(undoable()).toBe(true);
+    expect(live()).toContain("Position 69.8 percent from the left");
+    fireEvent.keyDown(document, { key: "z", ctrlKey: true });
+    expect(field("Left")).toHaveValue(60);
+    expect(undoable()).toBe(false); // one gesture, one step
+  });
+
+  it("Escape cancels the drag: the start box comes back, no step is recorded and the selection stays", async () => {
+    await mount();
+    await userEvent.click(hit("Sticker"));
+    stubStage();
+    drag(hit("Sticker"), [100, 100], [160, 130], { altKey: true });
+    await act(() => new Promise((r) => requestAnimationFrame(() => r(0))));
+    expect(field("Left")).not.toHaveValue(60); // the preview shows it
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(field("Left")).toHaveValue(60);
+    expect(undoable()).toBe(false);
+    expect(hit("Sticker")).toHaveAttribute("aria-pressed", "true");
+    fireEvent(window, pointer("pointerup", 160, 130));
+    expect(undoable()).toBe(false);
+    expect(live()).toBe("Cancelled");
+  });
+
+  it("a cancelled pointer and a click without movement record nothing; a second pointer is ignored", async () => {
+    await mount();
+    await userEvent.click(hit("Sticker"));
+    stubStage();
+    drag(hit("Sticker"), [100, 100], [160, 130], { altKey: true });
+    fireEvent(window, pointer("pointercancel", 160, 130));
+    expect(field("Left")).toHaveValue(60);
+    expect(undoable()).toBe(false);
+    drag(hit("Sticker"), [100, 100], [101, 100])(); // below the slop: a click
+    expect(undoable()).toBe(false);
+    fireEvent(hit("Sticker"), pointer("pointerdown", 100, 100));
+    fireEvent(hit("Sticker"), pointer("pointerdown", 300, 300, { pointerId: 2 }));
+    fireEvent(window, pointer("pointermove", 300, 300, { pointerId: 2, altKey: true })); // not the gesture's pointer
+    fireEvent(window, pointer("pointerup", 300, 300, { pointerId: 2 }));
+    expect(field("Left")).toHaveValue(60);
+    fireEvent(window, pointer("pointercancel", 100, 100));
+  });
+
+  it("snaps to the page centre line within 6 screen px and Alt switches it off", async () => {
+    await mount();
+    await userEvent.click(hit("Sticker")); // 150 wide: its centre is at 60 + 7.5 = 67.5 %, the page centre is at 50 %
+    stubStage();
+    const centreLeft = (816 / 2 - (150 * 0.816) / 2) / 8.16; // design px -> % of the page width
+    // move the item's centre to 3 screen px (6 design px) beside the page centre: it snaps onto it
+    const dx = (816 / 2 + 6 - (600 * 0.816 + 61.2)) * 0.5;
+    drag(hit("Sticker"), [100, 100], [100 + dx, 100])();
+    expect(field("Left").valueAsNumber).toBeCloseTo(centreLeft, 1);
+    fireEvent.keyDown(document, { key: "z", ctrlKey: true });
+    drag(hit("Sticker"), [100, 100], [100 + dx, 100], { altKey: true })();
+    expect(field("Left").valueAsNumber).toBeGreaterThan(centreLeft + 0.5);
+  });
+
+  it("resizes from a handle along the item's own axes and rotates from the rotate handle", async () => {
+    await mount();
+    await userEvent.click(hit("Sticker")); // r = 10 degrees
+    stubStage();
+    const w0 = field("Width").valueAsNumber;
+    const up = drag(
+      screen.getByRole("button", { name: "Resize from bottom right" }),
+      [200, 200],
+      [240, 200],
+      { altKey: true },
+    );
+    up();
+    // 40 screen px along x on a box turned 10 degrees: 80 design px * cos(10) of width
+    expect(field("Width").valueAsNumber).toBeCloseTo(
+      w0 + ((80 * Math.cos((10 * Math.PI) / 180)) / 816) * 100,
+      0,
+    );
+    fireEvent.keyDown(document, { key: "z", ctrlKey: true });
+    const centre = [(600 * 0.816 + 61.2) * 0.5, 0];
+    void centre;
+    const rotate = screen.getByRole("button", { name: "Rotate" });
+    drag(rotate, [200, 100], [200, 100])(); // no movement: nothing changes
+    expect(field("Rotation (degrees)")).toHaveValue(10);
+  });
+
+  it("touch: a swipe over an unselected item starts nothing, the tap's click selects, then a drag moves", async () => {
+    await mount();
+    stubStage();
+    fireEvent(hit("Sticker"), pointer("pointerdown", 100, 100, { pointerType: "touch" }));
+    fireEvent(window, pointer("pointermove", 160, 100, { pointerType: "touch", altKey: true }));
+    fireEvent(window, pointer("pointerup", 160, 100, { pointerType: "touch" }));
+    expect(hit("Sticker")).toHaveAttribute("aria-pressed", "false"); // no click came: the browser panned instead
+    expect(undoable()).toBe(false);
+    fireEvent.click(hit("Sticker")); // a tap
+    expect(hit("Sticker")).toHaveAttribute("aria-pressed", "true");
+    expect(undoable()).toBe(false);
+    drag(hit("Sticker"), [100, 100], [160, 100], { pointerType: "touch", altKey: true })();
+    expect(undoable()).toBe(true);
+  });
+});
+
+describe("gestures (keyboard and buttons)", () => {
+  const key = (k: string, init: object = {}) => userEvent.keyboard(k, init);
+
+  it("arrows move 1 design px and Shift 10; a burst of keys is one undo step; the live region says what happened", async () => {
+    await mount();
+    await userEvent.click(hit("Sticker"));
+    hit("Sticker").focus();
+    const left0 = field("Left").valueAsNumber;
+    await key("{ArrowRight}{ArrowRight}{ArrowRight}");
+    await key("{Shift>}{ArrowRight}{/Shift}");
+    expect(field("Left").valueAsNumber).toBeCloseTo(left0 + (13 / 816) * 100, 1);
+    expect(live()).toContain("Moved right 10.");
+    expect(live()).toContain("percent from the left");
+    expect(undoable()).toBe(false); // the burst is still open: nothing committed yet
+    await key("{Control>}z{/Control}"); // Ctrl closes the burst, then undo takes the whole burst away
+    expect(field("Left")).toHaveValue(left0);
+    expect(undoable()).toBe(false);
+  });
+
+  it("Alt+Shift+Arrow resizes by 10 along the box's own axes; Alt+Arrow alone is left to the browser", async () => {
+    await mount();
+    await userEvent.click(hit("Sticker"));
+    hit("Sticker").focus();
+    const w0 = field("Width").valueAsNumber;
+    const alt = fireEvent.keyDown(hit("Sticker"), { key: "ArrowLeft", altKey: true });
+    expect(alt).toBe(true); // not default-prevented
+    await key("{Alt>}{Shift>}{ArrowRight}{/Shift}{/Alt}");
+    expect(field("Width").valueAsNumber).toBeGreaterThan(w0);
+    expect(live()).toContain("Size");
+  });
+
+  it("comma and period rotate by 1 degree and with Shift by 15; the angle wraps to (-180, 180]", async () => {
+    await mount();
+    await userEvent.click(hit("Sticker")); // 10 degrees
+    hit("Sticker").focus();
+    await key(".");
+    expect(field("Rotation (degrees)")).toHaveValue(11);
+    await key("{Shift>}.{/Shift}"); // Shift+. types >
+    expect(field("Rotation (degrees)")).toHaveValue(26);
+    await key(",");
+    expect(field("Rotation (degrees)")).toHaveValue(25);
+    expect(live()).toContain("Rotated to 25 degrees");
+  });
+
+  it("Delete removes the selected item, clears the selection and says so; a template element is not deleted", async () => {
+    await mount();
+    await userEvent.click(hit("Sticker"));
+    hit("Sticker").focus();
+    await key("{Delete}");
+    expect(screen.queryByRole("button", { name: "Sticker" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "Page: Cover" })).toBeInTheDocument();
+    expect(live()).toBe("Deleted");
+    fireEvent.keyDown(document, { key: "z", ctrlKey: true });
+    expect(hit("Sticker")).toBeInTheDocument();
+    await userEvent.click(hit("Cover title"));
+    hit("Cover title").focus();
+    await key("{Delete}");
+    expect(hit("Cover title")).toBeInTheDocument();
+  });
+
+  it("the panel buttons rotate and resize with the same steps", async () => {
+    await mount();
+    await userEvent.click(hit("Sticker"));
+    const w0 = field("Width").valueAsNumber;
+    await userEvent.click(screen.getByRole("button", { name: "Rotate right 15°" }));
+    expect(field("Rotation (degrees)")).toHaveValue(25);
+    await userEvent.click(screen.getByRole("button", { name: "Rotate left 1°" }));
+    expect(field("Rotation (degrees)")).toHaveValue(24);
+    await userEvent.click(screen.getByRole("button", { name: "Wider" }));
+    expect(field("Width").valueAsNumber).toBeCloseTo(w0 + (10 / 816) * 100, 0);
+    await userEvent.click(screen.getByRole("button", { name: "Shorter" }));
+    expect(live()).toBe("Shorter");
+  });
+
+  it("? opens the shortcut list (all rows, in Vietnamese too) and Escape closes it", async () => {
+    await mount();
+    await userEvent.keyboard("?");
+    const sheet = screen.getByRole("region", { name: "Keyboard shortcuts" });
+    expect(within(sheet).getAllByRole("row")).toHaveLength(14);
+    expect(within(sheet).getByText(/Alt \+ Shift/)).toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("region", { name: "Keyboard shortcuts" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Keyboard shortcuts" }));
+    expect(screen.getByRole("region", { name: "Keyboard shortcuts" })).toBeInTheDocument();
+    cleanup();
+    await i18n.changeLanguage("vi");
+    await mount();
+    await userEvent.click(screen.getByRole("button", { name: "Phím tắt" }));
+    expect(screen.getByText("Xoay 15 độ")).toBeInTheDocument();
+  });
+});
+
+describe("hit order follows the drawn order (T-160 A1)", () => {
+  const hitOrder = () =>
+    [...document.querySelectorAll(".ed-hit")].map((b) => b.getAttribute("aria-label"));
+
+  it("a template element moved later is drawn, and hit, above one moved earlier; items stay on top", async () => {
+    await mount();
+    expect(hitOrder().slice(0, 3)).toEqual(["Cover title", "Cover photo", "Cover sticker"]);
+    // the photo is moved first, then the title: the title's box is appended to the page after the photo's, so it is drawn above it
+    await userEvent.click(hit("Cover photo"));
+    await setNum("Width", "30");
+    await userEvent.click(hit("Cover title"));
+    await setNum("Width", "50");
+    expect(hitOrder()).toEqual([
+      "Cover sticker", // not moved: still the template's own
+      "Cover photo",
+      "Cover title",
+      "Text: Xin chào lớp 12A1",
+      "Sticker",
+    ]);
+    const drawn = [...document.querySelectorAll(".ed-pagebox [data-layout-id]")].map((n) =>
+      n.getAttribute("data-layout-id"),
+    );
+    expect(drawn.filter((id) => id === "cover.photo" || id === "cover.title")).toEqual([
+      "cover.photo",
+      "cover.title",
+    ]);
+    // Tab walks the same order, so the topmost of an overlap is the one a click reaches
+    hit("Cover sticker").focus();
+    await userEvent.tab();
+    expect(document.activeElement).toBe(hit("Cover photo"));
+    await userEvent.tab();
+    expect(document.activeElement).toBe(hit("Cover title"));
   });
 });
 

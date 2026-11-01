@@ -364,7 +364,11 @@ describe("other failures", () => {
     let n = 1;
     for (const wait of [1000, 2000, 4000, 8000, 30_000]) {
       expect(srv.s.saves, `before ${wait}`).toHaveLength(n);
-      expect(snap()).toMatchObject({ saveState: "offline", dirty: true });
+      // a network failure reads "offline"; a 5xx (the second try) is the server failing, not the connection (T-160 A2)
+      expect(snap()).toMatchObject({
+        saveState: wait === 2000 ? "failing" : "offline",
+        dirty: true,
+      });
       await tick(wait - 1);
       expect(srv.s.saves).toHaveLength(n);
       await tick(1);
@@ -375,6 +379,28 @@ describe("other failures", () => {
     await tick(30_000);
     expect(snap()).toMatchObject({ saveState: "saved", dirty: false, version: 2 });
     expect(srv.s.saves.every((s) => s.base_version === 1)).toBe(true); // every retry names the same version
+  });
+
+  it("a 500 reads 'failing' (the server answered), a failed request 'offline'; both retry and a good save clears it (T-160 A2)", async () => {
+    const { srv, store, snap } = await open({ version: 1, layout: doc1() });
+    srv.s.script.push(() => srv.fail(500, "ERROR_INTERNAL"));
+    store.apply(setText("cover", "aaaaaa", { text: "x" }));
+    await tick(DEBOUNCE_MS);
+    expect(snap()).toMatchObject({ saveState: "failing", dirty: true });
+    await tick(1000); // the retry works
+    expect(snap()).toMatchObject({ saveState: "saved", dirty: false });
+  });
+
+  it("a gesture that ends after the screen was left is saved at once, with no timer left behind", async () => {
+    const { srv, store } = await open({ version: 1, layout: doc1() });
+    store.begin();
+    store.preview(setText("cover", "aaaaaa", { text: "x" }));
+    store.stop();
+    store.commit();
+    await tick(0);
+    expect(srv.s.saves).toHaveLength(1);
+    await tick(60_000);
+    expect(srv.s.saves).toHaveLength(1);
   });
 
   it("400 goes to invalid with the problem path and sends nothing until the next commit", async () => {

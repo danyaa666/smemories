@@ -56,6 +56,20 @@ The spec has no cover-title edit because the cover title is the book's own title
 (6) an item flush to the right and bottom edge (saved through the API) on A5, then A4, then Letter (the book's paper is changed through `yearbook/update`): the south-east handle sticks out of the page and `elementFromPoint` at its outer corner is the handle, so the page's clip does not hide it;
 (5b) with every save delayed 1.5 s, the student sets the width three times and clicks "Preview as PDF" at once: the new tab, opened by the click, goes to `/book` only after the save in flight and the queued one are done and shows the new width each time; an out-of-range number in step 3 shows "Between 1 and 200" and restores the old value; (7) at 700 px wide the editor does not mount and the message with the link back shows. The test uses the role `spinbutton` for the panel numbers because a resize handle is also named "Resize from left".
 
+## The editor gestures (T-160)
+
+`tools/e2e/editor-gestures.spec.mjs` runs in the same `make e2e` (about 25 s; it reuses one account and one book and runs in order). Chromium only.
+(1) mouse: on A5, A4 and Letter at 100 % and 125 % a drag (70 right, 45 down), a corner resize (40, 30) and a rotation (30 degrees) are measured against the pointer, with Alt held so nothing snaps; the error is at most 1 screen px (measured 0.03 to 0.55, rotation 0), one Ctrl/Cmd+Z undoes each gesture whole, and the four corners of a 44 x 44 px square around the handle all hit the handle;
+(2) Shift keeps the ratio and snaps the angle to 15; without Alt the item snaps onto the page centre line and a guide is drawn, with Alt it does not; Escape during a drag puts the item back, records no step and sends no `book-layout/save` (it waits 2 s, longer than the 1.5 s debounce);
+(3) keyboard only: Tab to the item, arrows (1 and 10 design px), Alt+Shift+arrows (resize), `.` `,` `Shift+.` (rotate), `?` (help list with 14 rows), Delete and undo, the live region text;
+(4) an item flush to the right and bottom edge can be shrunk from its south-east handle that lies outside the page, on all three papers;
+(5) a template element dragged over another one (the photo moved first, then the title over it): a click on the overlap reaches the title, the one drawn above, and Tab visits the photo before the title;
+(6) touch at 768 px with CDP touch events: a swipe over an unselected item pans the stage and moves nothing, a tap selects, then a finger drag moves the item (within the 6 px snap pull);
+(7) one item dragged among 100 (the document is served by the test through `page.route`, because the server allows 40 per page) under `Emulation.setCPUThrottlingRate` 4: at least 30 frames a second (measured 59.7, p95 frame 16.8 ms).
+The numbers print as `T160-NUMBERS {...}` lines.
+
+Not proven by the test, to check by hand (the leader lists these for the owner): the shortcut set on **Windows and Linux** (Alt+Shift+arrow must not switch the input language or move a window; the `,` and `.` keys on a Vietnamese keyboard with Telex on; Alt+Left must still go back), **macOS Safari and Firefox** (Option+Shift+arrow, Option while dragging), **touch in Firefox and WebKit** and on a real tablet, **screen readers** (the live region texts), and a **keyboard layout where `,` or `.` needs AltGr or Shift** (the handler reads the typed character, so `<` and `>` also count).
+
 A template element moved to a box equal to its own is a print-check test too (T-159 rework 1): "an override equal to the natural box leaves every editable element where it was", A5/A4/Letter, all eight editable ids, rect change below 0.15 % of the page width (measured 0.04 to 0.07 %; before the fix up to 12 %).
 
 The stage against the book screen (T-159 AC3) is a print-check test: `make print-check`, "the editor stage draws the cover and a notes page exactly as the book screen does", on A5, A4 and Letter at zoom 100 %. Both are on-screen renderings, so the budget is 0.5 % of the pixels (measured on the fixture book: cover 0.00 to 0.08 %, notes page 0.00 to 0.34 %; the rest is glyph and gradient edges on a fractional CSS zoom, and Letter with its exact zoom is 0.000 %).

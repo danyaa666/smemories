@@ -930,7 +930,8 @@
       "offline": "Mất kết nối: thay đổi được giữ ở đây và sẽ lưu khi có mạng trở lại.",
       "conflict": "Cuốn sách này đã được thay đổi ở tab hoặc thiết bị khác.",
       "invalid": "Không thể lưu thay đổi này. Hãy hoàn tác hoặc sửa lại.",
-      "gone": "Bạn không còn truy cập được cuốn sách này; không thể lưu thay đổi."
+      "gone": "Bạn không còn truy cập được cuốn sách này; không thể lưu thay đổi.",
+      "failing": "Chưa lưu được, đang thử lại..."
     },
     "title": "Bố cục tự do",
     "back": "Quay lại tuỳ chỉnh",
@@ -1037,6 +1038,55 @@
     "leaveTitle": "Rời trình chỉnh sửa?",
     "leaveBody": "Những thay đổi gần nhất vẫn đang được lưu. Chúng sẽ được gửi khi bạn rời đi, nhưng hãy xem trạng thái lưu nếu bạn không chắc.",
     "leaveConfirm": "Rời đi",
-    "leaveCancel": "Ở lại"
+    "leaveCancel": "Ở lại",
+    "helpButton": "Phím tắt",
+    "helpTitle": "Phím tắt",
+    "helpClose": "Đóng",
+    "help": {
+      "tab": "Chọn mục kế tiếp hoặc trước đó trên trang",
+      "move": "Dời mục đang chọn 1 px",
+      "moveBig": "Dời mục đang chọn 10 px",
+      "resize": "Đổi cỡ 10 px: Trái và Phải đổi chiều rộng, Lên và Xuống đổi chiều cao",
+      "rotate": "Xoay 1 độ (trái, phải)",
+      "rotateBig": "Xoay 15 độ",
+      "delete": "Xóa mục đang chọn",
+      "escape": "Hủy thao tác kéo đang làm, hoặc bỏ chọn",
+      "undo": "Hoàn tác",
+      "redo": "Làm lại",
+      "noSnap": "Không hít vào đường gióng khi kéo",
+      "ratio": "Giữ tỉ lệ khi đổi cỡ",
+      "snap15": "Xoay theo bước 15 độ khi xoay",
+      "help": "Hiện hoặc ẩn danh sách này"
+    },
+    "dir": {
+      "left": "sang trái",
+      "right": "sang phải",
+      "up": "lên trên",
+      "down": "xuống dưới"
+    },
+    "said": {
+      "leadMove": "Đã dời {{dir}} {{n}}.",
+      "movedTo": "{{lead}} Vị trí cách mép trái {{x}} phần trăm, cách mép trên {{y}} phần trăm.",
+      "resized": "Kích thước {{w}} phần trăm chiều rộng trang, {{h}} phần trăm chiều cao.",
+      "rotated": "Đã xoay đến {{deg}} độ.",
+      "cancelled": "Đã hủy"
+    },
+    "nudge": "Xoay và đổi cỡ",
+    "rotateLeft": "Xoay trái 1°",
+    "rotateRight": "Xoay phải 1°",
+    "rotateLeftBig": "Xoay trái 15°",
+    "rotateRightBig": "Xoay phải 15°",
+    "wider": "Rộng hơn",
+    "narrower": "Hẹp hơn",
+    "taller": "Cao hơn",
+    "shorter": "Thấp hơn",
+    "nudged": {
+      "rotateLeft": "Đã xoay trái",
+      "rotateRight": "Đã xoay phải",
+      "wider": "Rộng hơn",
+      "narrower": "Hẹp hơn",
+      "taller": "Cao hơn",
+      "shorter": "Thấp hơn"
+    }
   }
 }
