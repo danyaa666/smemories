@@ -38,6 +38,7 @@ export function useLayoutEditor(yearbookId: string) {
       cancel: store.cancel.bind(store),
       undo: store.undo.bind(store),
       redo: store.redo.bind(store),
+      clearHistory: store.clearHistory.bind(store),
       flush: store.flush,
       settle: store.settle,
       select: store.select,

@@ -55,6 +55,9 @@ export type TextEdit = {
   render: (item: Item, fit: FitInfo | undefined, style: CSSProperties) => ReactNode;
 };
 
+/** The editor sets it (T-162) to a placeholder that stands for a design image the server no longer has; the print and the class book leave it unset and draw nothing. */
+export const MissingImage = createContext<ReactNode>(null);
+
 type Ctx = { doc: LayoutDoc; spec: TemplateLayout; edit?: TextEdit };
 const LayoutContext = createContext<Ctx | null>(null);
 
@@ -253,6 +256,7 @@ const ItemView = memo(function ItemView({
 }) {
   const { size } = useBookEnv();
   const edit = useLayout()?.edit;
+  const missing = useContext(MissingImage);
   let body: ReactNode = null;
   if (item.t === "text") body = <TextItem item={item} kind={kind} spec={spec} edit={edit} />;
   else if (item.t === "asset" && item.asset && getAsset(item.asset))
@@ -263,6 +267,7 @@ const ItemView = memo(function ItemView({
         id={item.media}
         variant="print"
         quiet
+        fallback={missing}
         style={{
           width: "100%",
           height: "100%",

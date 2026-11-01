@@ -161,6 +161,11 @@ export class EditorStore {
   redo() {
     if (this.history.redo()) this.changed();
   }
+  /** Forgets every undo and redo step and keeps the document (T-162: a design image was deleted, so an older document must not come back). */
+  clearHistory() {
+    this.history.clear(this.history.committed);
+    this.emit();
+  }
   select = (ids: readonly string[]) => {
     this.selection = ids;
     this.emit();

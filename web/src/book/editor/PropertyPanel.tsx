@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import type { Media } from "../../api/yearbooks";
 import type { OnePage } from "../BookPages";
 import type { Box, PageBox } from "../layout/geometry";
 import type { TemplateLayout } from "../layout/runtime";
@@ -12,6 +13,7 @@ import {
   removeItem,
   reorderItem,
   setBg,
+  setItemProps,
   setOverride,
   type LayoutDoc,
   type Op,
@@ -20,6 +22,8 @@ import {
 import { pageName, targetName } from "./names";
 import { BIG_STEP, BIG_TURN, TURN } from "./gestures/keys";
 import type { GestureStore } from "./gestures/useGestures";
+import { AssetControls, ImageControls } from "./ItemControls";
+import { Swatches } from "./Swatches";
 import { TextControls } from "./TextControls";
 import { nudge, type Nudge } from "./gestures/math";
 import { NumField, tenth } from "./NumField";
@@ -45,6 +49,9 @@ export function PropertyPanel({
   store,
   cut,
   onAddText,
+  onDuplicate,
+  pickImage,
+  onMoreBackgrounds,
 }: {
   doc: LayoutDoc;
   kind: string;
@@ -62,8 +69,15 @@ export function PropertyPanel({
   cut: boolean;
   /** "Add text" (the toolbar has the same button). */
   onAddText: () => void;
+  /** Duplicate the selected item (T-162; Ctrl or Cmd + D does the same). */
+  onDuplicate: () => void;
+  /** The picker of the book's design images for "replace image" (T-162): the screen renders it and calls back with the chosen one. */
+  pickImage: (onPick: (m: Media) => void) => ReactNode;
+  /** Opens the palette's Background tab. */
+  onMoreBackgrounds: () => void;
 }) {
   const { t } = useTranslation();
+  const [replacing, setReplacing] = useState<string | null>(null); // the id of the image item that is being replaced
   const [last, setRefused] = useState<{ id?: string; why: Refusal } | null>(null);
   const refused = last && last.id === selected?.id ? last.why : null; // a refusal belongs to the selection it was made on
 
@@ -82,6 +96,21 @@ export function PropertyPanel({
         <button type="button" disabled={readOnly} onClick={onAddText}>
           {t("editor.addText")}
         </button>
+        {spec && (
+          <fieldset disabled={readOnly}>
+            <legend>{t("editor.palette.bgColour")}</legend>
+            <Swatches
+              spec={spec}
+              scope={scope}
+              value={bg?.color}
+              label={t("editor.palette.bgColour")}
+              onPick={(c) => run(setBg(kind, { color: c }))}
+            />
+            <button type="button" onClick={onMoreBackgrounds}>
+              {t("editor.palette.bgMore")}
+            </button>
+          </fieldset>
+        )}
         {bg && (
           <button type="button" disabled={readOnly} onClick={() => run(setBg(kind, null))}>
             {t("editor.clearBackground")}
@@ -253,6 +282,34 @@ export function PropertyPanel({
               run={run}
             />
           )}
+          {item.t === "asset" && spec && (
+            <AssetControls
+              item={item}
+              kind={kind}
+              spec={spec}
+              scope={scope}
+              readOnly={readOnly}
+              run={run}
+            />
+          )}
+          {item.t === "image" && (
+            <ImageControls
+              item={item}
+              kind={kind}
+              readOnly={readOnly}
+              run={run}
+              store={store}
+              onReplace={() => setReplacing(replacing === item.id ? null : item.id)}
+            />
+          )}
+          {item.t === "image" &&
+            replacing === item.id &&
+            pickImage((m) => {
+              if (run(setItemProps(kind, item.id, { media: m.id }))) {
+                setReplacing(null);
+                announce(t("editor.image.replaced"));
+              }
+            })}
           <div role="group" aria-label={t("editor.order")} className="ed-row">
             <button
               type="button"
@@ -275,6 +332,9 @@ export function PropertyPanel({
               {t("editor.toBack")}
             </button>
           </div>
+          <button type="button" disabled={readOnly} onClick={onDuplicate}>
+            {t("editor.duplicate")}
+          </button>
           <button
             type="button"
             className="ed-danger"

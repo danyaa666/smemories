@@ -48,22 +48,36 @@ export const listMedia = (id: string, nextId?: string) =>
     `/media/get-list?yearbook_id=${encodeURIComponent(id)}${nextId ? `&next_id=${encodeURIComponent(nextId)}` : ""}`,
   );
 
+/** One page of the book's design images (the layout editor's own pictures, T-152), newest first; the token of this list is not the photo list's. */
+export const listDesignImages = (id: string, nextId?: string, limit = 24) =>
+  request<S["MediaListResponse"]["data"]>(
+    `/media/get-list?yearbook_id=${encodeURIComponent(id)}&purpose=design&limit=${limit}${nextId ? `&next_id=${encodeURIComponent(nextId)}` : ""}`,
+  );
+
 export const deleteMedia = (id: string) => postJson<void>("/media/delete", { id });
 
 /** Same-origin image URL; the session cookie authorises it. The path is built from the photo id only. */
 export const mediaUrl = (id: string, variant: "thumb" | "display" | "print" = "thumb") =>
   `/api/media/get-content?id=${encodeURIComponent(id)}&variant=${variant}`;
 
-const DEFAULT_MAX_BYTES = 10 * 1024 * 1024; // SMEM_MEDIA_MAX_BYTES default
+export const DEFAULT_MAX_BYTES = 10 * 1024 * 1024; // SMEM_MEDIA_MAX_BYTES default
 
-/** fetch has no upload progress, so the upload uses XHR. `onProgress` gets 0..1. */
+/**
+ * fetch has no upload progress, so the upload uses XHR. `onProgress` gets 0..1. `opts.purpose` "design" stores a layout-editor image (T-152);
+ * `opts.signal` aborts it (the promise then rejects with an `AbortError`).
+ */
 export function uploadMedia(
   yearbookId: string,
   file: File,
   onProgress: (fraction: number) => void,
+  opts: { purpose?: "design"; signal?: AbortSignal } = {},
 ): Promise<Media> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
+    const abort = () => xhr.abort();
+    opts.signal?.addEventListener("abort", abort, { once: true });
+    xhr.onabort = () => reject(new DOMException("Upload cancelled", "AbortError"));
+    xhr.onloadend = () => opts.signal?.removeEventListener("abort", abort);
     xhr.open("POST", "/api/media/create");
     xhr.setRequestHeader("Accept", "application/json");
     xhr.upload.onprogress = (e) => {
@@ -88,7 +102,9 @@ export function uploadMedia(
     };
     const form = new FormData();
     form.append("yearbook_id", yearbookId); // before the file, so the server knows the target without buffering first
+    if (opts.purpose) form.append("purpose", opts.purpose);
     form.append("file", file);
+    if (opts.signal?.aborted) return reject(new DOMException("Upload cancelled", "AbortError"));
     xhr.send(form);
   });
 }

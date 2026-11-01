@@ -5,13 +5,24 @@ import type { LayoutDoc } from "./document";
 
 type Step = () => Response | Promise<Response>;
 
-export function mockServer(init: { version: number; layout: LayoutDoc | null }) {
+export type MockMedia = { id: string; width: number; height: number };
+
+export function mockServer(init: {
+  version: number;
+  layout: LayoutDoc | null;
+  /** The book's design images (media/get-list with purpose=design). */
+  media?: MockMedia[];
+}) {
   const s = {
     version: init.version,
     layout: init.layout,
     saves: [] as { yearbook_id: string; base_version: number; layout: LayoutDoc }[],
     gets: 0,
     resets: 0,
+    media: [...(init.media ?? [])],
+    deleted: [] as string[],
+    /** The order of the calls that matter to the delete-in-use rule: "save" and "delete:<id>". */
+    calls: [] as string[],
     script: [] as Step[],
     /** A second client saved: moves the stored version on. */
     otherTab(layout: LayoutDoc | null) {
@@ -38,6 +49,24 @@ export function mockServer(init: { version: number; layout: LayoutDoc | null }) 
           updated_at: null,
         });
       }
+      if (url.startsWith("/api/media/get-list")) {
+        const items = s.media.map((m) => ({
+          ...m,
+          yearbook_id: "Y",
+          content_type: "image/jpeg",
+          bytes: 1,
+          created_at: 1,
+          purpose: "design",
+        }));
+        return body({ items, next_id: "" });
+      }
+      if (url === "/api/media/delete") {
+        const id = JSON.parse(String(req?.body)).id as string;
+        s.calls.push(`delete:${id}`);
+        s.deleted.push(id);
+        s.media = s.media.filter((m) => m.id !== id);
+        return body({});
+      }
       if (url === "/api/book-layout/reset") {
         s.resets++;
         s.version++;
@@ -47,6 +76,7 @@ export function mockServer(init: { version: number; layout: LayoutDoc | null }) 
       if (url === "/api/book-layout/save") {
         const b = JSON.parse(String(req?.body));
         s.saves.push(b);
+        s.calls.push("save");
         const step = s.script.shift();
         if (step) return step();
         if (b.base_version !== s.version)
