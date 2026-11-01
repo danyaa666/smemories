@@ -12,7 +12,7 @@ import {
   type LayoutDoc,
   type LayoutProblem,
 } from "../../api/bookLayout";
-import { emptyDoc, type Op, type Refusal } from "./document";
+import { emptyDoc, mediaUses, type Op, type Refusal } from "./document";
 import { History } from "./history";
 
 export type SaveState =
@@ -160,6 +160,10 @@ export class EditorStore {
   }
   redo() {
     if (this.history.redo()) this.changed();
+  }
+  /** True when the document or any undo or redo step uses the design image (T-164). */
+  usesImageInHistory(mediaId: string): boolean {
+    return this.history.some((d) => mediaUses(d, mediaId).length > 0);
   }
   /** Forgets every undo and redo step and keeps the document (T-162: a design image was deleted, so an older document must not come back). */
   clearHistory() {

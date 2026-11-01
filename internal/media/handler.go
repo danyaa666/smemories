@@ -101,7 +101,7 @@ func (h *Handler) countUploadResult(purpose string, err error) {
 	switch {
 	case err == nil:
 		h.countUpload(purpose, UploadOK)
-	case errors.Is(err, ErrQuota):
+	case errors.Is(err, ErrQuota), errors.Is(err, ErrDesignLimit):
 		h.countUpload(purpose, UploadQuota)
 	case errors.Is(err, ErrInvalidImage), errors.Is(err, ErrUnsupported):
 		h.countUpload(purpose, UploadInvalid)
@@ -585,5 +585,21 @@ func (h *Handler) fail(w http.ResponseWriter, r *http.Request, err error) {
 	if apperr.Is(err, CodeStorage) && !errors.Is(err, context.Canceled) {
 		h.logger.Error("media: storage failed", "request_id", httpx.RequestIDFrom(r.Context()), "error", err)
 	}
+	if errors.Is(err, ErrDesignLimit) { // the 409 carries the cap so the client needs no list to word it
+		e := designLimitError{Status: CodeDesignImageLimit.Name, ErrorMessage: apperr.Message(err), RequestID: httpx.RequestIDFrom(r.Context())}
+		e.Data.Limit = maxDesignPerYearbook
+		httpx.WriteJSON(w, CodeDesignImageLimit.HTTP, e)
+		return
+	}
 	httpx.Fail(w, r, err)
+}
+
+// designLimitError is the v2 error envelope with the data member of ERROR_DESIGN_IMAGE_LIMIT.
+type designLimitError struct {
+	Status       string `json:"status"`
+	ErrorMessage string `json:"error_message"`
+	RequestID    string `json:"request_id"`
+	Data         struct {
+		Limit int `json:"limit"`
+	} `json:"data"`
 }

@@ -19,8 +19,8 @@ export type Job = {
   failure?: UploadFailure;
 };
 
-/** The reason for an error of `media/create`. `have` is how many design images the book has (the cap and the 500 MiB quota share one code). */
-export function failureOf(e: unknown, have: number): UploadFailure {
+/** The reason for an error of `media/create`. The 30-image cap and the 500 MiB quota have their own codes (T-164), so no list is needed. */
+export function failureOf(e: unknown): UploadFailure {
   if (!(e instanceof ApiError)) return { code: "generic" };
   if (e.status === 0) return { code: "offline" };
   const seconds = e.retryAfter;
@@ -31,8 +31,12 @@ export function failureOf(e: unknown, have: number): UploadFailure {
       return { code: "unsupported" };
     case "invalid_image":
       return { code: "corrupt" };
+    case "design_image_limit": {
+      const limit = (e.data as { limit?: unknown } | undefined)?.limit;
+      return { code: "cap", count: typeof limit === "number" ? limit : MAX_DESIGN_IMAGES };
+    }
     case "quota_exceeded":
-      return have >= MAX_DESIGN_IMAGES ? { code: "cap", count: have } : { code: "quota" };
+      return { code: "quota" };
     case "rate_limited":
       return { code: "rateLimited", seconds: seconds ?? 5 };
     case "busy":
@@ -55,8 +59,8 @@ type Deps = {
     opts: { purpose: "design"; signal: AbortSignal },
   ) => Promise<Media>;
 };
-/** What the screen tells the queue: how many design images the book has now, and what to do with a finished upload. */
-type Hooks = { have: () => number; onDone: (m: Media) => void };
+/** What the screen tells the queue: what to do with a finished upload. */
+type Hooks = { onDone: (m: Media) => void };
 
 export class Uploads {
   private jobs: Job[] = [];
@@ -65,7 +69,7 @@ export class Uploads {
   private next = 1;
   private listeners = new Set<() => void>();
   private snap: readonly Job[] = [];
-  private h: Hooks = { have: () => 0, onDone: () => {} };
+  private h: Hooks = { onDone: () => {} };
 
   constructor(private d: Deps) {}
 
@@ -146,7 +150,7 @@ export class Uploads {
       if (ctl.signal.aborted || (e instanceof DOMException && e.name === "AbortError")) {
         this.jobs = this.jobs.filter((j) => j.key !== key); // cancelled: it leaves the list
         this.emit();
-      } else this.patch(key, { state: "failed", failure: failureOf(e, this.h.have()) });
+      } else this.patch(key, { state: "failed", failure: failureOf(e) });
     } finally {
       this.aborts.delete(key);
       this.pump();

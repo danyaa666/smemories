@@ -86,6 +86,11 @@ export class History<T> {
     return true;
   }
 
+  /** True when `pred` holds for the present document or any step of the undo or redo stacks (T-164: an image the history still points at). */
+  some(pred: (doc: T) => boolean): boolean {
+    return pred(this.present) || this.past.some(pred) || this.future.some(pred);
+  }
+
   /** Replaces the document and forgets every step (reset, "use theirs", a first load). */
   clear(doc: T) {
     this.present = doc;

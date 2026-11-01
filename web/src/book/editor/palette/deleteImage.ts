@@ -1,6 +1,7 @@
 // Deleting a design image (T-162, spec 21 requirement 7). The server refuses a layout that points at a missing image, and undo could bring such a layout
 // back, so an image that is in use goes in this order: (a) one step removes every item and background that uses it, (b) wait until that is saved,
-// (c) delete the image, (d) forget the undo and redo steps. An image that is not in use is just deleted and the history stays.
+// (c) delete the image, (d) forget the undo and redo steps. An image that is in no page and no step of the history is just deleted and the history stays.
+// An image that only the history points at (an item removed earlier, T-164) skips (a) and (b) but still clears the history, or undo would bring it back.
 import { mediaUses, purgeMedia, type LayoutDoc, type Op, type Refusal } from "../document";
 
 export type DeleteDeps = {
@@ -9,6 +10,8 @@ export type DeleteDeps = {
   /** Resolves true when the server has the newest document (`store.settle`). */
   settle: () => Promise<boolean>;
   clearHistory: () => void;
+  /** True when an undo or redo step (or the document) still uses the image. */
+  usesInHistory: (id: string) => boolean;
   deleteMedia: (id: string) => Promise<unknown>;
 };
 
@@ -20,8 +23,9 @@ export type DeleteResult =
   { ok: true; cleared: boolean } | { ok: false; stage: "save" | "delete"; error?: unknown };
 
 export async function deleteDesignImage(id: string, d: DeleteDeps): Promise<DeleteResult> {
-  const used = mediaUses(d.doc(), id).length > 0;
-  if (used) {
+  const onPage = mediaUses(d.doc(), id).length > 0;
+  const used = onPage || d.usesInHistory(id);
+  if (onPage) {
     d.apply(purgeMedia(id));
     if (!(await d.settle())) return { ok: false, stage: "save" };
   }

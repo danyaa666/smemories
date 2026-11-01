@@ -30,7 +30,7 @@ import { deleteDesignImage } from "./palette/deleteImage";
 import { DesignImages } from "./palette/DesignImages";
 import { copyShift } from "./palette/defaults";
 import { ALL_KINDS, Palette, type Tab } from "./palette/Palette";
-import { Uploads, MAX_DESIGN_IMAGES } from "./palette/uploads";
+import { Uploads } from "./palette/uploads";
 import { useDesignImages } from "./palette/useDesignImages";
 import { PageStrip } from "./PageStrip";
 import { PropertyPanel } from "./PropertyPanel";
@@ -82,7 +82,9 @@ export function EditorShell({
   const wide = useMediaQuery("(min-width: 1700px)");
   const [chosen, setPalette] = useState<boolean | null>(null);
   const paletteOpen = chosen ?? wide;
-  const [deleting, setDeleting] = useState<{ m: Media; uses: string[] } | null>(null);
+  const [deleting, setDeleting] = useState<{ m: Media; uses: string[]; history: boolean } | null>(
+    null,
+  );
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const { states: fits, Provider: Fit } = useFitReport();
@@ -103,17 +105,16 @@ export function EditorShell({
   );
   const images = useDesignImages(bookId);
   const uploads = useMemo(() => new Uploads({ yearbookId: bookId, upload: uploadMedia }), [bookId]);
-  const { prepend, items: imageItems, more: moreImages } = images;
+  const { prepend } = images;
   useEffect(
     () =>
       uploads.bind({
-        have: () => (moreImages ? MAX_DESIGN_IMAGES : imageItems.length),
         onDone: (m) => {
           prepend(m);
           say(t("editor.upload.finished"));
         },
       }),
-    [uploads, prepend, imageItems.length, moreImages, t, say],
+    [uploads, prepend, t, say],
   );
   const missing = useMemo(
     () => (
@@ -214,7 +215,11 @@ export function EditorShell({
   }, [apply, kind, pb, select, selected, t, say, setNotice]);
   const askDelete = (m: Media) => {
     setDeleteError("");
-    setDeleting({ m, uses: mediaUses(ed.doc, m.id) });
+    setDeleting({
+      m,
+      uses: mediaUses(ed.doc, m.id),
+      history: ed.usesImageInHistory(m.id),
+    });
   };
   const confirmDelete = async () => {
     if (!deleting) return;
@@ -225,6 +230,7 @@ export function EditorShell({
       apply: ed.apply,
       settle: ed.settle,
       clearHistory: ed.clearHistory,
+      usesInHistory: ed.usesImageInHistory,
       deleteMedia,
     });
     setDeleteBusy(false);
@@ -545,9 +551,13 @@ export function EditorShell({
                   count: deleting.uses.length,
                   where: deleting.uses.map((k) => t(`editor.palette.kind.${k}`)).join(", "),
                 })
-              : t("editor.deleteImage.plain")}
+              : deleting.history
+                ? t("editor.deleteImage.onlyHistory")
+                : t("editor.deleteImage.plain")}
           </p>
-          {deleting.uses.length > 0 && <p>{t("editor.deleteImage.history")}</p>}
+          {(deleting.uses.length > 0 || deleting.history) && (
+            <p>{t("editor.deleteImage.history")}</p>
+          )}
           {deleteError && (
             <p role="alert" className="error">
               {deleteError}

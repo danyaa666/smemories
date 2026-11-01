@@ -382,7 +382,7 @@ describe("deleting a design image", () => {
     expect(screen.getByRole("button", { name: "Undo" })).toBeEnabled();
     await askDelete("Delete image 1 of 2");
     const dlg = screen.getByRole("dialog");
-    expect(dlg).toHaveTextContent("used on 2 page types (the cover, the profile page)");
+    expect(dlg).toHaveTextContent("used on 2 pages (the cover, the profile page)");
     expect(dlg).toHaveTextContent("Undo and redo are cleared");
     await userEvent.click(within(dlg).getByRole("button", { name: "Delete image" }));
     await waitFor(() => expect(srv.s.deleted).toEqual([M1]));
@@ -394,6 +394,46 @@ describe("deleting a design image", () => {
     expect(screen.getByRole("button", { name: "Redo" })).toBeDisabled();
     expect(screen.queryByRole("button", { name: "Delete image 2 of 2" })).toBeNull(); // only one image is left in the list
     expect(live()).toBe("Image deleted");
+  });
+
+  it("T-164: the dialog counts pages in plural form and an unused image gets the plain question", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    await mount(used);
+    await askDelete("Delete image 1 of 2");
+    expect(screen.getByRole("dialog")).toHaveTextContent("used on 2 pages");
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Keep it" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Delete image 2 of 2" }));
+    expect(screen.getByRole("dialog")).toHaveTextContent("deleted for good");
+  });
+
+  it("T-164: on no page but still in the undo steps: the dialog says so, and after confirming undo cannot bring the item back", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const srv = await mount({
+      v: 1,
+      pages: {
+        cover: {
+          items: [{ id: "img001", t: "image", media: M1, x: 100, w: 400, h: 300, cy: 300 }],
+        },
+      },
+    });
+    const stage = document.querySelector(".ed-pagebox")!;
+    await userEvent.click(screen.getByRole("button", { name: "Picture" }));
+    await userEvent.click(screen.getByRole("button", { name: "Delete" })); // the item is gone, but the step before it holds it
+    expect(stage.querySelector("[data-layout-item='img001']")).toBeNull();
+    await askDelete("Delete image 1 of 2");
+    const dlg = screen.getByRole("dialog");
+    expect(dlg).toHaveTextContent(
+      "No page uses this image now, but your undo and redo steps still do",
+    );
+    expect(dlg).toHaveTextContent("Undo and redo are cleared");
+    await userEvent.click(within(dlg).getByRole("button", { name: "Delete image" }));
+    await waitFor(() => expect(srv.s.deleted).toEqual([M1]));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(screen.getByRole("button", { name: "Undo" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Redo" })).toBeDisabled();
+    expect(stage.querySelector("[data-layout-item='img001']")).toBeNull();
   });
 
   it("not in use: a plain question and the history stays", async () => {
@@ -514,9 +554,9 @@ describe("the upload area", () => {
     prepend: () => {},
     drop: () => {},
   });
-  const send = async (err: unknown, have = 3, name = "a.png", type = "image/png") => {
+  const send = async (err: unknown, name = "a.png", type = "image/png") => {
     const up = new Uploads({ yearbookId: "Y", upload: () => Promise.reject(err) });
-    up.bind({ have: () => have, onDone: () => {} });
+    up.bind({ onDone: () => {} });
     render(
       <MemoryRouter>
         <DesignImages
@@ -531,20 +571,29 @@ describe("the upload area", () => {
     await userEvent.upload(screen.getByTestId("design-file"), new File(["x"], name, { type }));
     return screen.findByRole("alert");
   };
-  const e = (status: number, code: string, retry?: number) =>
-    new ApiError(status, code, "m", undefined, retry);
+  const e = (status: number, code: string, retry?: number, data?: unknown) =>
+    new ApiError(status, code, "m", undefined, retry, data);
   it.each([
-    ["too large", e(413, "payload_too_large"), 3, /larger than 10 MB/],
-    ["unsupported", e(415, "unsupported_media_type"), 3, /Only JPEG, PNG and WebP/],
-    ["corrupt", e(400, "invalid_image"), 3, /could not be read/],
-    ["cap with the count", e(400, "quota_exceeded"), 30, /already has 30 of 30/],
-    ["quota", e(400, "quota_exceeded"), 4, /500 MB is reached/],
-    ["rate limit with the wait", e(429, "rate_limited", 5), 3, /Try again in 5 s/],
-    ["busy with the wait", e(503, "busy", 8), 3, /busy.*8 s/],
-    ["not verified, with the link", e(403, "email_not_verified"), 3, /Verify your email address/],
-    ["offline", e(0, "network_error"), 3, /No connection/],
-  ])("%s", async (_n, err, have, text) => {
-    expect(await send(err, have)).toHaveTextContent(text);
+    ["too large", e(413, "payload_too_large"), /larger than 10 MB/],
+    ["unsupported", e(415, "unsupported_media_type"), /Only JPEG, PNG and WebP/],
+    [
+      "corrupt, with the real limits",
+      e(400, "invalid_image"),
+      /at most 12000 px a side; JPEG up to 50 megapixels, PNG and WebP up to 25 megapixels/,
+    ],
+    // T-164: the two 409s are told apart by their code alone (the screen holds no list here)
+    [
+      "cap with the count",
+      e(409, "design_image_limit", undefined, { limit: 30 }),
+      /already has 30 of 30/,
+    ],
+    ["quota", e(409, "quota_exceeded"), /500 MB is reached/],
+    ["rate limit with the wait", e(429, "rate_limited", 5), /Try again in 5 s/],
+    ["busy with the wait", e(503, "busy", 8), /busy.*8 s/],
+    ["not verified, with the link", e(403, "email_not_verified"), /Verify your email address/],
+    ["offline", e(0, "network_error"), /No connection/],
+  ])("%s", async (_n, err, text) => {
+    expect(await send(err)).toHaveTextContent(text);
   });
   it("links to the existing verify flow when the email is not verified", async () => {
     await send(e(403, "email_not_verified"));

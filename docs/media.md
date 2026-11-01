@@ -10,7 +10,7 @@
 | `POST /api/media/delete` | JSON `{id}`; idempotent. |
 | `GET /api/public-media/get-content?token=` | **Public** (no session, no cookie, no CORS), **binary** display variant only, behind a signed link token; see "Public photo links" below. |
 
-Errors are the v2 envelope (`ERROR_INVALID_IMAGE` 400, `ERROR_UNSUPPORTED_MEDIA_TYPE` 415, `ERROR_QUOTA_EXCEEDED` 409, `ERROR_TOO_LARGE` 413, `ERROR_EMAIL_NOT_VERIFIED` 403 (create), `ERROR_RATE_LIMITED` 429, `ERROR_BUSY` 503, `ERROR_STORAGE_ERROR` 502, `ERROR_NOT_FOUND` 404, `ERROR_PARAM` 400).
+Errors are the v2 envelope (`ERROR_INVALID_IMAGE` 400, `ERROR_UNSUPPORTED_MEDIA_TYPE` 415, `ERROR_QUOTA_EXCEEDED` 409, `ERROR_DESIGN_IMAGE_LIMIT` 409, `ERROR_TOO_LARGE` 413, `ERROR_EMAIL_NOT_VERIFIED` 403 (create), `ERROR_RATE_LIMITED` 429, `ERROR_BUSY` 503, `ERROR_STORAGE_ERROR` 502, `ERROR_NOT_FOUND` 404, `ERROR_PARAM` 400).
 
 - **Deadlines.** The server's own timeouts (15 s read, 30 s write, `httpx.NewServer`) are too short for a phone upload or a large download, so `create` and `get-content`
   carry a per-route timeout (`httpx.WithTimeout`: 2.5 min for create = 2 min to receive the body + 30 s to process, 2 min for get-content) and, in the same wrapper (`slowRoute`),
@@ -56,7 +56,7 @@ They are decoded, stripped of metadata, re-encoded and limited exactly like phot
   are not interchangeable (the purpose is part of the token's scope). A design id is not a cover or a profile photo (`yearbook` refuses it with `ERROR_INVALID_MEDIA`, the same code as an unknown photo), friends' note photos are always photos,
   and no public link opens a design image (`publicPhoto` requires `purpose = 'photo'`). The other direction, a photo as a design image, is `Service.DesignImages(ctx, owner, yearbookID, ids)`, which returns the ids that are design images of
   that owner's yearbook: the layout task must use it before it stores a media id (`TestDesignImageIsolation`).
-- **Limits.** At most 30 design images per yearbook (`maxDesignPerYearbook`); they do not count toward the 200 photos. Their stored bytes (display + thumb + print) count with the photos' in the owner's 500 MiB per user. `ERROR_QUOTA_EXCEEDED` (409) for either.
+- **Limits.** At most 30 design images per yearbook (`maxDesignPerYearbook`); they do not count toward the 200 photos. Their stored bytes (display + thumb + print) count with the photos' in the owner's 500 MiB per user. The 31st design image is `ERROR_DESIGN_IMAGE_LIMIT` (409, `data: {limit: 30}`, T-164); the 500 MiB quota stays `ERROR_QUOTA_EXCEEDED` (409) for photos and design images alike.
 - **Delete.** `media/delete` works for a design image (idempotent, objects first). Deleting the yearbook deletes its design images with the rows and the prefix (`TestDesignImageDelete`). A layout that still references a deleted
   image is the reader's problem (`book-data/get` drops the background or item, T-153); deletion never checks for references.
 - **Class admin.** `media.Store.readable` also opens a design image of a member's linked book for the class admin (read only, `no-store`) **only while the member's stored layout references it** (T-153: `bg.media` or an `image` item of `book_layout_tab.layout_json`; before T-153 every design image of the book was readable); see docs/class-permissions.md and docs/class-privacy-review.md.

@@ -2215,6 +2215,14 @@ export interface components {
                 }[];
             };
         };
+        /** @description `ERROR_QUOTA_EXCEEDED` (no `data`) or `ERROR_DESIGN_IMAGE_LIMIT` (`data.limit`). */
+        MediaCreateConflictError: components["schemas"]["ApiError"] & {
+            /** @description Only on `ERROR_DESIGN_IMAGE_LIMIT`. */
+            data?: {
+                /** @description The most design images one yearbook can hold (30). */
+                limit: number;
+            };
+        };
         /** @description `ERROR_VERSION_CONFLICT`: `data` is the stored version and document (`layout` null when it was reset or the template changed). */
         BookLayoutConflictError: components["schemas"]["ApiError"] & {
             /** @description The stored version and document. */
@@ -3790,7 +3798,15 @@ export interface operations {
             403: components["responses"]["ApiForbidden"];
             404: components["responses"]["ApiNotFound"];
             408: components["responses"]["ApiRequestTimeout"];
-            409: components["responses"]["ApiConflict"];
+            /** @description `ERROR_QUOTA_EXCEEDED` (photo cap or the 500 MiB quota) or `ERROR_DESIGN_IMAGE_LIMIT` (30 design images; `data.limit`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaCreateConflictError"];
+                };
+            };
             413: components["responses"]["ApiTooLarge"];
             415: components["responses"]["ApiUnsupportedMediaType"];
             429: components["responses"]["ApiRateLimited"];
