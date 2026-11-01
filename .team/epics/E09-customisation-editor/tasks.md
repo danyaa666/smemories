@@ -149,7 +149,7 @@ Spec: .team/epics/E09-customisation-editor/11-design-image-uploads.md (read it f
 - 2026-11-01 04:10Z · leader · merged 34d8b5a (PR #150, head f9fbe1e); QA_PASS with full local suite; owner approved
 
 ### T-153 — [E09] Layout document model and API (backend)
-- **Status:** TODO
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -158,16 +158,17 @@ Spec: .team/epics/E09-customisation-editor/11-design-image-uploads.md (read it f
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-11-01 04:10Z by leader
-- **Comments-seen:** 2
+- **Branch:** task/t-153-e09-layout-document-model-and-api-backen
+- **PR:** https://github.com/danyaa666/smemories/pull/152
+- **Updated:** 2026-11-01 04:38Z by dev
+- **Comments-seen:** 3
 
 Spec: .team/epics/E09-customisation-editor/12-layout-document-model-and-api.md (read it from the main checkout). book_layout_tab, document v1 (ADR 0004 units), booklayout package, book-layout/get|save|reset with optimistic concurrency, manifest design.layout, book-data/get carries layout.
 
 #### Comments
 - 2026-10-31 11:18Z · leader · Spec updated: new requirement 9 (narrow the class admin's read of design images to images the stored layout references; T-152 left it open) and AC6. Read the spec again when you start.
 - 2026-11-01 04:10Z · leader · T-152 merged (34d8b5a); spec updated with admin-read narrowing and DesignImages check
+- 2026-11-01 04:38Z · dev · PR #152 head 3aeaf04. Backend only (schema.d.ts regenerated). Run: go test -race ./..., integration for booklayout/bookdata/bookdesign/class/db/yearbook/templates/config/metrics/notes/media/bookexport, scripts/check-class-matrix.sh (now also book-layout/* and media/get-content), newman folder 'book-layout (T-153)' 40 req/104 assertions 0 failed, e2e 7 passed (own compose dev153). Notes: anonymous gets 401 (like book-design), non-owner/class admin 404; reset restarts version at 1; book-data layout fields not 'required' in OpenAPI (keeps web fixtures typing); account delete/export do not exist yet (T-025). Not run: print-check (no web/print change).
 
 ### T-154 — [E09] Web layout runtime: the book draws a layout (Memory Book)
 - **Status:** BACKLOG
