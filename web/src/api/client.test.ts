@@ -37,6 +37,25 @@ describe("api client", () => {
     });
   });
 
+  it("keeps `data` of an error body (book-layout 409 carries the stored document)", async () => {
+    stubFetch(async () =>
+      json(
+        {
+          status: "ERROR_VERSION_CONFLICT",
+          error_message: "x",
+          data: { version: 4, layout: null },
+        },
+        { status: 409 },
+      ),
+    );
+    const err = await getHealth().catch((e: unknown) => e);
+    expect(err).toMatchObject({
+      status: 409,
+      code: "version_conflict",
+      data: { version: 4, layout: null },
+    });
+  });
+
   it("falls back to unknown_error and the X-Request-Id header for a non-envelope body", async () => {
     stubFetch(
       async () =>
