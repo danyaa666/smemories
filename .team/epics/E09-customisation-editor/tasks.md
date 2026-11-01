@@ -235,7 +235,7 @@ Spec: .team/epics/E09-customisation-editor/14-fix-stale-book-design-newman-steps
 - 2026-10-31 15:37Z · leader · merged b2bc66e (PR #151, head 1a78b64); QA_PASS: collection 132 assertions, 0 failed, twice
 
 ### T-156 — [E09] Layout version must never go back (reset / template change)
-- **Status:** IN_QA
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** fix
 - **Milestone:** M4
@@ -243,20 +243,26 @@ Spec: .team/epics/E09-customisation-editor/14-fix-stale-book-design-newman-steps
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** —
 - **Branch:** task/t-156-e09-layout-version-must-never-go-back-re
 - **PR:** https://github.com/danyaa666/smemories/pull/154
-- **Updated:** 2026-11-01 06:40Z by qa
-- **Comments-seen:** 2
+- **Updated:** 2026-11-01 06:55Z by leader
+- **Comments-seen:** 4
 
 Spec: .team/epics/E09-customisation-editor/15-layout-version-never-goes-back.md (read it from the main checkout). QA ABA finding on T-153: reset restarts the version, so a stale editor can overwrite newer work
 
 #### Comments
 - 2026-11-01 06:24Z · dev · PR #154 head 8b3c25d. Counter on yearbook_tab.layout_version (migration 20261101130000, backfilled from layout rows); save compares base to it under the row lock, reset and template change delete the row and +1. After reset get -> layout null, version N+1; 409 carries current version. Tests: TestVersionNeverGoesBack (AC1-3), TestMigrateYearbookLayoutVersion (AC4), existing reset/template tests updated. Own compose t156: go test -race -tags integration ./... all ok, make lint 0, check:api ok, class-matrix ok, newman customisation-editor x2: 135 req/295 assert/0 failed. Not run: e2e/print-check (no web/print change). Note: reset on a book with no layout also bumps the version (harmless). Deploy migrate+code together.
 - 2026-11-01 06:25Z · leader · Leader note for QA: dev did not re-run the full integration suite after fixing TestMigrateBookLayoutTable (only TestMigrate*), and did not repeat the HTTP reproduction on a live stack. Run the full make test-integration equivalent, the live ABA reproduction (reset and template-change variants), migration up/down with existing rows (versions backfilled from layout rows), class matrix and newman, and quote result lines with the head SHA.
+- 2026-11-01 06:54Z · qa · QA_PASS on PR #154 head 8b3c25d (CI go/web/security pass; mergeable). Own compose project qa156 on ports 23306/26379/29000 (SMEM_TEST_S3_ENDPOINT set), torn down after.
+  RESULT LINES (head 8b3c25d): go test -race -count=1 -tags integration ./... = 33 pkgs ok, 0 FAIL (booklayout 73s, bookdata 46s, db 195s); go test -race ./... = 32 ok; make lint = 0 (gofmt, vet x2, golangci, eslint, tsc, i18n, check:api 'api schema ok', check-assets); scripts/check-class-matrix.sh ok (24 ops); newman customisation-editor x2 (limits reset between, --working-dir postman) = 135 req / 295 assert / 0 failed, both runs; e2e 7/7 passed; print-check 163/163, 0 fail.
+  AC EVIDENCE (live API on qa156, my own script, SMEM_ENV=dev): AC1 X at v3, reset -> get layout null version 4, 3 saves elsewhere -> 7, X save base 3 -> 409 {layout, version:7}, stored untouched. AC2 template variant (memory-book is the only customisable template, so memory-book -> navy-classic -> memory-book): get version 4 then 5 layout null; 3 saves -> 8; X base 3 and base 4 -> 409 carrying version 8; base 8 -> 200 (9). AC3 fresh book get = version 0/no layout, first save 1; sequence save x3 / reset / save x3 / reset / save / template change = 1,2,3,4,5,6,7,8,9,10 strictly increasing. Concurrency: 8 parallel saves with the same base + a reset: exactly one winner at most, never a double 200; no row has book_layout_tab.version != yearbook_tab.layout_version. AC4 migration on a real DB: up -> column BIGINT NOT NULL DEFAULT 0; down -> column gone, layout rows and yearbooks kept, version back to 20261101120000; with rows (A layout v7, B no layout, C layout v1) up backfilled A=7, B=0, C=1; down then up again re-backfills the same. Yearbook delete: layout get 404, 0 orphan book_layout_tab rows. Reset on a book with no layout: 200, version 0 -> 1, layout null, harmless. 409 carries current version (7, 8). AC5 all lines above.
+  MIGRATION SAFETY: expand-only (one NOT NULL DEFAULT 0 column + backfill UPDATE; old code ignores it, old inserts get 0), so it can run before the code. Caveat (non-blocking): old code running between migrate and deploy keeps bumping only book_layout_tab.version and its reset restarts at 1, so a book saved or reset in that window can have a stale counter; the new code then just uses the counter (self-consistent, the ABA protection starts from the counter). Nothing is shipped to users yet (editor T-154 unreleased), so migrate+code together as dev says is fine.
+  NON-BLOCKING OBSERVATIONS: (1) A reset of a book with no layout moves version 0 -> 1, so an editor that read version 0 and then saves base 0 gets one harmless 409 and must reload (spec allows). (2) book-data/get layout_version stays 0 when layout is null (documented print payload), while book-layout/get returns the real counter; T-154 must take base_version from book-layout/get, not book-data/get. (3) After a template change to a non-customisable template save returns 400 template_not_customisable before any version compare (fine). (4) 429 from layout save limit (60/min) seen only under my 9-thread burst.
+- 2026-11-01 06:55Z · leader · merged 7adc7af (PR #154, head 8b3c25d); QA_PASS: integration 33 pkgs 0 FAIL, newman 295/0 x2, e2e 7/7, print-check 163/163, live ABA repro 409 both variants
 
 ### T-157 — [E09] print-check: refuse a foreign server on its port; refresh test counts in docs
-- **Status:** TODO
+- **Status:** READY_FOR_QA
 - **Priority:** P3
 - **Type:** test
 - **Milestone:** M4
@@ -265,18 +271,19 @@ Spec: .team/epics/E09-customisation-editor/15-layout-version-never-goes-back.md 
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-11-01 06:43Z by leader
+- **Branch:** task/t-157-e09-print-check-refuse-a-foreign-server-
+- **PR:** 155
+- **Updated:** 2026-11-01 06:55Z by dev
 - **Comments-seen:** 1
 
 Spec: .team/epics/E09-customisation-editor/16-print-check-start-server-strict.md (read it from the main checkout). QA found print-check silently tested a stale vite on :5199
 
 #### Comments
 - 2026-11-01 06:43Z · leader · T-154 merged
+- 2026-11-01 06:55Z · dev · Head 2646dc6. print-check picks a free port itself; foreign server on PRINT_CHECK_PORT fails fast (new server.test.mjs, plus real stale vite on 5199 tried, left alive). make print-check 181/181 pass; web lint/tsc/vitest green. QA: run make print-check with a dummy server on 5199 and with PRINT_CHECK_PORT=5199.
 
 ### T-158 — [E09] Editor state: document store, undo/redo, autosave and conflict handling (web)
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -287,12 +294,13 @@ Spec: .team/epics/E09-customisation-editor/16-print-check-start-server-strict.md
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-11-01 08:00Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-11-01 06:55Z by leader
+- **Comments-seen:** 1
 
 Spec: .team/epics/E09-customisation-editor/17-editor-state-undo-autosave.md (read it from the main checkout). Pure operations, snapshot history depth 100, debounced autosave with base_version, 409 choices
 
 #### Comments
+- 2026-11-01 06:55Z · leader · T-156 merged 7adc7af; spec notes base_version source
 
 ### T-159 — [E09] Editor route and shell: page strip, zoom, selection overlay, property panel (web)
 - **Status:** BACKLOG
