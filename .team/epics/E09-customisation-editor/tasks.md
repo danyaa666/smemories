@@ -556,7 +556,7 @@ Spec: .team/epics/E09-customisation-editor/23-palette-follow-ups.md (read it fro
 - 2026-11-01 21:57Z · leader · merged a994dc6; QA: test-integration 33 pkgs ok, e2e 32/0, print-check 187/187, vitest 1045
 
 ### T-165 — [E09] Editor version history panel: list, preview and restore (web)
-- **Status:** IN_QA
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -564,11 +564,11 @@ Spec: .team/epics/E09-customisation-editor/23-palette-follow-ups.md (read it fro
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** —
 - **Branch:** task/t-165-e09-editor-version-history-panel-list-pr
 - **PR:** https://github.com/danyaa666/smemories/pull/163
-- **Updated:** 2026-11-01 22:11Z by qa
-- **Comments-seen:** 3
+- **Updated:** 2026-11-01 22:30Z by leader
+- **Comments-seen:** 5
 
 Spec: .team/epics/E09-customisation-editor/24-version-history-panel.md (read it from the main checkout). History button and panel, read-only preview of a snapshot, restore through the T-163 routes with settle first, history cleared after restore, dropped count message, every error mapped, e2e spec editor-history
 
@@ -576,6 +576,32 @@ Spec: .team/epics/E09-customisation-editor/24-version-history-panel.md (read it 
 - 2026-11-01 21:35Z · leader · T-163 merged (f0eb70f); version routes use the save rate limit (burst 20/10s), so no polling and cache previews
 - 2026-11-01 22:10Z · dev · PR #163 head 1f614a6 (rebased on develop 563b347). Web only. Local: vitest 1078 pass, lint/prettier/tsc/lint:i18n/check:api/build green. e2e (scripts/e2e.sh direct, private stack t165dev, ports 45306/45379/45333, SMEM_TEST_S3_ENDPOINT set): 37 passed 0 failed incl. editor-history.spec.mjs (4 tests: three bursts+preview+restore+reload, dropped image, two tabs 200+409, keyboard only); one earlier run had a one-off failure of editor-gestures touch test (2 px, passed on 2 other runs, unrelated). Print-check not run (no print/page rendering change). To verify: no version-* call before History opens; 31+ snapshots list stops at 30; restore with pending autosave; spec uses mysql CLI to back-date snapshots (docs/editor-history.md). Preview bar lives at top of the panel (keyboard reach). Editor does not mount below 768px so no phone dialog.
 - 2026-11-01 22:11Z · leader · Leader to QA: PR #163 head 1f614a69d57b5b67496ac797160e41a3de4265dd (web only). Run vitest, lint, tsc, lint:i18n, check:api, build and the full e2e (scripts/e2e.sh on your own stack; the new tools/e2e/editor-history.spec.mjs back-dates snapshots with the mysql CLI against SMEM_DB_DSN: confirm the client is documented in docs/e2e.md and the spec fails with a clear message when it is missing). Dev saw one 2 px flake in editor-gestures touch once: run e2e twice and report any repeat. Check per spec 24: no version-* request before History opens (Network); list stops at 30 with 31+ snapshots; restore while an autosave is pending keeps the pending edit; two tabs give one conflict; restore with a deleted design image shows the dropped message; keyboard-only walk and Esc focus return; a failed restore changes nothing. Result lines with counts and full SHA in your comment. Accepted: no phone dialog (editor does not mount below 768 px; phone mode is a later task).
+- 2026-11-01 22:30Z · qa · QA_PASS T-165, PR #163, head 1f614a69d57b5b67496ac797160e41a3de4265dd (full SHA). Web only; go/security/web CI green on this head.
+  
+  RESULT LINES (own stack t165qa, ports mysql 46306 / redis 46379 / s3 46333, SMEM_TEST_S3_ENDPOINT set, scripts/e2e.sh direct in the worktree, api 48080, web 44173):
+  - vitest: 62 files, 1078 passed, 0 failed
+  - eslint --max-warnings 0 + prettier --check: clean; tsc --noEmit: clean; lint:i18n: ok; check:api: ok; vite build: ok
+  - e2e run 1: 37 passed, 0 failed (incl. editor-history.spec.mjs 4/4)
+  - e2e run 2: 35 of 37 ... ONLY h2-gallery and journey failed with register 429 (limit not reset between direct runs; documented in docs/e2e.md). Environmental, not the PR. After flushing my own Redis: e2e run 3 = 37 passed, 0 failed (editor-gestures touch test passed in all 3 runs; the dev's 2 px flake did not repeat). e2e run 4 = 37 passed, 0 failed. So 3 full clean runs.
+  - print-check: not run (no print/page-rendering change; web-only editor UI)
+  - go-integration: not run (no Go change in this PR)
+  
+  AC evidence:
+  AC1 editor-history.spec test 1 (three bursts, open History, preview oldest, Back to current, restore, reload persisted, undo/redo disabled, Ctrl/Cmd+Z does nothing, new Before restore row): pass x4 runs.
+  AC2 spec test 2 (deleted design image: preview says 1 item will be dropped, restore dropped 1, message shown, book-layout/get never names the image): pass.
+  AC3 vitest maps each error to its own vi/en key (versions.test.ts, EditorHistory.test.tsx: invalid, template changed, 429 retry, offline, conflict); spec test 3 two tabs: 200 + 409 conflict banner, nothing overwritten: pass. I also saw live: list refresh after a restore hit the save rate limit and the panel showed "Too many requests. Try again in 5 s." with Try again, document untouched.
+  AC4 spec asserts no version-* call while editing and only version-list after History opens; the preview of the same row twice = one version-get. My own probe (33 saves, each back-dated, 32+ snapshots written): server version-list returns 30 and the panel shows exactly 30 rows after 1 list call; after three restores in a row (rows 0, 4 and 29) the list stays at 30. Preview cache max 5: versions.test.ts PreviewCache.
+  AC5 spec test 4 keyboard only + EditorHistory.test.tsx keyboard: Esc returns focus to History button (also asserted in my probe).
+  AC6 all web checks above green; no new dependency; nothing under .team/ in the PR diff (16 files: web, tools/e2e, docs).
+  Restore with a pending autosave (my probe): edit width to 77, open History within the debounce, restore an older row: a save went out first (200), restore 200, and the replaced document (77 %) is the new first Before restore row, restored version wins; version increased.
+  docs/e2e.md documents the mysql client for editor-history.spec; the spec throws a clear message when SMEM_DB_DSN does not match user:pass@tcp(host:port)/db. A missing mysql binary gives a raw spawn ENOENT from execFileSync (not a friendly text): non-blocking.
+  
+  Non-blocking:
+  1. Missing mysql client error is a raw ENOENT; a one-line hint would help.
+  2. Restore refreshes the list right away; with the shared save limit (60/min) a heavy user sees the 429 text then Try again (works, message is clear).
+  3. The probe spec (33 saves, restores in a row, pending-autosave restore) is NOT committed (it takes ~50 s and needs wiring in playwright.config testMatch); I can commit it on request.
+  Stack t165qa removed (own project only). Stale vite pids on :5199 untouched.
+- 2026-11-01 22:30Z · leader · merged 3e5c742; QA: vitest 1078, e2e 3 clean runs 37/0 (4th hit register 429, flushed redis), history probes 33 saves->30 rows, pending autosave saved first. Non-blocking: raw ENOENT when mysql client missing; QA probe spec not committed
 
 ### T-166 — [E09] Navy Classic: page kinds and editable elements for the layout editor (web + manifest)
 - **Status:** IN_PROGRESS
@@ -612,6 +638,25 @@ Spec: .team/epics/E09-customisation-editor/25-navy-classic-layout.md (read it fr
 - **Comments-seen:** 0
 
 Spec: .team/epics/E09-customisation-editor/26-class-book-layouts.md (read it from the main checkout). BookMember.layout read as the owner, layout before notes under the 8 MiB cap with truncated_layouts, privacy docs and matrix, web class book wiring, print-check and class e2e
+
+#### Comments
+
+### T-168 — [E09] History e2e hardening: friendly mysql-missing message, QA probe cases (tests only)
+- **Status:** TODO
+- **Priority:** P3
+- **Type:** test
+- **Milestone:** M4
+- **Depends-on:** none
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-11-02 05:35Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E09-customisation-editor/27-history-e2e-hardening.md (read it from the main checkout). Friendly message when the mysql client is missing, QA's three probe cases committed (30-row cap, restores in a row, pending autosave), spec time under about 60 s
 
 #### Comments
 
