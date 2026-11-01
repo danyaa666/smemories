@@ -1,8 +1,8 @@
 {
   "info": {
     "name": "SMemories - customisation editor (E09)",
-<<<<<<< HEAD
     "description": "Design-image uploads (E09 stage 2, T-152, D-43): `POST /api/media/create` with `purpose=design` and `GET /api/media/get-list?purpose=design` (folder design-images); a run makes about 9 uploads (limit 60 per 10 minutes per user). The 31st design image answers `409 ERROR_DESIGN_IMAGE_LIMIT` with `data.limit` 30 (T-164); that needs 31 uploads, more than this collection's upload budget, so it is proved by the Go integration test `TestDesignQuotas` and the e2e palette spec, not here. Book designs (E09 stage 1, T-141, D-41): `GET /api/book-design/get`, `POST /api/book-design/update`, `POST /api/book-design/reset`, the `design` of `GET /api/book-data/get` and the reset when a book's template changes. `{status,data}` envelope, `ERROR_*` codes. Uses the two verified accounts of notes.postman_collection.json (A owns the books, B is the other user; book-data/get needs a verified email): run that collection's Setup once (or this one's) and then `make verify-newman-users`. Run from the repository root: `newman run postman/customisation-editor.postman_collection.json`. Start the API with SMEM_ENV=dev and the `make up` stack. Each folder creates and deletes its own yearbook, so the collection can run twice in a row; a run makes about 40 design writes (limit 60 per 10 minutes per user, `make reset-limits` clears it), so wait or reset between two runs. Layout history (T-163): folder `book-layout history (T-163)` covers `version-list`, `version-get` and `restore` and the snapshots that `save` and `reset` store; it makes about 12 rate-limited calls (the `save` limits apply, burst 20 per 10 seconds) in its Full flow.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     {
