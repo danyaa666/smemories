@@ -2,10 +2,14 @@ import {
   createContext,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
+  useRef,
+  useState,
   type CSSProperties,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import type { BookData } from "../../api/book";
 import { AssetSvg, getAsset, loadSvg } from "../assets";
 import { Photo, useBookEnv } from "../env";
@@ -82,8 +86,15 @@ export function naturalBox(n: Natural): Box {
 export function Editable({ layoutId: id, children }: { layoutId: string; children: ReactNode }) {
   const ctx = useLayout();
   const { size } = useBookEnv();
+  // A moved box is placed in page units, so it is drawn straight into the page element (a portal): a positioned ancestor of the template
+  // (`.mb-cover-head`, `.mb-flow`) would otherwise offset it (T-159 rework 1). The marker only tells where the page is.
+  const marker = useRef<HTMLSpanElement>(null);
+  const [page, setPage] = useState<Element | null>(null);
   const ov = ctx?.doc.pages[kindOf(id)]?.overrides?.[id];
   const nat = ctx?.spec.natural[id];
+  useLayoutEffect(() => {
+    setPage(marker.current?.closest(".mb-page") ?? null);
+  });
   if (!ctx) return <>{children}</>; // no layout: the page is exactly what it always was
   const moves = ov && (ov.hidden || [ov.x, ov.w, ov.h, ov.cy, ov.r].some((v) => v !== undefined));
   if (!moves || !nat)
@@ -100,14 +111,16 @@ export function Editable({ layoutId: id, children }: { layoutId: string; childre
     cy: ov.cy ?? base.cy,
     r: ov.r ?? base.r,
   };
+  const drawn = (
+    <div data-layout-id={id} className="mb-ov" style={boxStyle(box, pageBox(size))}>
+      {children}
+    </div>
+  );
   return (
     <>
       {nat.flow && <div aria-hidden="true" style={{ flex: "none", width: nat.w, height: nat.h }} />}
-      {!ov.hidden && (
-        <div data-layout-id={id} className="mb-ov" style={boxStyle(box, pageBox(size))}>
-          {children}
-        </div>
-      )}
+      {!ov.hidden && <span ref={marker} hidden />}
+      {!ov.hidden && page && createPortal(drawn, page)}
     </>
   );
 }

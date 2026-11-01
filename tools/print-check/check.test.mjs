@@ -1188,6 +1188,62 @@ describe("layout layer: the printed page is the page on screen (T-154)", () => {
     });
   }
 
+  // T-159 rework 1 (R1): a moved template element is drawn where its stored box says. Every editable id gets an override equal to the box it already has; nothing may move,
+  // wherever the template's own markup puts it (a positioned ancestor such as .mb-cover-head used to offset the box). Rects are read as fractions of the page.
+  for (const size of ["A5", "A4", "Letter"]) {
+    test(`${size}: an override equal to the natural box leaves every editable element where it was`, async () => {
+      const TILT = { "cover.photo": -3, "cover.sticker": 10, "profile.photo": -2 }; // the template's own tilt (memory.tsx LAYOUT.natural)
+      const book = makeBook({ size, notes: 2, template: "memory-book" });
+      book.layout = { v: 1, pages: {} };
+      const read = (p, natural) =>
+        p.evaluate((natural) => {
+          const out = {};
+          for (const w of document.querySelectorAll("[data-layout-id]")) {
+            const id = w.dataset.layoutId;
+            if (out[id]) continue;
+            const el = natural ? w.firstElementChild : w;
+            const s = w.closest(".bk-inner").getBoundingClientRect();
+            const a = el.getBoundingClientRect();
+            const rec = { aabb: { x: (a.left - s.left) / s.width, y: (a.top - s.top) / s.width, w: a.width / s.width, h: a.height / s.width } };
+            if (natural) {
+              const keep = el.style.getPropertyValue("transform");
+              el.style.setProperty("transform", "none", "important"); // the unrotated box is what an override stores
+              const b = el.getBoundingClientRect();
+              el.style.setProperty("transform", keep);
+              rec.box = { x: Math.round(((b.left - s.left) / s.width) * 1000), w: Math.round((b.width / s.width) * 1000), h: Math.round((b.height / s.width) * 1000), cy: Math.round(((b.top + b.height / 2 - s.top) / s.height) * 1000) };
+            }
+            out[id] = rec;
+          }
+          return out;
+        }, natural);
+      const a = await browser.newPage({ viewport: { width: 1400, height: 1900 } });
+      await serveBook(a, book);
+      await open(a);
+      const before = await read(a, true);
+      await a.close();
+      const ids = Object.keys(TILT).concat(["cover.title", "profile.heading", "notes.heading", "back.heading", "back.pact"]);
+      for (const id of ids) assert.ok(before[id], `${id} is on a page of the fixture book`);
+      const pages = {};
+      for (const id of ids) {
+        const kind = id.split(".")[0];
+        (pages[kind] ??= { overrides: {} }).overrides[id] = { ...before[id].box, r: TILT[id] ?? 0 };
+      }
+      book.layout = { v: 1, pages };
+      const b = await browser.newPage({ viewport: { width: 1400, height: 1900 } });
+      await serveBook(b, book);
+      await open(b);
+      const after = await read(b, false);
+      await b.close();
+      const worst = [];
+      for (const id of ids) {
+        const d = Math.max(...["x", "y", "w", "h"].map((k) => Math.abs(before[id].aabb[k] - after[id].aabb[k])));
+        worst.push(`${id} ${(d * 100).toFixed(2)} %`);
+        assert.ok(d < 0.0015, `${size} ${id}: natural ${JSON.stringify(before[id].aabb)} drawn ${JSON.stringify(after[id].aabb)} (budget 0.15 % of the page width, about 1.2 design px)`);
+      }
+      console.log(`# ${size} override = natural box, largest rect change per id: ${worst.join(", ")}`);
+    });
+  }
+
   // T-159 AC3: the editor's stage draws the same page as the book screen. Both are on-screen renderings at paper size (zoom 100 %, scale 1), so unlike the print
   // comparison above there is no PDF noise: the layout-bearing page must differ by far less than the 0.5 % budget.
   for (const size of ["A5", "A4", "Letter"]) {
