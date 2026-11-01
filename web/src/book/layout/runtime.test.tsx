@@ -22,6 +22,7 @@ const manifest = JSON.parse(
       page_kinds: { id: string; editable: string[] }[];
       text_fonts: string[];
       colors: string[];
+      text_size: { min: number; max: number };
     };
   };
 };
@@ -133,6 +134,12 @@ describe("the manifest and the template agree", () => {
     expect(Object.keys(tpl.layout?.fonts ?? {}).sort()).toEqual(
       [...manifest.design.layout.text_fonts].sort(),
     );
+  });
+});
+
+describe("text size", () => {
+  it("the web knows the manifest's range of a text item's size (T-161)", () => {
+    expect(getTemplate("memory-book").layout?.textSize).toEqual(manifest.design.layout.text_size);
   });
 });
 

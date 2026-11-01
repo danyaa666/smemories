@@ -337,16 +337,109 @@
   color: var(--color-ink-2);
   font-size: 0.875rem;
 }
-.ed-preview {
-  max-height: 8rem;
-  overflow: auto;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
 .ed-danger {
   margin-top: var(--space-3);
   color: var(--color-error);
 }
 .ed-row {
+  margin-top: var(--space-2);
+}
+
+/* text boxes (T-161) */
+/* The field on the page is the printed text itself, made typeable: same box, font, size, line height and wrapping, no frame of its own (the selection outline is the frame). */
+.ed-textarea {
+  position: absolute;
+  inset: auto;
+  left: 0;
+  top: 0;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  resize: none;
+  overflow: hidden;
+  pointer-events: auto;
+  letter-spacing: inherit;
+  font-kerning: inherit;
+  font-variant: inherit;
+  font-feature-settings: inherit;
+  text-rendering: inherit;
+  tab-size: 8;
+  caret-color: currentcolor;
+  appearance: none;
+  unicode-bidi: isolate;
+  user-select: text;
+  -webkit-user-select: text;
+}
+/* the page-wide focus ring would draw 5 px around a field that is part of the printed text; the dashed outline of the box says it is open */
+.ed-textarea:focus,
+.ed-textarea:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+.ed-box.is-editing .ed-hit {
+  pointer-events: none;
+  border-style: dashed;
+}
+.ed-warn {
+  margin: var(--space-1) 0;
+  padding: var(--space-1) var(--space-2);
+  border-left: 3px solid var(--color-error);
+  color: var(--color-error);
+  font-size: 0.875rem;
+}
+.ed-text {
+  min-width: 0;
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+}
+.ed-panel-text {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+}
+.ed-text select {
+  min-height: 36px;
+  font: inherit;
+}
+.ed-slider {
+  width: 100%;
+  margin: 0 0 var(--space-2);
+}
+/* the swatches take the theme of the book through the template's custom properties; .mb-layer is only borrowed for those (it is a page layer otherwise) */
+.ed-swatches.mb-layer {
+  position: static;
+  overflow: visible;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  pointer-events: auto;
+}
+.ed-panel .ed-swatch {
+  width: 32px;
+  min-height: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--color-ink-2);
+  border-radius: 50%;
+}
+.ed-panel .ed-swatch[aria-checked="true"] {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+.ed-panel [aria-pressed="true"] {
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary);
+}
+.ed-check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   margin-top: var(--space-2);
 }

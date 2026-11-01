@@ -13,7 +13,7 @@ import { createPortal } from "react-dom";
 import type { BookData } from "../../api/book";
 import { AssetSvg, getAsset, loadSvg } from "../assets";
 import { Photo, useBookEnv } from "../env";
-import { FitText } from "../fit";
+import { FitText, type FitInfo } from "../fit";
 import { DESIGN_W, designHeight } from "../sizes";
 import { boxStyle, pageBox, type Box } from "./geometry";
 
@@ -41,22 +41,39 @@ export type TemplateLayout = {
   colors: Record<string, string>;
   fonts: Record<string, string>;
   natural: Record<string, Natural>;
+  /** The manifest's `design.layout.text_size` (design px): the range of a text item's size; a test pins it. */
+  textSize: { min: number; max: number };
 };
 
-type Ctx = { doc: LayoutDoc; spec: TemplateLayout };
+/**
+ * The editor's text field (T-161): while it is set, the text item with `id` is drawn with the field laid over its printed text. The printed text stays
+ * (hidden), so the fit rule keeps running on it and the field takes the size it chose. Never set on the print route or in the class book.
+ */
+export type TextEdit = {
+  id: string;
+  /** `style` is the printed text's own style (the field copies it); `fit` is what the fit rule chose for the printed text. */
+  render: (item: Item, fit: FitInfo | undefined, style: CSSProperties) => ReactNode;
+};
+
+type Ctx = { doc: LayoutDoc; spec: TemplateLayout; edit?: TextEdit };
 const LayoutContext = createContext<Ctx | null>(null);
 
 /** Gives the pages below it the layout of one book. Without a document, or for a template with no layout block, every page draws as it always did. */
 export function LayoutProvider({
   layout,
   spec,
+  edit,
   children,
 }: {
   layout: LayoutDoc | null | undefined;
   spec: TemplateLayout | undefined;
+  edit?: TextEdit;
   children: ReactNode;
 }) {
-  const value = useMemo(() => (layout && spec ? { doc: layout, spec } : null), [layout, spec]);
+  const value = useMemo(
+    () => (layout && spec ? { doc: layout, spec, edit } : null),
+    [layout, spec, edit],
+  );
   return <LayoutContext.Provider value={value}>{children}</LayoutContext.Provider>;
 }
 
@@ -157,7 +174,18 @@ export function useLayoutBg(kind: string): { color?: string; node?: ReactNode } 
 /** True when the kind has a background of its own: the template then leaves its paper colour and picture out. */
 export const hasLayoutBg = (bg: ReturnType<typeof useLayoutBg>) => !!(bg.color || bg.node);
 
-function TextItem({ item, kind, spec }: { item: Item; kind: string; spec: TemplateLayout }) {
+function TextItem({
+  item,
+  kind,
+  spec,
+  edit,
+}: {
+  item: Item;
+  kind: string;
+  spec: TemplateLayout;
+  edit?: TextEdit;
+}) {
+  const [fit, setFit] = useState<FitInfo>();
   const font = item.font !== undefined && Object.hasOwn(spec.fonts, item.font) ? item.font : "body";
   const color =
     item.color !== undefined && Object.hasOwn(spec.colors, item.color)
@@ -175,10 +203,18 @@ function TextItem({ item, kind, spec }: { item: Item; kind: string; spec: Templa
     whiteSpace: "pre-wrap",
     overflowWrap: "anywhere",
   };
+  const editing = edit?.id === item.id;
   return (
-    <FitText fitKey={`layout:${kind}:${item.id}`} style={style}>
-      {item.text ?? ""}
-    </FitText>
+    <>
+      <FitText
+        fitKey={`layout:${kind}:${item.id}`}
+        style={editing ? { ...style, visibility: "hidden" } : style}
+        onFit={editing ? setFit : undefined}
+      >
+        {item.text ?? ""}
+      </FitText>
+      {editing && edit.render(item, fit, style)}
+    </>
   );
 }
 
@@ -216,8 +252,9 @@ const ItemView = memo(function ItemView({
   spec: TemplateLayout;
 }) {
   const { size } = useBookEnv();
+  const edit = useLayout()?.edit;
   let body: ReactNode = null;
-  if (item.t === "text") body = <TextItem item={item} kind={kind} spec={spec} />;
+  if (item.t === "text") body = <TextItem item={item} kind={kind} spec={spec} edit={edit} />;
   else if (item.t === "asset" && item.asset && getAsset(item.asset))
     body = <AssetItem item={item} spec={spec} />;
   else if (item.t === "image" && item.media)

@@ -1010,7 +1010,11 @@
     "clearBackground": "Clear background",
     "refused": {
       "bad_box": "That place or size is outside the limits.",
-      "other": "That change is not allowed."
+      "other": "That change is not allowed.",
+      "too_many_on_page": "This page already has 40 items. Delete one to add another.",
+      "too_many_in_total": "The book already has 150 added items. Delete one to add another.",
+      "text_too_long": "That text is longer than 500 characters.",
+      "bad_text": "That text has characters that cannot be printed."
     },
     "box": "Place and size (% of the page)",
     "x": "Left",
@@ -1087,6 +1091,35 @@
       "narrower": "Narrower",
       "taller": "Taller",
       "shorter": "Shorter"
-    }
+    },
+    "addText": "Add text",
+    "newText": "Your text",
+    "textAdded": "Text box added. Type to replace the text; Escape to finish.",
+    "textField": "Text of the box",
+    "textPanelField": "Text of the box (edit here)",
+    "textCut": "Text is cut: it does not fit the box even at the smallest size. Make the box bigger or the text shorter.",
+    "runes": "{{n}} of {{max}} characters",
+    "font": {
+      "label": "Font",
+      "display": "Heading font",
+      "body": "Body font"
+    },
+    "size": "Size",
+    "sizeSlider": "Size slider",
+    "color": {
+      "label": "Colour",
+      "ink": "Ink",
+      "soft": "Soft ink",
+      "paper": "Paper",
+      "white": "White",
+      "accent": "Accent"
+    },
+    "align": {
+      "label": "Alignment",
+      "left": "Left",
+      "center": "Centre",
+      "right": "Right"
+    },
+    "bold": "Bold"
   }
 }

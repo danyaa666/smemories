@@ -90,12 +90,15 @@ export function FitText({
   minScale = 0.5,
   className,
   style,
+  onFit,
 }: {
   fitKey: string;
   children: ReactNode;
   minScale?: number;
   className?: string;
   style?: CSSProperties;
+  /** Told the outcome of every fit (the editor's text field takes the size the fit rule chose from it). Pass a stable function. */
+  onFit?: (info: FitInfo) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const report = useContext(FitContext);
@@ -109,17 +112,31 @@ export function FitText({
       const info = fitElement(el, start, minScale);
       el.dataset.fit = info.state;
       report?.(fitKey, info);
+      onFit?.(info);
     };
     fit();
     const fonts = typeof document === "undefined" ? undefined : document.fonts;
     const again = () => live && fit();
     void fonts?.ready.then(again);
     fonts?.addEventListener?.("loadingdone", again);
+    // the editor (T-161) changes the box of a text: it fits again at its new size (a layout size change does not come through a render of this component)
+    const seen = { w: el.clientWidth, h: el.clientHeight };
+    const resized =
+      typeof ResizeObserver === "undefined"
+        ? undefined
+        : new ResizeObserver(() => {
+            if (el.clientWidth === seen.w && el.clientHeight === seen.h) return;
+            seen.w = el.clientWidth;
+            seen.h = el.clientHeight;
+            again();
+          });
+    resized?.observe(el);
     return () => {
       live = false;
       fonts?.removeEventListener?.("loadingdone", again);
+      resized?.disconnect();
     };
-  }, [children, minScale, size, fitKey, report]);
+  }, [children, minScale, size, fitKey, report, onFit]);
   // Only when the text leaves the page (not on every re-fit, which would make the summary flicker and loop).
   useLayoutEffect(() => () => report?.(fitKey, undefined), [fitKey, report]);
   return (
