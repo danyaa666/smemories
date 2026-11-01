@@ -334,7 +334,7 @@ Spec: .team/epics/E09-customisation-editor/17-editor-state-undo-autosave.md (rea
 - 2026-11-01 07:18Z · leader · merged cdaa62d (PR #156, head 0b2c3f3); QA_PASS after rework 1: vitest 814, mirror test 8/8, live 429/conflict/offline scenarios
 
 ### T-159 — [E09] Editor route and shell: page strip, zoom, selection overlay, property panel (web)
-- **Status:** TODO
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -343,15 +343,17 @@ Spec: .team/epics/E09-customisation-editor/17-editor-state-undo-autosave.md (rea
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-11-01 07:18Z by leader
-- **Comments-seen:** 1
+- **Branch:** task/t-159-e09-editor-route-and-shell-page-strip-zo
+- **PR:** https://github.com/danyaa666/smemories/pull/157
+- **Updated:** 2026-11-01 07:44Z by dev
+- **Comments-seen:** 3
 
 Spec: .team/epics/E09-customisation-editor/18-editor-shell-and-selection.md (read it from the main checkout). Route /yearbooks/:id/editor, overlay outside the page clip, panel numeric edits, e2e journey
 
 #### Comments
 - 2026-11-01 07:18Z · leader · T-158 merged cdaa62d
+- 2026-11-01 07:44Z · dev · PR #157 head ce6c1dc. Web only. Verified locally on own compose project t159stack (ports 23306/26379/29000): make e2e 8 passed (new editor-shell.spec.mjs), make print-check 184 pass (3 new stage-vs-book tests: A5 0.03/0.15 %, A4 0.08/0.34 %, Letter 0/0 %), web lint/prettier/tsc/vitest 844/lint:i18n/check:api/build green. QA: check A5/A4/Letter, Vietnamese labels, conflict banner from a second tab, keyboard-only (Tab select, panel edit, Ctrl+Z), narrow <768. Gaps: Preview as PDF opens /book in a new tab right after a flush (async save race possible); handles tabindex -1 (gestures and keyboard are T-160). memory.tsx natural keys reordered to draw order. docker permission was fine, no denied commands.
+- 2026-11-01 07:44Z · leader · Leader note for QA: also check the 'Preview as PDF' race dev flagged (opens /book in a new tab right after a save starts): the PDF must show the latest edit; if it can show the layout from before the last edit, report it (a flush-then-open fix is small). Run make e2e and make print-check on the PR head yourself, plus the conflict banner from a second client, A5/A4/Letter, Vietnamese labels, keyboard-only and the <768 px message.
 
 ### T-160 — [E09] Editor gestures: move, resize, rotate, snap, guides, with keyboard control (web)
 - **Status:** BACKLOG
