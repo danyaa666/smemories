@@ -225,6 +225,33 @@ describe("conflict (409)", () => {
     expect(snap()).toMatchObject({ doc: emptyDoc(), version: 2 });
   });
 
+  it.each(["useTheirs", "keepMine"] as const)(
+    "%s with no conflict body and a failing refetch stays in conflict without a rejection",
+    async (choice) => {
+      const { srv, store, snap } = await open({ version: 1, layout: doc1() });
+      srv.s.script.push(() => srv.fail(409, "ERROR_VERSION_CONFLICT")); // no data
+      store.apply(setText("cover", "aaaaaa", { text: "mine" }));
+      await tick(DEBOUNCE_MS);
+      expect(snap().saveState).toBe("conflict");
+      const real = globalThis.fetch;
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => {
+          throw new TypeError("Failed to fetch");
+        }),
+      );
+      await expect(store[choice]()).resolves.toBeUndefined();
+      expect(snap()).toMatchObject({ saveState: "conflict", dirty: true });
+      vi.stubGlobal("fetch", real); // back online: the same choice now works
+      await store[choice]();
+      await tick(0);
+      expect(snap().saveState).not.toBe("conflict");
+      expect(snap().doc.pages.cover?.items?.[0]).toMatchObject(
+        choice === "keepMine" ? { text: "mine" } : { text: "hi" },
+      );
+    },
+  );
+
   it("ABA: a stale base_version never wins, even when the stored document equals ours", async () => {
     const { srv, store, snap } = await open({ version: 1, layout: doc1() });
     srv.s.otherTab(doc1("bbbbbb"));
@@ -250,6 +277,45 @@ describe("other failures", () => {
     await tick(100);
     expect(srv.s.saves).toHaveLength(2);
     expect(snap()).toMatchObject({ dirty: false, saveState: "saved" });
+  });
+
+  it("a commit during a 429 wait does not save before Retry-After has passed", async () => {
+    const { srv, store, snap } = await open({ version: 1, layout: doc1() });
+    srv.s.script.push(() => srv.fail(429, "ERROR_RATE_LIMITED", undefined, { "Retry-After": "7" }));
+    store.apply(setText("cover", "aaaaaa", { text: "x" }));
+    await tick(DEBOUNCE_MS); // save 1 -> 429, wait until +7 s
+    await tick(2000);
+    store.apply(setText("cover", "aaaaaa", { text: "y" })); // the debounce would fire 1.5 s later, inside the wait
+    await tick(DEBOUNCE_MS + 3000); // 1.5 s after the 429 + 6.5 s: still 0.5 s early
+    expect(srv.s.saves).toHaveLength(1);
+    await tick(500);
+    expect(srv.s.saves).toHaveLength(2);
+    expect(srv.s.saves[1]!.layout.pages.cover?.items?.[0]).toMatchObject({ text: "y" });
+    expect(snap()).toMatchObject({ dirty: false, saveState: "saved" });
+  });
+
+  it("a commit during an offline backoff does not shorten it, but flush() still saves at once", async () => {
+    const { srv, store, snap } = await open({ version: 1, layout: doc1() });
+    srv.s.script.push(() => {
+      throw new TypeError("Failed to fetch");
+    });
+    store.apply(setText("cover", "aaaaaa", { text: "x" }));
+    await tick(DEBOUNCE_MS); // fails, retry in 1 s
+    store.apply(setText("cover", "aaaaaa", { text: "y" }));
+    await tick(999);
+    expect(srv.s.saves).toHaveLength(1);
+    await tick(1); // the 1 s backoff is over
+    expect(srv.s.saves).toHaveLength(2);
+    expect(snap().dirty).toBe(false);
+    srv.s.script.push(() => {
+      throw new TypeError("Failed to fetch");
+    });
+    store.apply(setText("cover", "aaaaaa", { text: "z" }));
+    await tick(DEBOUNCE_MS); // fails again, retry in 2 s
+    store.flush(); // page hidden / back online
+    await tick(0);
+    expect(srv.s.saves).toHaveLength(4);
+    expect(snap().dirty).toBe(false);
   });
 
   it("network errors and 5xx retry after 1, 2, 4, 8 s, then every 30 s, and keep the document dirty", async () => {

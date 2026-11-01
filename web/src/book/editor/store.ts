@@ -47,6 +47,7 @@ export class EditorStore {
   private attempt = 0;
   private debounce: ReturnType<typeof setTimeout> | undefined;
   private retry: ReturnType<typeof setTimeout> | undefined;
+  private notBefore = 0; // end of the current 429 / backoff wait (ms); the debounce never saves before it
   private stopped = false;
   private loaded: Snapshot["loaded"] = "loading";
   private saveState: SaveState = "idle";
@@ -193,7 +194,9 @@ export class EditorStore {
     clearTimeout(this.debounce);
     this.debounce = undefined;
     if (this.saveState === "conflict" || this.saveState === "gone") return;
-    this.debounce = setTimeout(() => void this.save(), DEBOUNCE_MS);
+    // a commit during a 429 or backoff wait must not shorten it (flush on hide / online / stop still saves at once)
+    const delay = Math.max(DEBOUNCE_MS, this.notBefore - Date.now());
+    this.debounce = setTimeout(() => void this.save(), delay);
   }
   /** Saves now (page hide, leaving, the user asked). */
   flush = () => void this.save();
@@ -256,19 +259,29 @@ export class EditorStore {
   }
   private wait(seconds: number, state: SaveState) {
     this.saveState = state;
+    this.notBefore = Date.now() + seconds * 1000;
     if (this.stopped) return;
     this.retry = setTimeout(() => void this.save(), seconds * 1000);
   }
 
   // --- conflict ---
   /** The stored version and document the 409 carried (read again if the answer had none). */
-  private async stored(): Promise<LayoutConflict> {
-    return this.conflict ?? (await getBookLayout(this.yearbookId));
+  private async stored(): Promise<LayoutConflict | undefined> {
+    if (this.conflict) return this.conflict;
+    try {
+      return await getBookLayout(this.yearbookId);
+    } catch (e) {
+      // the refetch failed: stay in `conflict` (the choice can be made again); no access any more -> `gone`
+      if (denied(e)) this.saveState = "gone";
+      this.emit();
+      return undefined;
+    }
   }
   /** Conflict choice 1: drop my edits, take the stored document, forget the history. */
   async useTheirs(): Promise<void> {
     if (this.saveState !== "conflict") return;
     const s = await this.stored();
+    if (!s) return;
     this.history.clear(s.layout ?? emptyDoc());
     this.version = s.version;
     this.rev++;
@@ -282,6 +295,7 @@ export class EditorStore {
   async keepMine(): Promise<void> {
     if (this.saveState !== "conflict") return;
     const s = await this.stored();
+    if (!s) return;
     this.version = s.version;
     this.rev++; // dirty even if my document equals the one I had last saved
     this.conflict = null;

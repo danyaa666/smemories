@@ -82,11 +82,20 @@ const rounded = <T extends Partial<Box>>(b: T): T => {
   return out as T;
 };
 
-/** Plain text: at most 500 code points, no control character other than newline (the server rejects those). */
+// Go's strings.TrimSpace (unicode.IsSpace): unlike JS trim() it keeps U+FEFF and also trims U+0085.
+const GO_EDGE_SPACE =
+  /^[\t-\r \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+|[\t-\r \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+$/g;
+// Refused characters: Cc except \n, Cf except the joiner U+200D, Zl, Zp, U+FFFD, and lone surrogates (JSON turns them into U+FFFD).
+const BAD_TEXT_CHAR = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}\p{Cs}\uFFFD]/u;
+
+/**
+ * Plain text, mirroring the server: internal/booklayout/validate.go (text) with internal/textx CleanMultiline is the source of truth.
+ * Order as there: \r\n -> \n, NFC, trim, refuse the characters above (bad_text), then at most 500 code points (text_too_long).
+ */
 function textRefusal(text: string): Refusal | undefined {
-  if ([...text].length > MAX_TEXT) return "text_too_long";
-  // eslint-disable-next-line no-control-regex
-  if (/[\u0000-\u0009\u000b-\u001f\u007f-\u009f]/.test(text)) return "bad_text";
+  const clean = text.replace(/\r\n/g, "\n").normalize("NFC").replace(GO_EDGE_SPACE, "");
+  if (BAD_TEXT_CHAR.test(clean.replace(/\n|\u200d/g, ""))) return "bad_text";
+  if ([...clean].length > MAX_TEXT) return "text_too_long";
   return undefined;
 }
 
