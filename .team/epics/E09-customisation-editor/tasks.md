@@ -662,7 +662,7 @@ Spec: .team/epics/E09-customisation-editor/27-history-e2e-hardening.md (read it 
 
 #### Comments
 
-### T-169 — [E09] Spike: canvas foundation (Doory / Fabric.js) against our DOM editor, ADR 0005
+### T-169 — [E09] Spike: Doory-template import and a Fabric.js image studio beside the DOM editor (ADR 0005)
 - **Status:** TODO
 - **Priority:** P1
 - **Type:** spike
@@ -677,7 +677,7 @@ Spec: .team/epics/E09-customisation-editor/27-history-e2e-hardening.md (read it 
 - **Updated:** 2026-11-04 by leader
 - **Comments-seen:** 0
 
-Spec: .team/epics/E09-customisation-editor/28-canvas-foundation-spike.md (read it from the main checkout). Owner asked 2026-11-04 to consider Doory (Fabric.js canvas editor). Measure options A keep DOM, B Fabric.js in our editor, C Doory frontend forked, D Doory as a sidecar service, E Fabric.js only as an isolated image studio beside the DOM editor: data-bound flowing book, Vietnamese IME, print parity, templates and the three new features, integration and ops, licence (Attribution Assurance), project health. ADR 0005 with one recommendation. No product code.
+Spec: .team/epics/E09-customisation-editor/28-canvas-foundation-spike.md (read it from the main checkout). Owner decision D-45 (2026-11-04): hybrid, DOM editor stays, Fabric.js only as an isolated image studio, Doory templates usable. Spike: convert the 10 Doory starter templates into our layout documents (coverage, determinism, validator, print parity), storage and apply model for shipped / own / per-section templates, studio failure modes, licence of templates and assets, then ADR 0005 with a task plan. No product code.
 
 #### Comments
 
