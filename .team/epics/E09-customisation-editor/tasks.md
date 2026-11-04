@@ -677,7 +677,7 @@ Spec: .team/epics/E09-customisation-editor/27-history-e2e-hardening.md (read it 
 - **Updated:** 2026-11-04 by leader
 - **Comments-seen:** 0
 
-Spec: .team/epics/E09-customisation-editor/28-canvas-foundation-spike.md (read it from the main checkout). Owner asked 2026-11-04 to consider Doory (Fabric.js canvas editor). Measure options A keep DOM, B Fabric.js in our editor, C Doory frontend forked, D Doory as a sidecar service: data-bound flowing book, Vietnamese IME, print parity, templates and the three new features, integration and ops, licence (Attribution Assurance), project health. ADR 0005 with one recommendation. No product code.
+Spec: .team/epics/E09-customisation-editor/28-canvas-foundation-spike.md (read it from the main checkout). Owner asked 2026-11-04 to consider Doory (Fabric.js canvas editor). Measure options A keep DOM, B Fabric.js in our editor, C Doory frontend forked, D Doory as a sidecar service, E Fabric.js only as an isolated image studio beside the DOM editor: data-bound flowing book, Vietnamese IME, print parity, templates and the three new features, integration and ops, licence (Attribution Assurance), project health. ADR 0005 with one recommendation. No product code.
 
 #### Comments
 

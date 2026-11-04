@@ -8,7 +8,7 @@ On 2026-11-04 the owner asked to "integrate canvas editing using an open-source 
 
 Facts the leader found on 2026-11-04 (verify them, do not trust them): Doory was created 2026-10-10, ~2.0k stars, 276 commits on `main`, no GitHub releases (tags v0.1.0, v0.2.0), pushed 2026-11-02. Stack: **Fabric.js** canvas, React 19, TypeScript, Vite, Zustand, Yjs for co-editing; backend **Django 5 + DRF + Channels + PostgreSQL** (Redis and S3 optional), Docker Compose with nginx; 10 starter templates; multi-page designs; export PNG/JPG/SVG/PDF (jsPDF) with bleed and crop marks; MCP server for AI; ONNX Runtime Web in the bundle. Licence: **Attribution Assurance License** (GitHub shows NOASSERTION): redistribution (including the program run for users) requires showing, each time the program starts and, for a web app, on its pages, the credit "Doory by Siam, creator and maintainer of Doory, https://github.com/shaongitbd/doory", and keeping the GPG-signed licence text and NOTICE. Its README does not mention Vietnamese or IME.
 
-#### Options to compare (all four, same criteria)
+#### Options to compare (all five, same criteria)
 - **A. Keep the DOM editor** (ADR 0004) and add the new features on it. The baseline: use ADR 0004's own numbers.
 - **B. Fabric.js (MIT) inside our own editor**: replace the DOM editor's interaction layer with a Fabric canvas per page; our own UI, our Go API, our print path.
 - **C. Doory's frontend embedded/forked into our web app**, backed by our Go API instead of Django (list exactly which Django endpoints, WebSocket channels and storage the frontend needs and what replacing them costs).
@@ -27,7 +27,7 @@ Facts the leader found on 2026-11-04 (verify them, do not trust them): Doory was
 8. **Recommendation.** A table of A/B/C/D against questions 1..7 with the numbers, then one recommendation with the reasons, the cost of being wrong, a rollback path, and — if the answer is not A — the task list that would replace the remaining stage 2 plan. State the owner decisions it needs (foundation, the attribution line, any new service and its cost).
 
 #### Requirements (SHALL)
-1. Write `docs/adr/0005-canvas-foundation.md` (status "proposed" until the owner decides) with the answers, numbers, the comparison table and the recommendation. Link the evidence files.
+1. Write `docs/adr/0005-canvas-foundation.md` (status "proposed" until the owner decides) with the answers, numbers, the comparison table (A to E) and the recommendation. Link the evidence files.
 2. Prototypes and scripts live in `docs/spikes/canvas/` with their own `package.json` and a `README.md` that reproduces every number from a clean checkout. **Do not vendor Doory's source** into our repository: the README clones it at a pinned commit SHA into a git-ignored folder (add the folder to `.gitignore` in the same PR). Nothing in `web/`, `internal/`, `cmd/`, CI or dependencies of the product changes.
 3. Run Doory's stack (options C/D) only on a private compose project with its own name and non-default ports; never touch the main project's volumes, never restart Docker Desktop, never kill processes you did not start. The stack is torn down at the end; the README says how to bring it up again. No secrets from `.env` are read or committed (use Doory's `.env.example` with throw-away values).
 4. If a candidate fails a question (for example Vietnamese composition loses letters, or printing is rasterised), say so plainly with the evidence; do not hide it. If a question cannot be answered in the time-box, report what is missing instead of guessing.
