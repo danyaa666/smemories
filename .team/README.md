@@ -12,7 +12,7 @@
 |---|---:|---|
 | BACKLOG | 5 | T-023, T-024, T-025, T-031, T-050 |
 | TODO | 2 | T-167, T-168 |
-| IN_PROGRESS | 1 | T-169 |
+| READY_FOR_QA | 1 | T-169 |
 | IN_QA | 1 | T-166 |
 | MERGED | 16 | T-150, T-151, T-152, T-153, T-154, T-155, T-156, T-157, T-158, T-159, T-160, T-161, T-162, T-163, T-164, T-165 |
 | DONE | 136 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138, T-139, T-140, T-141, T-142, T-143, T-144, T-145, T-146, T-147, T-149, T-148 |
@@ -22,9 +22,9 @@
 
 **Awaiting your review (MERGED):** T-150 ([E09] Spike: layout editor architecture and ADR 0004); T-151 ([E09] Asset pack and registry for stickers, shapes and frames); T-152 ([E09] Backend: student-uploaded design images (backgrounds and decorations)); T-153 ([E09] Layout document model and API (backend)); T-154 ([E09] Web layout runtime: the book draws a layout (Memory Book)); T-155 ([E09] Fix three stale Postman assertions in the customisation-editor collection); T-156 ([E09] Layout version must never go back (reset / template change)); T-157 ([E09] print-check: refuse a foreign server on its port; refresh test counts in docs); T-158 ([E09] Editor state: document store, undo/redo, autosave and conflict handling (web)); T-159 ([E09] Editor route and shell: page strip, zoom, selection overlay, property panel (web)); T-160 ([E09] Editor gestures: move, resize, rotate, snap, guides, with keyboard control (web)); T-161 ([E09] Editor text boxes: add, type in place, font, size, colour, align (web)); T-162 ([E09] Editor palette: stickers, shapes, frames, own images and the page background (web)); T-163 ([E09] Layout version history and restore (backend)); T-164 ([E09] Palette follow-ups: copy, history edge, distinct cap/quota code (web + one small API change)); T-165 ([E09] Editor version history panel: list, preview and restore (web))
 
-**Open questions for you:** none
+**Open questions for you:** Q-064 (Doory templates: licence route, studio, and template colours (ADR 0005, T-169))
 
-_Board last written 2026-11-05 08:04Z_
+_Board last written 2026-11-05 08:24Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -707,6 +707,15 @@ My recommendation: A. Everything users can touch is built; going live turns the 
 
 **Blocked meanwhile:** nothing today; the pipeline runs dry after T-147/T-148 merge.
 
+### Q-064 — Doory templates: licence route, studio, and template colours (ADR 0005, T-169)
+- **Status:** OPEN
+- **Asked:** 2026-11-05 08:24Z
+- **Blocks:** —
+- **Recommendation:** Route B (we author our own templates, Doory only as inspiration); no image studio in the first release; decide the template colour palette after seeing the first authored templates.
+- **Answer:** _(pending)_
+
+Spike T-169 (PR #165, ADR 0005 on that branch) found: 73% of the 230 objects in Doory's 10 starter templates convert to our layout today (85% with two stretching shapes); text converts at 96%, lines and paths not at all. The converter is deterministic and every output passes our layout validator; three converted templates print within the ADR 0004 thresholds. The templates are under the Attribution Assurance License, not CC0, and 4 other contributors besides the author hold copyright, so the author alone cannot waive terms. DECISIONS: (1) Licence route. A = accept the credit line 'Doory by Siam, creator and maintainer of Doory, https://github.com/shaongitbd/doory' on the template gallery and the app footer, keep the signed licence text, convert the templates we like (fastest; ongoing obligation; credit never on printed pages). B = we author our own pages in our format using Doory only as inspiration; nothing converted is committed (more design work; no obligations; our Vietnamese copy and themes are needed anyway). Recommended: B. (2) Confirm no Doory stock photos ship (they show real people; our books are made by minors). (3) Image studio (Fabric.js): the ADR shows no job needs it that CSS/SVG, existing image controls or a vector draw item cannot do with less weight; recommended: none in the first release (D-45 allows it later). (4) Template colours: converted art snaps to the book's five theme tokens (it wears the student's theme); an optional template-private palette of up to 8 colours would keep original colours but changes the layout document and validator; recommended: decide after the first authored templates. Work that does not depend on this answer is already queued: page-by-page flow, stretching shapes, page-template model, own-template API.
+
 <!-- questions:end -->
 
 ## 4. Architecture & decision log
@@ -784,6 +793,7 @@ Leader decisions (low-risk, inside the approved stack):
 | L-12 | **Designer templates are imported as pre-rendered decoration plus slots; the runtime stays pure Go.** | Leader decision 2026-10-08 within D-06/D-12. A dev-only Node/Playwright tool renders each canvas page to a background PNG with text and photo placeholders hidden and reads slot and label boxes from the page; the Go renderer draws the background, then localised static text and the user's text and photos (template format v2, T-038). No browser at run time. Costs about 1 MiB per page of embedded assets (budget 8 MiB per template). | Re-draw every design in JSON shapes by hand; render HTML in the server (headless browser); embed PDF pages as backgrounds (new dependency) | Assets pass 64 MiB in total, or a design needs live vector effects |
 | L-17 | **Layout version history retention (T-163, 2026-11-01).** A snapshot of the replaced layout is kept when a save starts a new editing burst (newest snapshot older than 10 minutes), and always on reset and restore; the newest 30 per book are kept (at most 3.84 MB per book); owner only, deleted with template change, yearbook and account; restore writes a new higher version and drops items whose asset or design image no longer exists. | D-43 promised version history and the PRD listed retention as an open question. It is the student's own layout JSON (no new personal data), so it is a low-risk choice inside the approved stack; storage is small and bounded. The owner can change the numbers (they live in one place). |
 | L-18 | **Superseded by D-45 (the owner chose the hybrid).** Canvas foundation is evaluated by spike T-169 before any change (2026-11-04). The owner asked to consider Doory (Fabric.js, Django backend, Attribution Assurance License) for canvas editing plus per-section templates and 'save my page as a template'. D-43(a) (DOM editor, no canvas library) stays in force until the owner decides on ADR 0005; T-165..T-168 continue on the DOM editor; the three new features are specified after the decision. | Leader (low risk: a spike changes no product code); owner decides the foundation, the attribution line and any new service afterwards. | D-43, T-169 |
+| L-19 | **ADR 0005 model accepted as the plan for templates (2026-11-05).** A template is a page template (the `pages.<kind>` value of a layout document); every template, shipped or a student's own, passes `booklayout.Validate` (CI for shipped, save and apply time for own); apply is one write with one `apply` snapshot; shipped templates are embedded files; no studio in the first release unless the owner asks (Q-064). Tasks T-170..T-173 follow; real template content waits for the owner's licence route (Q-064). | Leader (low risk: no new owner-level choice; the licence, studio and palette points stay with the owner in Q-064). | D-45, T-169 |
 
 ## 5. Engineering conventions
 

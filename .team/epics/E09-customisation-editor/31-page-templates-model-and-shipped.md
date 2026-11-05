@@ -1,0 +1,27 @@
+# E09_T-172 — Page templates: model, shipped storage, validator gate and read route (Go + web preview)
+
+**Epic:** E09-customisation-editor · **Milestone:** M4 · **Risk:** low (no migration, no write path; owner-only read) · **Priority:** P2 · **Type:** feature
+**Depends on:** none (T-171 improves what templates can contain but is not required). **Read first:** `docs/adr/0005-doory-templates-and-fabric-studio.md` (on branch `task/t-169-...` / PR #165 until merged: Q3 "Where templates live", Q8 task 3), `internal/booklayout/validate.go` (`Validate`, `ValidateRestore`), `internal/templates/embed/*.json` and its loader, `docs/templates.md`, `docs/assets.md`, `web/src/book/layout/runtime.tsx` (draws a page from a layout document), `docs/api-contract.md`, `docs/class-permissions.md` (matrix rows for new routes).
+
+#### Why
+Owner request: a template chosen per section (cover, profile, notes, back). ADR 0005 chose **page templates**: the value of `pages.<kind>` of a layout document (`bg`, `overrides`, `items`) plus metadata, applied by copying it into the book's layout. This task builds the model, the shipped storage and the rule that makes it reliable: **a shipped template that fails the layout validator fails the build.** Applying (a write) is T-173; the gallery UI is a later task.
+
+#### Requirements (SHALL)
+1. **Model**: a shipped page template is a file `internal/templates/embed/pagetemplates/<template-id>/<id>.json` = `{id, label_en, label_vi, kind, source, licence, page}` where `kind` is one of the book template's page kinds, `page` is the page value (`bg`, `overrides`, `items`), `source` says where it came from (`authored`), `licence` names the licence file next to it. A template contains only what the validator allows: `text` and `asset` items (no `image`: a shipped template has no media id), a `bg` colour token or registry asset, overrides of the kind's editable elements, at most 40 items, no URL, no script, plain text. Names are plain text of at most 60 characters.
+2. **Loader and gate**: the embed loader parses every file at start-up and in `go test`; a `go test` validates **each** shipped template against its book template's manifest with `booklayout.Validate` (as a one-page document) and fails the build if one is invalid, has an unknown kind, references an asset missing from the registry, or lacks its licence file. A start-up error is fatal in dev and test, logged and skipped in production (a broken template never takes the API down; a counter records it).
+3. **Content to prove the pipeline** (not the final gallery): at least one minimal **authored** template per page kind of `memory-book` and of `navy-classic`, built only from our CC0 registry assets and colour tokens, with Vietnamese and English labels and licence files. Real content is a later task and depends on the owner's answer on the Doory licence route (Q-064): **nothing derived from Doory ships here.**
+4. **Read route** `POST /api/book-layout/template-list` (`yearbook_id`, optional `kind`): owner only (404 for anyone else, like the other `book-layout` routes; class admin and anonymous 404/401 as the matrix says), `{status,data}` envelope, returns `{id, label_en, label_vi, kind, item_count, page}` for the shipped templates of the book's current template (own templates are added by T-173), sorted by label. No new rate-limit class (share the layout read limit). Response size stays small (at most 40 items per page value; assert a bound).
+5. **Web preview**: a small `TemplatePreview` component that draws a template's page with the book's real runtime (`LayoutProvider` with a one-page document) at a given width, read-only, for the gallery task to use; unit tests with the shipped test templates; no stored preview images.
+6. **Class matrix, OpenAPI, Postman**: the new route has a row in `docs/class-permissions.md` and `docs/class-privacy-review.md`, the OpenAPI entry (`web/src/api/schema.d.ts` regenerated, `check:api` green), a Postman step asserting the real envelope.
+7. **Tests**: loader unit tests (valid, unknown kind, unknown asset, missing licence, oversize, bad JSON: each reported by file name), the gate test over all shipped files, handler/integration tests (owner sees only their book's template's items, 404 for other users and missing books, class admin 404, kind filter), the preview component test.
+8. **Docs**: `docs/templates.md` ("Page templates": the file shape, the gate, how to add one, what a template may contain), `docs/api-contract.md`.
+9. No migration, no new dependency, nothing under `.team/`, nothing derived from Doory.
+
+#### Acceptance criteria
+- [ ] AC1 — The gate test fails the build for a template with an unknown asset, an `image` item, an unknown kind, a missing licence file or more than 40 items, and passes for the shipped ones (each shown by a negative-control test).
+- [ ] AC2 — `template-list` returns the shipped templates of the book's template for the owner only; the matrix test is green with the new row.
+- [ ] AC3 — `TemplatePreview` draws each shipped test template on A5, A4 and Letter without error.
+- [ ] AC4 — Lint, vet, `go test -race ./...`, `make test-integration`, web checks (lint, prettier, tsc, vitest, `lint:i18n`, `check:api`, build), the Postman run and the class matrix green; QA reports counts and head SHA.
+
+#### Test plan
+QA runs everything on the PR head (full `make test-integration`, matrix, Postman), breaks a shipped template on purpose in a scratch copy to see the gate fail, checks every route 404/401 cell, and draws each template on three papers.

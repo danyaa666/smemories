@@ -663,7 +663,7 @@ Spec: .team/epics/E09-customisation-editor/27-history-e2e-hardening.md (read it 
 #### Comments
 
 ### T-169 — [E09] Spike: Doory-template import and a Fabric.js image studio beside the DOM editor (ADR 0005)
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P1
 - **Type:** spike
 - **Milestone:** M4
@@ -671,13 +671,90 @@ Spec: .team/epics/E09-customisation-editor/27-history-e2e-hardening.md (read it 
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-11-05 08:04Z by dev
+- **Assignee:** —
+- **Branch:** task/t-169-e09-spike-doory-template-import-and-a-fa
+- **PR:** https://github.com/danyaa666/smemories/pull/165
+- **Updated:** 2026-11-05 08:23Z by dev
 - **Comments-seen:** 0
 
 Spec: .team/epics/E09-customisation-editor/28-canvas-foundation-spike.md (read it from the main checkout). Owner decision D-45 (2026-11-04): hybrid, DOM editor stays, Fabric.js only as an isolated image studio, Doory templates usable. Spike: convert the 10 Doory starter templates into our layout documents (coverage, determinism, validator, print parity), storage and apply model for shipped / own / per-section templates, studio failure modes, licence of templates and assets, then ADR 0005 with a task plan. No product code.
+
+#### Comments
+- 2026-11-05 08:23Z · dev · Spike done in one wake-up. ADR 0005 (Proposed) + docs/spikes/canvas (npm run clone && npm run measure reproduces all). Head 9b5510c. Verify: coverage 230 objs 73% today / 85% with stretch shapes; 52 files pass booklayout.Validate (go run -tags spike ./docs/spikes/canvas/validate); determinism sha256 equal; parity 9 cases <=0.20%; 15 studio failure cases pass; bundle absent. Gaps stated plainly in ADR: parity uses a copy of the draw rule not the product runtime, no real phone/iOS, no studio keyboard, no Telex (no text tool). Owner must decide licence route A (credit) or B (recreate) before any converted template is committed; renders/converted files are git-ignored for that reason. Diff touches only docs/adr/0005, docs/spikes/canvas, .gitignore.
+
+### T-170 — [E09] Editor flow: page by page, Save and done, Print, back to the book manage page (web)
+- **Status:** TODO
+- **Priority:** P1
+- **Type:** feature
+- **Milestone:** M4
+- **Depends-on:** none
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-11-05 by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E09-customisation-editor/29-editor-page-flow-done-print.md (read it from the main checkout). Previous/next page through the real book order, Done (settle then manage page, leave guard), Print after settle, deep links from the manage page, e2e editor-flow
+
+#### Comments
+
+### T-171 — [E09] Stretching shapes: rectangle and ellipse that fill their box (registry + web)
+- **Status:** TODO
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M4
+- **Depends-on:** none
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-11-05 by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E09-customisation-editor/30-stretching-shapes.md (read it from the main checkout). shape.rect and shape.ellipse (CC0, licence files, stretch flag), AssetSvg edge to edge, free resize in the editor, print-check cell
+
+#### Comments
+
+### T-172 — [E09] Page templates: model, shipped storage, validator gate and read route (Go + web preview)
+- **Status:** TODO
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M4
+- **Depends-on:** none
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-11-05 by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E09-customisation-editor/31-page-templates-model-and-shipped.md (read it from the main checkout). Shipped page templates as embedded files, build fails if one fails booklayout.Validate, template-list route, TemplatePreview, authored test templates only (nothing from Doory)
+
+#### Comments
+
+### T-173 — [E09] Own page templates and the apply API (Go): save my page, apply a template per section
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M4
+- **Depends-on:** T-172
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-11-05 by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E09-customisation-editor/32-own-templates-and-apply-api.md (read it from the main checkout). book_template_tab migration, template-create/delete/list, apply-template in one write with one apply snapshot, limits 20 and 64 KiB, concurrency tests. Risk high: owner approval before merge
 
 #### Comments
 
