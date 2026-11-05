@@ -159,6 +159,26 @@ describe("deep link", () => {
   });
 });
 
+describe("notes pages share one layout (ADR 0004)", () => {
+  it("says so on a notes page, in the live region on arrival, and only there", async () => {
+    await mount();
+    expect(screen.queryByTestId("notes-shared")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Next page" })); // profile
+    await userEvent.click(screen.getByRole("button", { name: "Next page" })); // notes page 1
+    expect(screen.getByTestId("notes-shared")).toHaveTextContent("applies to every notes page");
+    expect(live()).toMatch(/Notes page 1\. This layout applies to every notes page/);
+    await userEvent.click(screen.getByRole("button", { name: "Next page" })); // notes page 2
+    expect(screen.getByTestId("notes-shared")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Next page" })); // back
+    expect(screen.queryByTestId("notes-shared")).toBeNull();
+  });
+
+  it("shows it when a deep link opens a notes page", async () => {
+    await mount({ url: `/yearbooks/${BOOK}/editor?page=notes` });
+    expect(screen.getByTestId("notes-shared")).toBeInTheDocument();
+  });
+});
+
 const edit = async () => {
   await userEvent.click(screen.getByRole("button", { name: "Cover title" }));
   const w = screen.getByRole("spinbutton", { name: "Width" });

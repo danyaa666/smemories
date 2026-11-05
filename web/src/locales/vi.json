@@ -1009,6 +1009,7 @@
     "goneLink": "Về danh sách kỷ yếu",
     "strip": "Các trang",
     "pageOf": "Trang {{n}} / {{total}}: {{name}}",
+    "notesShared": "Bố cục này áp dụng cho mọi trang lời nhắn.",
     "page": {
       "cover": "Bìa",
       "profile": "Giới thiệu",

@@ -1009,6 +1009,7 @@
     "goneLink": "Back to my yearbooks",
     "strip": "Pages",
     "pageOf": "Page {{n}} of {{total}}: {{name}}",
+    "notesShared": "This layout applies to every notes page.",
     "page": {
       "cover": "Cover",
       "profile": "Profile",

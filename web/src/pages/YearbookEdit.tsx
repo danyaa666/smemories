@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -27,6 +28,12 @@ export function YearbookEdit() {
     retry: false,
     refetchOnWindowFocus: false,
   });
+  // T-170: arriving here (after Done in the editor, or from a link) puts focus on the page heading, not on whatever button the old page left behind
+  const heading = useRef<HTMLHeadingElement>(null);
+  const loaded = q.isSuccess;
+  useEffect(() => {
+    if (loaded) heading.current?.focus();
+  }, [loaded]);
   const saved = (y: Yearbook) => {
     qc.setQueryData(["yearbook", id], y);
     void qc.invalidateQueries({ queryKey: YEARBOOKS_KEY });
@@ -68,7 +75,9 @@ export function YearbookEdit() {
       <p>
         <Link to="/yearbooks">{t("books.back")}</Link>
       </p>
-      <h1>{y.title}</h1>
+      <h1 ref={heading} tabIndex={-1}>
+        {y.title}
+      </h1>
       <p>
         <Link to={`/yearbooks/${y.id}/customise`}>{t("customise.link")}</Link>
       </p>

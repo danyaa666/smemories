@@ -286,7 +286,9 @@ export function EditorShell({
     setEditing(null);
     setNotice("");
     select([]);
-    say(t("editor.pageOf", { n: i + 1, total: pages.length, name: pageName(t, pages[i]!) }));
+    const to = pages[i]!;
+    const arrived = t("editor.pageOf", { n: i + 1, total: pages.length, name: pageName(t, to) });
+    say(to.section === "notes" ? `${arrived}. ${t("editor.notesShared")}` : arrived);
   };
   const step = (by: -1 | 1) => {
     const to = index + by;
@@ -533,6 +535,11 @@ export function EditorShell({
         <span className="ed-pos" data-testid="page-position">
           {t("editor.pageOf", { n: index + 1, total: pages.length, name: pageName(t, page) })}
         </span>
+        {kind === "notes" && (
+          <span className="ed-hint" data-testid="notes-shared">
+            {t("editor.notesShared")}
+          </span>
+        )}
         <button type="button" aria-disabled={index === pages.length - 1} onClick={() => step(1)}>
           {t("editor.nextPage")}
         </button>

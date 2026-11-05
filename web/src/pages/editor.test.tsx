@@ -159,4 +159,12 @@ describe("the book manage page and the editor (T-170)", () => {
     expect(await screen.findByRole("heading", { name: "Design the pages" })).toBeInTheDocument();
     expect(screen.getByTestId("where")).toHaveTextContent(`/yearbooks/${BOOK}`);
   });
+
+  it("puts focus on the page heading after Done, not on a button", async () => {
+    withDesign([]);
+    renderApp(`/yearbooks/${BOOK}/editor`);
+    await userEvent.click(await screen.findByRole("button", { name: "Done" }));
+    const h1 = await screen.findByRole("heading", { level: 1, name: "Lớp 12A1" });
+    await waitFor(() => expect(h1).toHaveFocus());
+  });
 });
