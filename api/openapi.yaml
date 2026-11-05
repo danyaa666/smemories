@@ -1984,7 +1984,6 @@ paths:
         - {code: ERROR_TEMPLATE_LIMIT, description: "The user already has 20 own templates (`data.limit`). Nothing was stored."}
         - {code: ERROR_INVALID_LAYOUT, description: "The stored page no longer validates (`data.problems`), or the book's template cannot hold a layout."}
         - {code: ERROR_NOT_FOUND, description: The yearbook does not exist or belongs to someone else; the two cannot be told apart.}
-        - {code: ERROR_PARAM, description: "Bad ids, `kind` is not a page kind of the book's template, the book has no saved page of that kind, or `name` is not valid."}
         - {code: ERROR_RATE_LIMITED, description: "Too many requests; wait `Retry-After` seconds (shared with `save`)."}
         - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
         - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
@@ -2060,6 +2059,9 @@ paths:
           content:
             application/json:
               schema: {$ref: "#/components/schemas/EmptyResponse"}
+              examples:
+                deleted:
+                  value: {status: OK, data: {}}
         "400": {$ref: "#/components/responses/ApiBadRequest"}
         "401": {$ref: "#/components/responses/ApiUnauthorized"}
         "403": {$ref: "#/components/responses/ApiForbidden"}
@@ -2090,7 +2092,6 @@ paths:
         - {code: ERROR_VERSION_CONFLICT, description: "`base_version` is not the stored version (`data.version`, `data.layout`). Nothing was changed."}
         - {code: ERROR_TEMPLATE_MISMATCH, description: "The own template was made on another book template than the book has now. Nothing was changed."}
         - {code: ERROR_NOT_FOUND, description: "The yearbook or the template does not exist, or belongs to someone else; the cases cannot be told apart."}
-        - {code: ERROR_PARAM, description: "Bad ids or `source`, missing `base_version`, `kind` is not a page kind of the book's template, or the template is for another kind."}
         - {code: ERROR_RATE_LIMITED, description: "Too many requests; wait `Retry-After` seconds (shared with `save`)."}
         - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
         - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
@@ -2112,6 +2113,9 @@ paths:
           content:
             application/json:
               schema: {$ref: "#/components/schemas/BookLayoutRestoredResponse"}
+              examples:
+                applied:
+                  value: {status: OK, data: {version: 10, updated_at: 1793361600000, dropped: 0, layout: {v: 1, pages: {cover: {bg: {color: soft}, items: [{id: t1a2b3, t: text, text: Kỷ niệm của lớp, x: 100, w: 800, h: 200, cy: 420, r: 0}]}}}}}
         "400":
           description: "`ERROR_PARAM` or `ERROR_INVALID_LAYOUT` with `data.problems`."
           content:
@@ -4505,6 +4509,7 @@ components:
           properties:
             data:
               type: object
+              description: The limit.
               required: [limit]
               properties:
                 limit: {type: integer, description: The limit (20).}

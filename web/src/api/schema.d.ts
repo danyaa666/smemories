@@ -2500,6 +2500,7 @@ export interface components {
         };
         /** @description `ERROR_TEMPLATE_LIMIT`: the user already has the most own templates allowed. */
         BookLayoutTemplateLimitError: components["schemas"]["ApiError"] & {
+            /** @description The limit. */
             data: {
                 /** @description The limit (20). */
                 limit: number;
