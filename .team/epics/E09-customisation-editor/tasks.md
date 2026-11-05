@@ -604,7 +604,7 @@ Spec: .team/epics/E09-customisation-editor/24-version-history-panel.md (read it 
 - 2026-11-01 22:30Z · leader · merged 3e5c742; QA: vitest 1078, e2e 3 clean runs 37/0 (4th hit register 429, flushed redis), history probes 33 saves->30 rows, pending autosave saved first. Non-blocking: raw ENOENT when mysql client missing; QA probe spec not committed
 
 ### T-166 — [E09] Navy Classic: page kinds and editable elements for the layout editor (web + manifest)
-- **Status:** READY_FOR_QA
+- **Status:** IN_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -612,10 +612,10 @@ Spec: .team/epics/E09-customisation-editor/24-version-history-panel.md (read it 
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** qa
 - **Branch:** task/t-166-e09-navy-classic-page-kinds-and-editable
 - **PR:** https://github.com/danyaa666/smemories/pull/164
-- **Updated:** 2026-11-01 23:01Z by dev
+- **Updated:** 2026-11-05 08:04Z by qa
 - **Comments-seen:** 2
 
 Spec: .team/epics/E09-customisation-editor/25-navy-classic-layout.md (read it from the main checkout). design.layout block in navy-classic.json, Editable wrappers in navy.tsx, background replaces the page tone, parity with no layout, print-check parity fixture, server cases, editor-navy e2e
@@ -663,7 +663,7 @@ Spec: .team/epics/E09-customisation-editor/27-history-e2e-hardening.md (read it 
 #### Comments
 
 ### T-169 — [E09] Spike: Doory-template import and a Fabric.js image studio beside the DOM editor (ADR 0005)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P1
 - **Type:** spike
 - **Milestone:** M4
@@ -671,10 +671,10 @@ Spec: .team/epics/E09-customisation-editor/27-history-e2e-hardening.md (read it 
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** dev
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-11-04 by leader
+- **Updated:** 2026-11-05 08:04Z by dev
 - **Comments-seen:** 0
 
 Spec: .team/epics/E09-customisation-editor/28-canvas-foundation-spike.md (read it from the main checkout). Owner decision D-45 (2026-11-04): hybrid, DOM editor stays, Fabric.js only as an isolated image studio, Doory templates usable. Spike: convert the 10 Doory starter templates into our layout documents (coverage, determinism, validator, print parity), storage and apply model for shipped / own / per-section templates, studio failure modes, licence of templates and assets, then ADR 0005 with a task plan. No product code.
