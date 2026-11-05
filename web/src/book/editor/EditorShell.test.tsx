@@ -315,7 +315,7 @@ describe("property panel", () => {
     });
     await userEvent.click(hit("Cover title"));
     const saved = async () => {
-      await userEvent.click(screen.getByRole("link", { name: "Preview as PDF" }));
+      await userEvent.click(screen.getByRole("link", { name: "Print or save as PDF" }));
       await waitFor(() =>
         expect(srv.s.layout?.pages.cover?.overrides?.["cover.title"]).toBeDefined(),
       );
@@ -331,7 +331,7 @@ describe("property panel", () => {
     await setNum("Left", "20");
     await setNum("Top", "30"); // Top commits cy from the stored height only
     await waitFor(() => expect(field("Top")).toHaveValue(30));
-    await userEvent.click(screen.getByRole("link", { name: "Preview as PDF" }));
+    await userEvent.click(screen.getByRole("link", { name: "Print or save as PDF" }));
     await waitFor(() => expect(srv.s.saves.length).toBeGreaterThan(1));
     const ov = srv.s.layout!.pages.cover!.overrides!["cover.title"]!;
     expect(ov).toMatchObject({ x: 200, w: 500, h: 133, r: 0 });
@@ -595,7 +595,7 @@ describe("gestures (keyboard and buttons)", () => {
     await mount();
     await userEvent.keyboard("?");
     const sheet = screen.getByRole("region", { name: "Keyboard shortcuts" });
-    expect(within(sheet).getAllByRole("row")).toHaveLength(14);
+    expect(within(sheet).getAllByRole("row")).toHaveLength(15);
     expect(within(sheet).getByText(/Alt \+ Shift/)).toBeInTheDocument();
     await userEvent.keyboard("{Escape}");
     expect(screen.queryByRole("region", { name: "Keyboard shortcuts" })).toBeNull();
@@ -680,7 +680,7 @@ describe("toolbar and banners", () => {
 
   it("opens the PDF preview in a new tab and saves first", async () => {
     await mount();
-    const a = screen.getByRole("link", { name: "Preview as PDF" });
+    const a = screen.getByRole("link", { name: "Print or save as PDF" });
     expect(a).toHaveAttribute("href", `/yearbooks/${BOOK}/book`);
     expect(a).toHaveAttribute("target", "_blank");
   });
@@ -699,10 +699,10 @@ describe("toolbar and banners", () => {
     });
     await userEvent.click(hit("Cover title"));
     await setNum("Width", "40");
-    await userEvent.click(screen.getByRole("link", { name: "Preview as PDF" })); // starts the first save
+    await userEvent.click(screen.getByRole("link", { name: "Print or save as PDF" })); // starts the first save
     await waitFor(() => expect(srv.s.saves).toHaveLength(1));
     await setNum("Width", "45"); // an edit while the first save is in flight: queued
-    await userEvent.click(screen.getByRole("link", { name: "Preview as PDF" }));
+    await userEvent.click(screen.getByRole("link", { name: "Print or save as PDF" }));
     expect(open).toHaveBeenCalledWith("about:blank", "_blank"); // opened by the click, still blank
     expect(tab.location.href).toBe("");
     release();
@@ -722,7 +722,7 @@ describe("toolbar and banners", () => {
     srv.s.script.push(() => srv.fail(400, "ERROR_INVALID_ARGUMENT", { problems: [] }));
     await userEvent.click(hit("Cover title"));
     await setNum("Width", "40");
-    await userEvent.click(screen.getByRole("link", { name: "Preview as PDF" }));
+    await userEvent.click(screen.getByRole("link", { name: "Print or save as PDF" }));
     await waitFor(() => expect(tab.close).toHaveBeenCalled());
     expect(tab.location.href).toBe("");
     expect(await screen.findByText(/preview was not opened/)).toBeInTheDocument();

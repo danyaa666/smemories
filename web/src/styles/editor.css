@@ -22,6 +22,22 @@
   font: inherit;
   cursor: pointer;
 }
+.ed-toolbar .btn-primary {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-on-primary);
+}
+.ed-toolbar .btn-primary:hover {
+  background: var(--color-primary-hover);
+}
+.ed-pos {
+  font-weight: 600;
+}
+.ed-hint {
+  color: var(--color-ink-muted, inherit);
+  font-size: 0.85em;
+}
+.ed-toolbar button[aria-disabled="true"],
 .ed-toolbar button:disabled,
 .ed-bar button:disabled,
 .ed-panel button:disabled {

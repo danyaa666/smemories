@@ -55,5 +55,6 @@ export const SHORTCUTS: readonly { id: string; keys: string }[] = [
   { id: "noSnap", keys: "Alt (Mac: Option) while dragging" },
   { id: "ratio", keys: "Shift while resizing" },
   { id: "snap15", keys: "Shift while rotating" },
+  { id: "pages", keys: "Page Up, Page Down" },
   { id: "help", keys: "?" },
 ];
