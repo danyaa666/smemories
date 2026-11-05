@@ -892,7 +892,7 @@ Spec: .team/epics/E09-customisation-editor/32-own-templates-and-apply-api.md (re
 - 2026-11-05 15:55Z · leader · Leader review (QA_PASS accepted, head 4af81307e440910719d750f48036d4c1cbae09be, MERGEABLE, go/web/security green, no .team files). Read: migration book_template_tab (expand-only, no FKs, owner-scoped unique key, down drops the table), create (take rate limit, Clean(name,1,60), book read as owner, page kind validated against the book's block, strip of image items and picture bg then Validate with NO media, 64 KiB cap, limit under the user row lock), apply (params validated first, rate limit, store.get as owner, mismatch and conflict mapped to metric labels, log line without layout content). QA: integration 33 pkg ok, race x20 ok, migration up/down/up ok, newman T-173 folder 90/0 twice, live probe (strip, limit 6 parallel creates, 64 KiB, 401/404, 5 rounds of parallel applies = one 200 and one 409, atomic failures, snapshot kind apply, retention 30, no layout in logs/metrics), print-check 199/199, e2e 39/39 on run 2 (run 1: T-174 touch flake). Open items, none blocking: dropped-asset count and rate limits covered only by Go integration tests. NEEDS OWNER: risk high, merge only after 'team approve T-173'.
 
 ### T-174 — [E09] Stabilise the editor-gestures touch test (flake: 2 to 3 px against 0.5 allowed)
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P3
 - **Type:** test
 - **Milestone:** M4
@@ -900,15 +900,17 @@ Spec: .team/epics/E09-customisation-editor/32-own-templates-and-apply-api.md (re
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-174-e09-stabilise-the-editor-gestures-touch-
-- **PR:** —
-- **Updated:** 2026-11-05 18:43Z by dev
-- **Comments-seen:** 0
+- **PR:** https://github.com/danyaa666/smemories/pull/171
+- **Updated:** 2026-11-05 19:26Z by dev
+- **Comments-seen:** 2
 
 Spec: .team/epics/E09-customisation-editor/33-gestures-touch-test-flake.md (read it from the main checkout). The touch pan assertion failed in 3 runs (T-165 dev, T-166 QA twice); find the cause (test timing or a product pan moving an item), fix at the source, 30 isolated and 10 full-suite runs clean
 
 #### Comments
+- 2026-11-05 19:26Z · dev · PR #171 head d3b7781554da0eed500c8a1b8faa556067f9f55e. Cause = test timing, proven: per-frame sampling after touchEnd shows the stage still gliding (scrollLeft 347 -> 368 over ~190 ms) while the item's stored style is identical in every frame and the atomic item-minus-sheet delta is 0; the old test polled scroll>20 (mid-fling) then read sheet and item in two evaluations (2-3 px apart). No product change. Fix: settledRects helper (scroll unchanged 3 frames, one evaluate returns item, sheet, style, scroll), 0.5 px kept, adds style-unchanged and vertical checks; one paragraph in docs/e2e.md. Private stack t174dev (13741/16741/19741, SMEM_TEST_S3_ENDPOINT set). Before: reproduced at once, old spec 2 fails in 10 isolated runs. After: 30/30 isolated, 30/30 isolated under full CPU load (11 busy loops; note QA's concurrent stack loads the machine, flake is load/timing sensitive), 10/10 full-suite runs 41 passed 0 failed. QA: run the touch test 20x isolated (-g 'setup:|touch at 768' --repeat-each) and full suite 3x, compare to old spec if wanted. Stack stopped, not removed.
+- 2026-11-05 19:27Z · leader · Leader to QA: PR #171 head d3b7781554da0eed500c8a1b8faa556067f9f55e (verify full SHA with gh pr view). Test-only change (tools/e2e/editor-gestures.spec.mjs + docs/e2e.md); dev's diagnosis: the stage keeps gliding after the swipe (scrollLeft 347 -> 368 over ~190 ms), the old test read sheet and item in two evaluations 2-3 px apart; the new settledRects helper waits for 3 stable frames and reads everything in one evaluate; tolerance unchanged 0.5 px. Verify: (1) read the diff: tolerance not loosened, new assertions (stage panned, item style unchanged, vertical axis) meaningful, no waitForTimeout sleep as the fix; (2) run -g 'setup:|touch at 768' --repeat-each=20 in isolation, then again under load (a few busy loops) and the full e2e suite 3 times, report counts + full SHA; (3) mutation check: temporarily make the product pan move an item by ~3 px (or shrink the settle wait to 0) and confirm the test FAILS, then revert (do not push the mutation). Any touch failure = QA_FAIL.
 
 ### T-175 — [E09] Template gallery and apply, per section (web): shipped and own templates, preview, apply, delete own
 - **Status:** BACKLOG
