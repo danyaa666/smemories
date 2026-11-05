@@ -228,12 +228,3 @@ func TestQA167NormalClassLosesNothing(t *testing.T) {
 		}
 	}
 }
-
-func mustMarshal(t *testing.T, v any) []byte {
-	t.Helper()
-	b, err := json.Marshal(v)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return b
-}
