@@ -1,6 +1,12 @@
 /* The book: fixed-size pages (book/env.tsx Sheet) and the print rules. Loaded with the book route only. */
 @import "./fonts/fonts.css";
 
+/* A page template drawn small (T-172, layout/TemplatePreview.tsx): the frame sizes itself from --pw, --ph and --s set on this element. */
+.tp-preview {
+  flex: none;
+  overflow: hidden;
+}
+
 .bk-stage {
   display: flex;
   flex-direction: column;

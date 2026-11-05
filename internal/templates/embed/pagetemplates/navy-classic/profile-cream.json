@@ -1,0 +1,29 @@
+{
+ "id": "profile-cream",
+ "label_en": "Cream profile",
+ "label_vi": "Trang cá nhân kem",
+ "kind": "profile",
+ "source": "authored",
+ "licence": "LICENCE.txt",
+ "page": {
+  "bg": {
+   "color": "paper"
+  },
+  "items": [
+   {
+    "id": "n1c2d3",
+    "t": "text",
+    "x": 70,
+    "w": 860,
+    "h": 70,
+    "cy": 600,
+    "r": 0,
+    "text": "Điều mình muốn nhớ mãi về lớp",
+    "font": "body",
+    "size": 18,
+    "color": "bronze",
+    "align": "left"
+   }
+  ]
+ }
+}

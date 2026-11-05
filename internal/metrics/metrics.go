@@ -35,6 +35,7 @@ type Metrics struct {
 	layoutSnapshots *prometheus.CounterVec
 	layoutPruned    prometheus.Counter
 	layoutRestores  *prometheus.CounterVec
+	pageTemplateBad prometheus.Counter
 }
 
 // New returns a registry with the Go runtime and process collectors and the HTTP and rate-limit instruments.
@@ -77,6 +78,9 @@ func New() *Metrics {
 			Namespace: namespace, Name: "layout_restores_total", Help: "Layout restores (book-layout/restore) by result (ok, conflict, invalid, template_changed; T-163). No ids or document content.",
 		}, []string{"result"}),
 	}
+	m.pageTemplateBad = prometheus.NewCounter(prometheus.CounterOpts{
+		Namespace: namespace, Name: "page_templates_rejected_total", Help: "Shipped page templates left out at start-up because they failed the layout validator (T-172). Should stay 0.",
+	})
 	for _, k := range layoutSnapshotKinds {
 		m.layoutSnapshots.WithLabelValues(k) // present at 0 from the first scrape
 	}
@@ -95,7 +99,7 @@ func New() *Metrics {
 		m.publicMedia.WithLabelValues(r) // present at 0 from the first scrape
 	}
 	m.reg.MustRegister(collectors.NewGoCollector(), collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-		m.duration, m.inFlight, m.rateLimited, m.mailFailed, m.publicMedia, m.mediaPanics, m.mediaUploads, m.layoutSaves, m.layoutSnapshots, m.layoutPruned, m.layoutRestores)
+		m.duration, m.inFlight, m.rateLimited, m.mailFailed, m.publicMedia, m.mediaPanics, m.mediaUploads, m.layoutSaves, m.layoutSnapshots, m.layoutPruned, m.layoutRestores, m.pageTemplateBad)
 	return m
 }
 
@@ -181,6 +185,9 @@ func (m *Metrics) LayoutRestore(result string) {
 	}
 	m.layoutRestores.WithLabelValues(result).Inc()
 }
+
+// PageTemplateRejected counts one shipped page template that was left out at start-up.
+func (m *Metrics) PageTemplateRejected() { m.pageTemplateBad.Inc() }
 
 // MediaProcessPanic counts one panic recovered in the image pipeline (T-104).
 func (m *Metrics) MediaProcessPanic() { m.mediaPanics.Inc() }

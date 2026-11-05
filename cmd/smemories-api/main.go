@@ -186,6 +186,15 @@ func main() {
 	classSvc.SetPublicBaseURL(cfg.PublicBaseURL)
 	designSvc := bookdesign.NewService(bookdesign.NewStore(d), limiters, nil)
 	bookStore.OnTemplateChange(designSvc.DeleteByYearbook) // a design is only valid for the template it was made for
+	// a shipped page template that fails the layout validator: fatal in dev and test, left out and counted in production (T-172)
+	_, badTemplates := booklayout.Shipped()
+	for _, err := range badTemplates {
+		logger.Error("shipped page template rejected", "error", err)
+		mt.PageTemplateRejected()
+		if cfg.Env != "prod" {
+			os.Exit(1)
+		}
+	}
 	layoutSvc := booklayout.NewService(booklayout.NewStore(d), mediaSvc, limiters, cfg.LayoutSavesPerMin, nil)
 	layoutSvc.SetCounter(mt.LayoutSave)
 	layoutSvc.SetObserver(booklayout.Observer{Snapshot: mt.LayoutSnapshot, Pruned: mt.LayoutSnapshotsPruned, Restore: mt.LayoutRestore, Log: logger})

@@ -47,3 +47,13 @@ export const restoreLayoutVersion = (yearbookId: string, id: string, baseVersion
     id,
     base_version: baseVersion,
   });
+
+// Page templates (T-172): shipped, authored pages that hold only text and asset items. Reading them is owner only and shares the save rate limit.
+export type PageTemplate = S["BookLayoutTemplateListResponse"]["data"]["items"][number];
+
+/** The shipped page templates of the book's current template, optionally of one page kind (`cover`, `profile`, `notes`, `back`). */
+export const listPageTemplates = (yearbookId: string, kind?: string) =>
+  postJson<S["BookLayoutTemplateListResponse"]["data"]>("/book-layout/template-list", {
+    yearbook_id: yearbookId,
+    ...(kind === undefined ? {} : { kind }),
+  });

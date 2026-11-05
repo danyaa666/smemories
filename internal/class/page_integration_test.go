@@ -380,6 +380,9 @@ func (e *env) adminCalls(admin person, cls, book, coll, note, media string) map[
 		"book-layout/version-get": func() resp {
 			return e.do(admin, "POST", "/api/book-layout/version-get", body("yearbook_id", book, "id", layoutVersionID))
 		},
+		"book-layout/template-list": func() resp { // T-172
+			return e.do(admin, "POST", "/api/book-layout/template-list", body("yearbook_id", book))
+		},
 		"book-layout/restore": func() resp {
 			return e.do(admin, "POST", "/api/book-layout/restore", `{"yearbook_id":"`+book+`","id":"`+layoutVersionID+`","base_version":3}`)
 		},
@@ -441,6 +444,7 @@ func TestAdminStillHasNoRightsOverAStudentsBook(t *testing.T) {
 			{"version-list", body("yearbook_id", book)},
 			{"version-get", body("yearbook_id", book, "id", layoutVersionID)},
 			{"restore", `{"yearbook_id":"` + book + `","id":"` + layoutVersionID + `","base_version":3}`},
+			{"template-list", body("yearbook_id", book)}, // T-172
 		} {
 			if r := e.do(p, "POST", "/api/book-layout/"+c.path, c.body); r.Code != 404 || r.code() != "ERROR_NOT_FOUND" || strings.Contains(r.Body.String(), "SECRET") {
 				t.Errorf("%s on book-layout/%s: %d %s", who, c.path, r.Code, r.Body)

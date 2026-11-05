@@ -1,0 +1,29 @@
+{
+ "id": "profile-calm",
+ "label_en": "Calm profile",
+ "label_vi": "Trang cá nhân dịu",
+ "kind": "profile",
+ "source": "authored",
+ "licence": "LICENCE.txt",
+ "page": {
+  "bg": {
+   "color": "paper"
+  },
+  "items": [
+   {
+    "id": "t1c2d3",
+    "t": "text",
+    "x": 100,
+    "w": 800,
+    "h": 70,
+    "cy": 870,
+    "r": 0,
+    "text": "Điều mình muốn nhớ mãi về lớp",
+    "font": "body",
+    "size": 20,
+    "color": "accent",
+    "align": "center"
+   }
+  ]
+ }
+}
