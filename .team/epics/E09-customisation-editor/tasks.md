@@ -745,7 +745,26 @@ Spec: .team/epics/E09-customisation-editor/29-editor-page-flow-done-print.md (re
 - 2026-11-05 09:56Z · leader · Leader to QA (re-test after rework): PR #166 head 06029547d77e75053f6881fea93ff11669069cf0. Check R1 notes-page text (en+vi, live region on arrival; deep link shows text without announcement), R2 editor-flow-qa.spec.mjs now in testMatch (dev changed ONE assertion: after Done and browser Back from the ?page=notes deep link the editor reopens on notes; judge whether that is the right expectation), R3 manage-page h1 focus. Dev saw one run where the QA spec read 'Page 1 of 4: Cover' after Back instead of notes, not reproduced in 6 runs: run the full e2e at least twice plus the QA spec 10 times in isolation and report any repeat (a repeat means a real remount race: QA_FAIL). Counts and full SHA in your comment.
 
 ### T-171 — [E09] Stretching shapes: rectangle and ellipse that fill their box (registry + web)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M4
+- **Depends-on:** none
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** dev
+- **Branch:** task/t-171-e09-stretching-shapes-rectangle-and-elli
+- **PR:** —
+- **Updated:** 2026-11-05 09:57Z by dev
+- **Comments-seen:** 0
+
+Spec: .team/epics/E09-customisation-editor/30-stretching-shapes.md (read it from the main checkout). shape.rect and shape.ellipse (CC0, licence files, stretch flag), AssetSvg edge to edge, free resize in the editor, print-check cell
+
+#### Comments
+
+### T-172 — [E09] Page templates: model, shipped storage, validator gate and read route (Go + web preview)
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -754,38 +773,40 @@ Spec: .team/epics/E09-customisation-editor/29-editor-page-flow-done-print.md (re
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-11-05 by leader
-- **Comments-seen:** 0
-
-Spec: .team/epics/E09-customisation-editor/30-stretching-shapes.md (read it from the main checkout). shape.rect and shape.ellipse (CC0, licence files, stretch flag), AssetSvg edge to edge, free resize in the editor, print-check cell
-
-#### Comments
-
-### T-172 — [E09] Page templates: model, shipped storage, validator gate and read route (Go + web preview)
-- **Status:** IN_QA
-- **Priority:** P2
-- **Type:** feature
-- **Milestone:** M4
-- **Depends-on:** none
-- **Risk:** low
-- **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** qa
 - **Branch:** task/t-172-e09-page-templates-model-shipped-storage
 - **PR:** https://github.com/danyaa666/smemories/pull/167
-- **Updated:** 2026-11-05 09:38Z by qa
-- **Comments-seen:** 2
+- **Updated:** 2026-11-05 10:03Z by leader
+- **Comments-seen:** 4
 
 Spec: .team/epics/E09-customisation-editor/31-page-templates-model-and-shipped.md (read it from the main checkout). Shipped page templates as embedded files, build fails if one fails booklayout.Validate, template-list route, TemplatePreview, authored test templates only (nothing from Doory)
 
 #### Comments
 - 2026-11-05 09:37Z · dev · PR #167 head f6c21e4. Added: embedded page templates (8 authored, both templates, 4 kinds) + licence files, booklayout.LoadPageTemplates/Shipped gate (go test fails on any invalid file; prod logs+counts+skips, dev/test refuse to start), POST book-layout/template-list, TemplatePreview + listPageTemplates, OpenAPI/schema.d.ts, class matrix rows, Postman folder, docs. Results: go test -race ./... pass; vet, golangci-lint 0 issues; integration (booklayout, class, templates, metrics, bookdata, cmd) ok; web lint/tsc/i18n/check:api/vitest 1120/build green; Postman folder 20 req 46 assertions 0 failed (postman CLI, own stack t172dev). Not run: full make test-integration, e2e, print-check (no print/auth/editor-shell change). Verify: break a shipped file in a scratch copy -> go test fails; admin/member 404 cells; preview of 8 templates on A5/A4/Letter.
 - 2026-11-05 09:38Z · leader · Leader to QA: PR #167 head f6c21e4d15acfdcc7336c5a1eb501030f622b43b. It touches a Go route, a class matrix row and the web preview, so report counts + full SHA for the FULL make test-integration (-race), the class matrix, migrations untouched check, check:api, the Postman run (folder has 20 requests / 46 assertions per dev), vitest and web checks, e2e (once, own stack) and make print-check. Verify: break a shipped template in a scratch copy and see go test fail for each negative control (unknown asset, image item, unknown kind, missing licence file, >40 items); 404/401 cells for admin, member, other-class admin, anonymous; owner sees only their book's template's items; kind filter; response size small; TemplatePreview of all 8 templates on A5/A4/Letter; production start with a broken file logs + counts + skips (not fatal) while dev/test refuse to start; no Doory-derived content. Accepted: dev branched before #166 (T-170) merged — fine.
+- 2026-11-05 10:02Z · qa · QA_PASS T-172, PR #167, head f6c21e4d15acfdcc7336c5a1eb501030f622b43b (git rev-parse in worktree; PR CI: go, web, security pass; e2e/go-integration/image skipped by D-37/D-38). Own stack: compose project t172qa, mysql 33172 / redis 63172 / s3 19172, SMEM_TEST_S3_ENDPOINT set, torn down at the end (down -v of my own project only).
+  RESULT LINES
+  - go build, go vet (plain and -tags integration), golangci-lint: 0 issues, gofmt clean. go test -race -count=1 ./...: all ok.
+  - FULL make test-integration equivalent (go test -race -count=1 -timeout 30m -tags integration ./...): 33 packages ok, 0 FAIL (booklayout 222s, class 376s, templates 8s, metrics 1.4s, yearbook 185s).
+  - Class matrix (internal/class page_integration_test, in the run above): ok, includes the new template-list cell (admin 404 on a student's book; matrix row + privacy-review row present).
+  - Migrations: git diff origin/develop...HEAD -- migrations is empty; no new dependency (go.mod/package.json untouched); nothing under .team/.
+  - Web (in worktree): eslint+prettier clean, tsc clean, lint:i18n ok, check:api ok (schema.d.ts in step), vitest 64 files / 1120 tests passed, vite build ok.
+  - Postman (postman CLI, postman/customisation-editor.postman_collection.json, from repo root with --working-dir postman, API SMEM_ENV=dev): 2 back-to-back full runs, each 186 requests, 420 assertions, 0 failed (T-172 folder: full flow + 10-step edge cases: 401, ERROR_PARAM bad id/kind/unknown field, 404 unknown book and other user B, 403 foreign origin, 405 GET). Note: a first run without --working-dir fails the T-152 upload steps (fixtures), unrelated.
+  - e2e (scripts/e2e.sh direct, own stack, DB smem_test_e2e): 38 passed, 0 failed (journey, class, design, editor specs, h2-gallery).
+  - make print-check equivalent (cd tools/print-check && npm test): 193 tests, 193 pass, 0 fail.
+  AC EVIDENCE
+  - AC1 gate: in a scratch copy I broke one shipped file at a time and ran TestShippedPageTemplates: unknown asset (shape.nope), image item, bg unknown kind (poster), missing licence file, 41 items, URL in text, stray file: each FAILED the build naming the file and reason (e.g. 'memory-book/cover-sunny.json: not a valid page: pages.cover.items[0].asset unknown_id', 'items too_many', 'licence file LICENCE.txt is missing or empty'); restored copy: ok. Plus dev's TestLoadPageTemplates negative controls pass. Shipped: 8 files, 8 loaded, each of 4 kinds in both templates.
+  - AC2: Postman + TestBookLayout template-list integration tests: owner gets only own book's template's items (memory-book vs navy-classic token sets differ), kind filter, sorted by label, 1.79 KB for 4 templates (<=40 items each, bound asserted), 404 for other user/unknown book, 401 anon, class matrix green.
+  - AC3: TemplatePreview.test.tsx draws all 8 shipped templates on A5, A4 and Letter (24 cases) plus text-as-text and unknown-kind cases, all pass in vitest 1120.
+  - AC4: all of the above.
+  - Start-up behaviour: built the API from the scratch copy with a broken shipped file: SMEM_ENV=test and SMEM_ENV=dev both log 'shipped page template rejected ... asset unknown_id' and exit 1. No Doory content (grep doory in templates/preview/loader: none; source must be 'authored', checked by code and a test).
+  NON-BLOCKING
+  1. Production path (log + count + skip, no exit) was verified by code read only (main.go exits only when cfg.Env != prod; counter smem_page_templates_rejected_total incremented first); a real prod start needs verified DB TLS which my local stack cannot give.
+  2. web/src/api/bookLayout.ts comment says template-list 'shares the save rate limit'; service.go says it spends the layout read limit. Wording only.
+  3. TemplatePreview is unused by any screen yet (by design, gallery task later), so preview is proved by jsdom tests, not by a pixel check.
+- 2026-11-05 10:03Z · leader · merged 44f339a; QA: integration 33 pkgs ok (-race, matrix incl template-list), postman 186/420/0 x2, e2e 38/0, print-check 193/193, vitest 1120; gate negative controls fail go test; non-blocking: comment in web/src/api/bookLayout.ts says save rate limit but layout read limit is used; prod skip path verified by code read only
 
 ### T-173 — [E09] Own page templates and the apply API (Go): save my page, apply a template per section
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -796,12 +817,13 @@ Spec: .team/epics/E09-customisation-editor/31-page-templates-model-and-shipped.m
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-11-05 by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-11-05 10:03Z by leader
+- **Comments-seen:** 1
 
 Spec: .team/epics/E09-customisation-editor/32-own-templates-and-apply-api.md (read it from the main checkout). book_template_tab migration, template-create/delete/list, apply-template in one write with one apply snapshot, limits 20 and 64 KiB, concurrency tests. Risk high: owner approval before merge
 
 #### Comments
+- 2026-11-05 10:03Z · leader · T-172 merged (44f339a); Risk high: owner approve needed before merge
 
 ### T-174 — [E09] Stabilise the editor-gestures touch test (flake: 2 to 3 px against 0.5 allowed)
 - **Status:** TODO
