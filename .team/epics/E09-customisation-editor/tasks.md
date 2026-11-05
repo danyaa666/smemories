@@ -762,7 +762,7 @@ Spec: .team/epics/E09-customisation-editor/30-stretching-shapes.md (read it from
 #### Comments
 
 ### T-172 — [E09] Page templates: model, shipped storage, validator gate and read route (Go + web preview)
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -770,15 +770,17 @@ Spec: .team/epics/E09-customisation-editor/30-stretching-shapes.md (read it from
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-172-e09-page-templates-model-shipped-storage
-- **PR:** —
-- **Updated:** 2026-11-05 09:20Z by dev
-- **Comments-seen:** 0
+- **PR:** https://github.com/danyaa666/smemories/pull/167
+- **Updated:** 2026-11-05 09:37Z by dev
+- **Comments-seen:** 2
 
 Spec: .team/epics/E09-customisation-editor/31-page-templates-model-and-shipped.md (read it from the main checkout). Shipped page templates as embedded files, build fails if one fails booklayout.Validate, template-list route, TemplatePreview, authored test templates only (nothing from Doory)
 
 #### Comments
+- 2026-11-05 09:37Z · dev · PR #167 head f6c21e4. Added: embedded page templates (8 authored, both templates, 4 kinds) + licence files, booklayout.LoadPageTemplates/Shipped gate (go test fails on any invalid file; prod logs+counts+skips, dev/test refuse to start), POST book-layout/template-list, TemplatePreview + listPageTemplates, OpenAPI/schema.d.ts, class matrix rows, Postman folder, docs. Results: go test -race ./... pass; vet, golangci-lint 0 issues; integration (booklayout, class, templates, metrics, bookdata, cmd) ok; web lint/tsc/i18n/check:api/vitest 1120/build green; Postman folder 20 req 46 assertions 0 failed (postman CLI, own stack t172dev). Not run: full make test-integration, e2e, print-check (no print/auth/editor-shell change). Verify: break a shipped file in a scratch copy -> go test fails; admin/member 404 cells; preview of 8 templates on A5/A4/Letter.
+- 2026-11-05 09:38Z · leader · Leader to QA: PR #167 head f6c21e4d15acfdcc7336c5a1eb501030f622b43b. It touches a Go route, a class matrix row and the web preview, so report counts + full SHA for the FULL make test-integration (-race), the class matrix, migrations untouched check, check:api, the Postman run (folder has 20 requests / 46 assertions per dev), vitest and web checks, e2e (once, own stack) and make print-check. Verify: break a shipped template in a scratch copy and see go test fail for each negative control (unknown asset, image item, unknown kind, missing licence file, >40 items); 404/401 cells for admin, member, other-class admin, anonymous; owner sees only their book's template's items; kind filter; response size small; TemplatePreview of all 8 templates on A5/A4/Letter; production start with a broken file logs + counts + skips (not fatal) while dev/test refuse to start; no Doory-derived content. Accepted: dev branched before #166 (T-170) merged — fine.
 
 ### T-173 — [E09] Own page templates and the apply API (Go): save my page, apply a template per section
 - **Status:** BACKLOG
