@@ -1,6 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { getBookData } from "../api/book";
+import { listPages } from "../book/BookPages";
+import { getTemplate } from "../book/templates";
 import { deleteYearbook, getYearbook, updateYearbook, type Yearbook } from "../api/yearbooks";
 import { errorText } from "../auth/errors";
 import { BookForm } from "../components/BookForm";
@@ -15,6 +18,15 @@ export function YearbookEdit() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const q = useQuery({ queryKey: ["yearbook", id], queryFn: () => getYearbook(id) });
+  // the page kinds the editor shows (a hidden section, or notes while there are none, has no link); a failed read leaves the first link alone
+  const layout = !!q.data && !!getTemplate(q.data.template_id).layout;
+  const book = useQuery({
+    queryKey: ["book-data", id],
+    queryFn: () => getBookData(id),
+    enabled: layout,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
   const saved = (y: Yearbook) => {
     qc.setQueryData(["yearbook", id], y);
     void qc.invalidateQueries({ queryKey: YEARBOOKS_KEY });
@@ -60,6 +72,22 @@ export function YearbookEdit() {
       <p>
         <Link to={`/yearbooks/${y.id}/customise`}>{t("customise.link")}</Link>
       </p>
+      {layout && (
+        <section aria-labelledby="pages-h">
+          <h2 id="pages-h">{t("designPages.heading")}</h2>
+          <p>{t("designPages.intro")}</p>
+          <ul>
+            <li>
+              <Link to={`/yearbooks/${y.id}/editor`}>{t("designPages.all")}</Link>
+            </li>
+            {[...new Set(book.data ? listPages(book.data).map((p) => p.section) : [])].map((s) => (
+              <li key={s}>
+                <Link to={`/yearbooks/${y.id}/editor?page=${s}`}>{t(`designPages.${s}`)}</Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <section aria-labelledby="book-h">
         <h2 id="book-h">{t("book.heading")}</h2>
         <BookForm

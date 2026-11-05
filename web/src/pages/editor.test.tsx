@@ -1,4 +1,5 @@
 import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { BookData } from "../api/book";
 import { err, mockApi, ok, renderApp, user } from "../test/api";
@@ -46,11 +47,25 @@ const bookData = (template = "memory-book"): BookData => ({
   approved_total: 0,
   truncated: false,
 });
-const serve = (opts: { template?: string; gone?: boolean } = {}) =>
+const serve = (
+  opts: { template?: string; gone?: boolean; hidden?: string[]; notes?: number } = {},
+) =>
   mockApi({
     "GET /user/get-me": () => ok(user()),
     [`GET /yearbook/get?id=${BOOK}`]: () => (opts.gone ? err(404, "not_found") : ok(yearbook)),
-    [`GET /book-data/get?yearbook_id=${BOOK}`]: () => ok(bookData(opts.template)),
+    [`GET /book-data/get?yearbook_id=${BOOK}`]: () =>
+      ok({
+        ...bookData(opts.template),
+        notes: Array.from({ length: opts.notes ?? 0 }, (_, i) => ({
+          id: `01J9Z3K6V8Q4M7N2P5R8N0000${i}`,
+          answers: { name: `Bạn ${i}`, message: "Chúc mừng" },
+          signature: null,
+          photo_ids: [],
+        })),
+        design: opts.hidden
+          ? { sections: { order: ["cover", "profile", "notes", "back"], hidden: opts.hidden } }
+          : null,
+      }),
     [`GET /book-design/get?yearbook_id=${BOOK}`]: () =>
       ok({
         template_id: opts.template ?? "memory-book",
@@ -106,5 +121,42 @@ describe("the editor route", () => {
     renderApp(`/yearbooks/${BOOK}/editor`);
     expect(await screen.findByText(/does not support free layout/)).toBeInTheDocument();
     expect(calls.some((c) => c.path.startsWith("/book-layout"))).toBe(false);
+  });
+});
+
+describe("the book manage page and the editor (T-170)", () => {
+  const withDesign = (hidden: string[], notes = 0) => serve({ hidden, notes });
+  it("lists a link per page kind, hidden sections omitted, and the links open the editor at that page", async () => {
+    withDesign(["profile"], 2);
+    renderApp(`/yearbooks/${BOOK}`);
+    expect(await screen.findByRole("heading", { name: "Design the pages" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Edit page by page" })).toHaveAttribute(
+      "href",
+      `/yearbooks/${BOOK}/editor`,
+    );
+    expect(await screen.findByRole("link", { name: "Edit notes pages" })).toHaveAttribute(
+      "href",
+      `/yearbooks/${BOOK}/editor?page=notes`,
+    );
+    expect(screen.getByRole("link", { name: "Edit cover" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Edit back page" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Edit profile page" })).toBeNull();
+  });
+
+  it("has no link for notes pages while the book has no notes", async () => {
+    withDesign([]);
+    renderApp(`/yearbooks/${BOOK}`);
+    expect(await screen.findByRole("link", { name: "Edit profile page" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Edit notes pages" })).toBeNull();
+  });
+
+  it("opens the editor on the page of the link, then Done returns to the manage page", async () => {
+    withDesign(["profile"]);
+    renderApp(`/yearbooks/${BOOK}`);
+    await userEvent.click(await screen.findByRole("link", { name: "Edit back page" }));
+    expect(await screen.findByTestId("page-position")).toHaveTextContent("Page 2 of 2: Back cover");
+    await userEvent.click(screen.getByRole("button", { name: "Done" }));
+    expect(await screen.findByRole("heading", { name: "Design the pages" })).toBeInTheDocument();
+    expect(screen.getByTestId("where")).toHaveTextContent(`/yearbooks/${BOOK}`);
   });
 });

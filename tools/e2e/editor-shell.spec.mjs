@@ -158,7 +158,7 @@ test("layout editor shell: open, select, change the width, undo, reload; handles
     await expect.poll(titleShare).toBeGreaterThan(0.6);
   });
 
-  await step("5b. 'Preview as PDF' shows the just-edited layout even when the save is slow (R2)", async () => {
+  await step("5b. 'Print or save as PDF' shows the just-edited layout even when the save is slow (R2)", async () => {
     // every save takes 1.5 s; the student edits the width and clicks Preview at once, three times
     await owner.route("**/api/book-layout/save", async (route) => {
       await new Promise((r) => setTimeout(r, 1500));
@@ -170,7 +170,7 @@ test("layout editor shell: open, select, change the width, undo, reload; handles
         await num("Width").fill(String(want));
         await num("Width").press("Enter");
         const popup = owner.context().waitForEvent("page");
-        await owner.getByRole("link", { name: "Preview as PDF" }).click();
+        await owner.getByRole("link", { name: "Print or save as PDF" }).click();
         const tab = await popup;
         await tab.waitForURL(/\/book$/, { timeout: STEP_MS });
         await tab.waitForSelector("html[data-book-ready]", { timeout: STEP_MS });
@@ -209,6 +209,7 @@ test("layout editor shell: open, select, change the width, undo, reload; handles
       await owner.getByRole("button", { name: "Sticker", exact: true }).click();
       const probe = await owner.evaluate(() => {
         const handle = document.querySelector(".ed-h-se");
+        handle.scrollIntoView({ block: "center", inline: "center" }); // T-170: the second toolbar row pushes the page down; a person scrolls too
         const sheet = document.querySelector(".ed-pagebox .bk-sheet");
         const h = handle.getBoundingClientRect();
         const s = sheet.getBoundingClientRect();

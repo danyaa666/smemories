@@ -416,6 +416,15 @@
     "revokeTitle": "Revoke this link?",
     "revokeBody": "Friends can no longer use it. Notes already sent stay in your inbox."
   },
+  "designPages": {
+    "heading": "Design the pages",
+    "intro": "Move, add and change what is on each page.",
+    "all": "Edit page by page",
+    "cover": "Edit cover",
+    "profile": "Edit profile page",
+    "notes": "Edit notes pages",
+    "back": "Edit back page"
+  },
   "customise": {
     "title": "Customise the design",
     "link": "Customise the design",
@@ -982,7 +991,13 @@
     "undo": "Undo",
     "redo": "Redo",
     "resetAll": "Reset all layout",
-    "preview": "Preview as PDF",
+    "flow": "Pages, print and finish",
+    "prevPage": "Previous page",
+    "nextPage": "Next page",
+    "print": "Print or save as PDF",
+    "printHint": "Prints all pages of the book, {{size}}.",
+    "done": "Done",
+    "doneFailed": "Your latest changes are not saved yet, so the editor stays open. Check the save status, then press Done again.",
     "previewFailed": "The latest changes could not be saved, so the preview was not opened.",
     "range": "Between {{min}} and {{max}}",
     "conflict": "This book was changed in another tab or device. Editing is paused until you choose.",
@@ -1106,6 +1121,7 @@
       "noSnap": "Do not snap to guides while dragging",
       "ratio": "Keep the proportions while resizing",
       "snap15": "Turn in steps of 15 degrees while rotating",
+      "pages": "Go to the previous or next page of the book",
       "help": "Show or hide this list"
     },
     "dir": {

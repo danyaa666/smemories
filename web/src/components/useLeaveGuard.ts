@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 /**
@@ -17,13 +17,31 @@ export function useLeaveGuard(active: boolean) {
   const [back, setBack] = useState(false); // Back was pressed: the dialog asks
   const off = useRef(false); // set while a confirmed leave is under way
   const armed = useRef(false); // the sentinel entry is on top of the history stack
+  const popping = useRef<Promise<void> | null>(null);
+
+  /** Pops the sentinel (the screen's own entry has the same URL) and resolves once the browser has done it: a navigation made before that would be undone by the pending Back. */
+  const release = useCallback((): Promise<void> => {
+    if (!armed.current) return popping.current ?? Promise.resolve();
+    armed.current = false;
+    off.current = true; // this pop is ours, not a Back press
+    popping.current = new Promise<void>((done) => {
+      const end = () => {
+        window.removeEventListener("popstate", end);
+        clearTimeout(timer);
+        off.current = false;
+        popping.current = null;
+        done();
+      };
+      const timer = setTimeout(end, 500); // no popstate (a browser that skipped it): do not wait for ever
+      window.addEventListener("popstate", end);
+    });
+    window.history.back();
+    return popping.current;
+  }, []);
 
   useEffect(() => {
     if (!active) {
-      if (armed.current) {
-        armed.current = false;
-        window.history.back(); // pops the sentinel; the screen's own entry has the same URL
-      }
+      void release();
       return;
     }
     if (!armed.current) {
@@ -38,7 +56,7 @@ export function useLeaveGuard(active: boolean) {
     };
     window.addEventListener("popstate", pop);
     return () => window.removeEventListener("popstate", pop);
-  }, [active]);
+  }, [active, release]);
 
   useEffect(() => {
     if (!active) return;
@@ -67,6 +85,8 @@ export function useLeaveGuard(active: boolean) {
   }, [active]);
 
   return {
+    /** Takes the guard's history entry away and resolves when that is done: await it before navigating away from a screen that just became clean (T-170 Done). */
+    release,
     /** True while the dialog asks (a link was clicked or Back was pressed). */
     pending: pending !== null || back,
     stay: () => {

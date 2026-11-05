@@ -70,6 +70,9 @@ export function PageStrip({
 }) {
   const { t } = useTranslation();
   const buttons = useRef<(HTMLButtonElement | null)[]>([]);
+  useEffect(() => {
+    buttons.current[current]?.scrollIntoView?.({ block: "nearest" }); // the active page stays in view when the buttons step through a long book
+  }, [current]);
   const move = (to: number) => {
     const i = Math.min(Math.max(to, 0), pages.length - 1);
     onPick(i);

@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import { getBookData } from "../api/book";
@@ -36,6 +36,7 @@ export function Editor() {
 
 function Loaded({ id }: { id: string }) {
   const { t } = useTranslation();
+  const qc = useQueryClient();
   const book = useQuery({ queryKey: ["yearbook", id], queryFn: () => getYearbook(id) }); // the same request as the shell's: it tells who owns the book
   const data = useQuery({
     queryKey: ["book-data", id],
@@ -84,6 +85,7 @@ function Loaded({ id }: { id: string }) {
     <EditorShell
       key={templateId ?? ""}
       bookId={id}
+      onDone={() => void qc.invalidateQueries({ queryKey: ["book-data", id] })} // the manage page shows the book as it is now
       data={data.data}
       safeMm={design.data?.design?.layout?.safe_margin_mm ?? DEFAULT_SAFE_MM}
     />

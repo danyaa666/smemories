@@ -416,6 +416,15 @@
     "revokeTitle": "Thu hồi liên kết này?",
     "revokeBody": "Bạn bè sẽ không dùng được nữa. Các lời nhắn đã gửi vẫn nằm trong hộp thư của bạn."
   },
+  "designPages": {
+    "heading": "Thiết kế các trang",
+    "intro": "Di chuyển, thêm và thay đổi nội dung trên từng trang.",
+    "all": "Chỉnh sửa từng trang",
+    "cover": "Chỉnh sửa bìa",
+    "profile": "Chỉnh sửa trang hồ sơ",
+    "notes": "Chỉnh sửa các trang lời nhắn",
+    "back": "Chỉnh sửa trang cuối"
+  },
   "customise": {
     "title": "Tùy chỉnh thiết kế",
     "link": "Tùy chỉnh thiết kế",
@@ -982,7 +991,13 @@
     "undo": "Hoàn tác",
     "redo": "Làm lại",
     "resetAll": "Đặt lại toàn bộ bố cục",
-    "preview": "Xem trước dạng PDF",
+    "flow": "Trang, in và hoàn tất",
+    "prevPage": "Trang trước",
+    "nextPage": "Trang sau",
+    "print": "In hoặc lưu thành PDF",
+    "printHint": "In tất cả các trang của sách, cỡ {{size}}.",
+    "done": "Xong",
+    "doneFailed": "Những thay đổi gần nhất chưa được lưu nên trình chỉnh sửa vẫn mở. Hãy xem trạng thái lưu rồi nhấn Xong lại.",
     "previewFailed": "Chưa lưu được các thay đổi mới nhất nên chưa mở bản xem trước.",
     "range": "Nhập số từ {{min}} đến {{max}}",
     "conflict": "Cuốn sách này vừa được thay đổi ở tab hoặc thiết bị khác. Việc chỉnh sửa tạm dừng cho đến khi bạn chọn.",
@@ -1106,6 +1121,7 @@
       "noSnap": "Không hít vào đường gióng khi kéo",
       "ratio": "Giữ tỉ lệ khi đổi cỡ",
       "snap15": "Xoay theo bước 15 độ khi xoay",
+      "pages": "Sang trang trước hoặc trang sau của sách",
       "help": "Hiện hoặc ẩn danh sách này"
     },
     "dir": {

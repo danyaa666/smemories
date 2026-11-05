@@ -383,7 +383,7 @@ test("keyboard: select, move, resize, rotate, delete and undo without a pointer"
   });
   await step("? lists the shortcuts; Escape closes the list and a second Escape clears the selection", async () => {
     await page.keyboard.press("Shift+?");
-    await expect(page.getByRole("region", { name: "Keyboard shortcuts" }).getByRole("row")).toHaveCount(14);
+    await expect(page.getByRole("region", { name: "Keyboard shortcuts" }).getByRole("row")).toHaveCount(15);
     await page.keyboard.press("Escape");
     await expect(page.getByRole("region", { name: "Keyboard shortcuts" })).toHaveCount(0);
     await hit.focus();
@@ -412,6 +412,7 @@ test("an item flush to the page edge can be resized with the mouse from a handle
       await setZoom(page, 100);
       const item = drawn(page, FLUSH.id);
       await page.getByRole("button", { name: "Sticker", exact: true }).click();
+      await page.getByRole("button", { name: "Resize from bottom right" }).scrollIntoViewIfNeeded(); // T-170: the second toolbar row pushes the page down; a person scrolls too
       const b0 = await box(item);
       const sheet = await box(page.locator(".ed-pagebox .bk-sheet"));
       const hb = await box(page.getByRole("button", { name: "Resize from bottom right" }));
