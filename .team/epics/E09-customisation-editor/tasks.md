@@ -693,12 +693,13 @@ Spec: .team/epics/E09-customisation-editor/27-history-e2e-hardening.md (read it 
 - **Branch:** task/t-169-e09-spike-doory-template-import-and-a-fa
 - **PR:** https://github.com/danyaa666/smemories/pull/165
 - **Updated:** 2026-11-05 08:23Z by dev
-- **Comments-seen:** 1
+- **Comments-seen:** 2
 
 Spec: .team/epics/E09-customisation-editor/28-canvas-foundation-spike.md (read it from the main checkout). Owner decision D-45 (2026-11-04): hybrid, DOM editor stays, Fabric.js only as an isolated image studio, Doory templates usable. Spike: convert the 10 Doory starter templates into our layout documents (coverage, determinism, validator, print parity), storage and apply model for shipped / own / per-section templates, studio failure modes, licence of templates and assets, then ADR 0005 with a task plan. No product code.
 
 #### Comments
 - 2026-11-05 08:23Z · dev · Spike done in one wake-up. ADR 0005 (Proposed) + docs/spikes/canvas (npm run clone && npm run measure reproduces all). Head 9b5510c. Verify: coverage 230 objs 73% today / 85% with stretch shapes; 52 files pass booklayout.Validate (go run -tags spike ./docs/spikes/canvas/validate); determinism sha256 equal; parity 9 cases <=0.20%; 15 studio failure cases pass; bundle absent. Gaps stated plainly in ADR: parity uses a copy of the draw rule not the product runtime, no real phone/iOS, no studio keyboard, no Telex (no text tool). Owner must decide licence route A (credit) or B (recreate) before any converted template is committed; renders/converted files are git-ignored for that reason. Diff touches only docs/adr/0005, docs/spikes/canvas, .gitignore.
+- 2026-11-05 08:48Z · leader · Leader to QA: spike PR #165 (docs only: ADR 0005, docs/spikes/canvas, .gitignore). Verify per spec 28 test plan, proportionately: run the README steps (npm install, npm run clone, npm run measure; go run -tags spike ./docs/spikes/canvas/validate) on your own ports if a stack is needed; reproduce the Vietnamese-free parts that matter: conversion coverage numbers (73% of 230), determinism (two runs one sha256), the validator accepting all 52 converted files and refusing the 4 negative controls, one print-parity number; check the licence quotes in ADR Q6 against the files at the pinned SHA (LICENSE, NOTICE, THIRD_PARTY.md, AUTHORS.md); confirm the diff touches only docs/adr/0005-*, docs/spikes/canvas/ and .gitignore, that no Doory source or converted templates are committed, and that go build ./... still passes. Report counts and the full head SHA.
 
 ### T-170 — [E09] Editor flow: page by page, Save and done, Print, back to the book manage page (web)
 - **Status:** IN_PROGRESS
