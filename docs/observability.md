@@ -28,6 +28,7 @@ Every label comes from a small fixed set: `route` is the mux pattern (`GET /api/
 | `smem_layout_snapshots_total` | counter | kind | layout history snapshots written (`auto`, `reset`, `restore`; T-163); no id or document content |
 | `smem_layout_snapshots_pruned_total` | counter | | history snapshots deleted because a book held more than 30 (T-163) |
 | `smem_layout_restores_total` | counter | result | `book-layout/restore` calls by `result` (`ok`, `conflict`, `invalid`, `template_changed`; T-163) |
+| `smem_page_templates_rejected_total` | counter | | shipped page templates left out at start-up because they failed the layout validator (T-172); a build test makes it 0 for the files in the repository, so a rise means a bad build in `prod` (in `dev` and `test` the API refuses to start). Alert on any increase |
 | `smem_media_process_panics_total` | counter | | panics recovered while decoding, scaling or encoding a photo (T-104); each one answered `400 ERROR_INVALID_IMAGE`, freed its processing slot and logged one ERROR line "image processing panicked" (no image bytes). Any increase is a decoder bug or a crafted file: alert on `increase(...[1h]) > 0` |
 | `smem_public_drains_in_progress` | gauge | | rejected public submissions whose body is being drained (no slot held, only a socket); at most 16 per client key (T-110) |
 | `smem_public_uploads_in_progress` / `smem_public_uploads_max` | gauge | | public note submissions in progress / `SMEM_PUBLIC_UPLOAD_MAX_CONNS` |

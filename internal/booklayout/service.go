@@ -427,3 +427,28 @@ func (s *Service) restore(ctx context.Context, ownerID uint64, publicID, id stri
 	s.written(w)
 	return &restoreResult{Restored: Restored{Version: w.version, UpdatedAt: pol.nowMs, Layout: doc, Dropped: dropped}, From: snap.Version, Replaced: baseVersion}, nil
 }
+
+// Templates lists the shipped page templates of the owner's book, optionally of one page kind (T-172): those of the book's current template,
+// sorted by label. Another user's and an unknown book are ERROR_NOT_FOUND. A book whose template has no layout block gets an empty list.
+// Own templates are added by T-173. It spends the same rate limit as the other layout reads.
+func (s *Service) Templates(ctx context.Context, ownerID uint64, publicID, kind string) ([]PageTemplate, error) {
+	if err := s.take(ctx, ownerID); err != nil {
+		return nil, err
+	}
+	st, err := s.store.get(ctx, ownerID, publicID)
+	if err != nil {
+		return nil, err
+	}
+	block := layoutOf(st.templateID)
+	if block == nil {
+		return []PageTemplate{}, nil
+	}
+	if _, ok := block.Kind(kind); kind != "" && !ok {
+		return nil, apperr.New(apperr.Param, "kind must be a page kind of the book's template")
+	}
+	out := templatesFor(*st.templateID, kind)
+	if out == nil {
+		out = []PageTemplate{}
+	}
+	return out, nil
+}

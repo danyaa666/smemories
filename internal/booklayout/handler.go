@@ -36,7 +36,26 @@ func (h *Handler) Routes(mux *http.ServeMux) {
 	mux.Handle("POST /api/book-layout/reset", auth.Guard(h.allowedOrigins, h.requireUser(http.HandlerFunc(h.reset))))
 	mux.Handle("POST /api/book-layout/version-list", auth.Guard(h.allowedOrigins, h.requireUser(http.HandlerFunc(h.versionList))))
 	mux.Handle("POST /api/book-layout/version-get", auth.Guard(h.allowedOrigins, h.requireUser(http.HandlerFunc(h.versionGet))))
+	mux.Handle("POST /api/book-layout/template-list", auth.Guard(h.allowedOrigins, h.requireUser(http.HandlerFunc(h.templateList))))
 	mux.Handle("POST /api/book-layout/restore", auth.Guard(h.allowedOrigins, h.requireUser(http.HandlerFunc(h.restore))))
+}
+
+type templateListInput struct {
+	YearbookID string `json:"yearbook_id"`
+	Kind       string `json:"kind"`
+}
+
+func (h *Handler) templateList(w http.ResponseWriter, r *http.Request) {
+	u, ok := auth.MustUser(w, r)
+	if !ok {
+		return
+	}
+	var in templateListInput
+	if !httpx.DecodeJSON(w, r, &in) || !validID(w, r, in.YearbookID) {
+		return
+	}
+	items, err := h.svc.Templates(r.Context(), u.InternalID, in.YearbookID, in.Kind)
+	respond(w, r, map[string]any{"items": items, "next_id": ""}, err) // a handful per template, so never a next page
 }
 
 type versionInput struct {
