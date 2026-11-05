@@ -115,4 +115,6 @@ The Postman collection and `web/src/api/schema.d.ts` follow the file; the defini
 
 `ERROR_INVALID_SIGNATURE` (400, T-095) is the business code of the optional `signature` part of `submit-note`; the format is in [note-fields.md](note-fields.md), section "Signature".
 
+`class-book/get` (T-167): every `members[]` entry carries `layout`, the member's stored layout document exactly as `book-data/get` returns it (`null` when none, when it was made for another template, when the page is not linked, or when it was left out for size; no version or history), and the top-level `truncated_layouts` lists the member ids whose layout was left out (`[]` normally), next to `truncated` for notes. The whole body stays within 8 MiB: a layout (up to 128 KiB) is paid before the member's notes, and if keeping it would leave the later members less than the 16 KiB a member without notes and layout needs, it is dropped (with the layouts of every later member) instead of the notes. Admin only, as before; rule and tests in [class-permissions.md](class-permissions.md).
+
 New endpoints (moderation T-013, book data T-056, template list and print feedback T-061, ...) are written in v2 from the start; pick the namespace by the same rule (`note`, `book-data`, `book-export`, `book-design`, `book-layout`, `template`, `print-feedback`).

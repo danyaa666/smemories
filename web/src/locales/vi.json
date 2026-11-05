@@ -712,7 +712,10 @@
     "cutNotes": "Lời nhắn quá dài và bị cắt: {{count}}.",
     "cutProfile": "Đoạn trong hồ sơ quá dài và bị cắt: {{count}}.",
     "leftOut": "Lời nhắn của các bạn sau bị bỏ khỏi sách lớp vì sách quá lớn ({{count}}): {{names}}. Trang giới thiệu của các bạn vẫn được in, nhưng không có lời nhắn nào.",
-    "leftOutAck": "Tôi hiểu rằng lời nhắn của các bạn này sẽ không có trong bản in"
+    "leftOutAck": "Tôi hiểu rằng lời nhắn của các bạn này sẽ không có trong bản in",
+    "layoutLeftOut": "Bố cục tự do của các bạn sau bị bỏ khỏi sách lớp vì sách quá lớn ({{count}}): {{names}}. Trang giới thiệu và lời nhắn của các bạn vẫn được in, nhưng theo trang mẫu chuẩn.",
+    "layoutLeftOutAck": "Tôi hiểu rằng bố cục của các bạn này sẽ không có trong bản in",
+    "leftOutAckBoth": "Tôi hiểu rằng lời nhắn và bố cục của các bạn nêu trên sẽ không có trong bản in"
   },
   "legal": {
     "terms": "Điều khoản sử dụng",

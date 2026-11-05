@@ -712,7 +712,10 @@
     "cutNotes": "Notes too long for their space and cut off: {{count}}.",
     "cutProfile": "Profile texts too long for their space and cut off: {{count}}.",
     "leftOut": "These students' notes are left out of the class book because it would be too large ({{count}}): {{names}}. Their profile pages are still printed, but none of their notes.",
-    "leftOutAck": "I understand that these students' notes will be missing from the printout"
+    "leftOutAck": "I understand that these students' notes will be missing from the printout",
+    "layoutLeftOut": "These students' layouts are left out of the class book because it would be too large ({{count}}): {{names}}. Their profile and notes are still printed, but on the template's standard pages.",
+    "layoutLeftOutAck": "I understand that these students' layouts will be missing from the printout",
+    "leftOutAckBoth": "I understand that the notes and layouts listed above will be missing from the printout"
   },
   "legal": {
     "terms": "Terms of Use",

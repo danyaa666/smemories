@@ -62,7 +62,7 @@ response is `Cache-Control: no-store`, and neither the text nor a link is ever l
 
 `GET /api/class-book/get?class_id=` (package `internal/class`, session, class admin only) is the data of the class book for the browser renderer, the class counterpart of
 `book-data/get`: `{class, front_pages, members[], back_pages}`; each member is `{member_id, name, linked, yearbook{template_id, page_size, language}, profile, notes[],
-note_count, approved_total, truncated}`. Permissions and privacy: [class-permissions.md](class-permissions.md). The class pages (T-127) are in the two arrays, each `{id, kind, title, body, placement, created_at, updated_at}`, `body` plain text to be shown as text; an empty side is `[]`.
+design, layout, note_count, approved_total, truncated}`, plus `truncated`, `truncated_layouts` at the top level. Permissions and privacy: [class-permissions.md](class-permissions.md). The class pages (T-127) are in the two arrays, each `{id, kind, title, body, placement, created_at, updated_at}`, `body` plain text to be shown as text; an empty side is `[]`.
 
 - **Budget.** The book keeps the page budget of about 120 pages: at most **60 members and 40 approved notes per member** (`notes.MaxClassBookNotes`). A student with more approved notes is cut at 40 in
   their own order, with `truncated: true` and the real `approved_total` (never silent).
@@ -94,6 +94,11 @@ chose, or the one picked on the screen (`?size=A5|A4|Letter`); the cover and cla
 kept) shrunk to one page; the text of a page that still does not fit is cut and listed. The screen shows the page count (a warning above 120) and a summary naming the students with no page, the students whose
 approved notes were left out by the 40-note limit, whose notes or profile are cut at the template's smallest size, and the class pages that are cut. Ready (`html[data-book-ready]`, Print enabled) waits for the fonts and
 for **every** photo of every student's pages, through the shared queue of at most 16 requests in flight. `tools/print-check` prints a 30-student fixture (three templates, 77 pages) on A5 and A4 (about 10 s).
+
+**Each student's layout (T-167).** `class-book/get` carries every member's free `layout` (the `book-data/get` document: re-validated against the member's own template and the asset registry, `null` when none or when it no longer fits)
+and the top-level `truncated_layouts`. `memberBook` hands it to that student's `LayoutProvider`, so it draws on their pages only and in their template's manifest; a member in `truncated_layouts` has `layout: null` and draws as without one. The
+8 MiB cap pays a member's layout before their notes (rule: [class-permissions.md](class-permissions.md), "Layouts and the cap"); the print screen names the members whose layout was left out and, like for cut notes, asks the admin to
+confirm before printing. `tools/print-check` prints the 6-student fixture with two members with different layouts, one on the same template as another, and one whose layout was dropped.
 
 **Each student's design (T-146).** `class-book/get` carries every member's resolved `design` (the `book-data/get` shape). `ClassBookPages` wraps each student's pages in a `DesignProvider`, so their theme, font set, hidden
 and moved sections, replaced texts and images apply to those pages only; the class cover, class pages and back cover keep the class look. A hidden section is not counted in the page count and its photos are

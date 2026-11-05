@@ -1473,6 +1473,9 @@ describe("layout layer: the printed page is the page on screen (T-154)", () => {
     cb.members[0].layout = mark(0); // memory-book (every 5th student)
     cb.members[2].layout = mark(2); // built-in layout (no template): no layout block, so nothing is drawn
     cb.members[3].layout = mark(3); // navy-classic (T-166): has a layout block, drawn on its own pages
+    cb.members[5].layout = mark(5); // memory-book again, a different layout (T-167: two members with the same template and different layouts)
+    cb.members[1].layout = null; // navy-classic whose layout the 8 MiB cap dropped (T-167): listed in truncated_layouts, drawn as without one
+    cb.truncated_layouts = [cb.members[1].member_id];
     const want = classBookPages(cb);
     const page = await browser.newPage();
     await serveBook(page, null, cb);
@@ -1488,6 +1491,11 @@ describe("layout layer: the printed page is the page on screen (T-154)", () => {
     assert.ok(squash(pages[hit("Layoutmark3")[0]]).includes(squash(studentName(3))), "on that student's own profile page");
     assert.equal(hit("Layoutmark2").length, 0, "a student on a template without a layout block draws none");
     assert.ok(squash(pages[hit("Layoutmark0")[0]]).includes(squash(studentName(0))), "on that student's own profile page");
+    assert.equal(hit("Layoutmark5").length, 1, "student 5's own, different layout (same template as student 0)");
+    assert.ok(squash(pages[hit("Layoutmark5")[0]]).includes(squash(studentName(5))), "on student 5's own profile page");
+    assert.notEqual(hit("Layoutmark5")[0], hit("Layoutmark0")[0], "two layouts, two pages");
+    assert.ok(squash(text(file)).includes(squash(studentName(1))), "the member whose layout was dropped is still printed");
+    assert.equal(hit("Layoutmark1").length, 0, "and has no layout");
   });
 });
 
