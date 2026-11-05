@@ -61,12 +61,20 @@ func (h *Handler) templateList(w http.ResponseWriter, r *http.Request) {
 	respond(w, r, map[string]any{"items": items, "next_id": ""}, err) // a handful per template, so never a next page
 }
 
-type templateInput struct {
+type templateCreateInput struct {
+	YearbookID string `json:"yearbook_id"`
+	Kind       string `json:"kind"`
+	Name       string `json:"name"`
+}
+
+type templateDeleteInput struct {
+	ID string `json:"id"`
+}
+
+type applyInput struct {
 	YearbookID  string `json:"yearbook_id"`
 	BaseVersion *int64 `json:"base_version"`
 	Kind        string `json:"kind"`
-	Name        string `json:"name"`
-	ID          string `json:"id"`
 	Source      string `json:"source"`
 	TemplateID  string `json:"template_id"`
 }
@@ -76,7 +84,7 @@ func (h *Handler) templateCreate(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	var in templateInput
+	var in templateCreateInput
 	if !httpx.DecodeJSON(w, r, &in) || !validID(w, r, in.YearbookID) {
 		return
 	}
@@ -89,7 +97,7 @@ func (h *Handler) templateDelete(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	var in templateInput
+	var in templateDeleteInput
 	if !httpx.DecodeJSON(w, r, &in) {
 		return
 	}
@@ -105,7 +113,7 @@ func (h *Handler) applyTemplate(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	var in templateInput
+	var in applyInput
 	if !httpx.DecodeJSON(w, r, &in) || !validID(w, r, in.YearbookID) {
 		return
 	}

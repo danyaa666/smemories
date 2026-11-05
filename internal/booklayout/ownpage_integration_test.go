@@ -432,6 +432,7 @@ func TestFailedApplyChangesNothing(t *testing.T) {
 		"own id for shipped":    {alice, applyBody(book, v, "cover", "shipped", own), 400, "ERROR_PARAM"},
 		"shipped id for own":    {alice, applyBody(book, v, "cover", "own", shipped.ID), 400, "ERROR_PARAM"},
 		"negative version":      {alice, applyBody(book, -1, "cover", "shipped", shipped.ID), 400, "ERROR_PARAM"},
+		"unknown field":         {alice, fmt.Sprintf(`{"yearbook_id":%q,"base_version":2,"kind":"cover","source":"shipped","template_id":%q,"bogus":1}`, book, shipped.ID), 400, "ERROR_PARAM"},
 		"missing version":       {alice, fmt.Sprintf(`{"yearbook_id":%q,"kind":"cover","source":"shipped","template_id":%q}`, book, shipped.ID), 400, "ERROR_PARAM"},
 		"bob applies his own":   {bob, applyBody(book, v, "cover", "own", bobOwn), 404, "ERROR_NOT_FOUND"},
 		"bob, alice's own":      {bob, applyBody(bobBook, 1, "cover", "own", own), 404, "ERROR_NOT_FOUND"},
