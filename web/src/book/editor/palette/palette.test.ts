@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { assets, getAsset } from "../../assets";
 import { MAX_BOX, MIN_BOX, addItem, emptyDoc, type LayoutDoc } from "../document";
 import { assetItem, copyShift, imageItem } from "./defaults";
+import { pageBox } from "../../layout/geometry";
 import { fold, matchAssets } from "./search";
 
 describe("search", () => {
@@ -34,6 +35,22 @@ describe("add defaults", () => {
       expect(Math.abs(it.h / it.w - a.height / a.width)).toBeLessThan(0.01);
       expect(addItem("cover", it)(emptyDoc()).refused).toBeUndefined(); // legal for the server on any asset
     }
+  });
+  it("a stretching shape is 40 % of the page width by 25 % of the page height on every paper, centred (T-171)", () => {
+    for (const size of ["A5", "A4", "Letter"] as const) {
+      const pb = pageBox(size);
+      for (const id of ["shape.rect", "shape.ellipse"]) {
+        const it = assetItem(getAsset(id)!, "newone1", pb);
+        expect(it).toMatchObject({ w: 400, x: 300, cy: 500, r: 0 });
+        expect(it.h / 1000).toBeCloseTo((0.25 * pb.h) / pb.w, 2);
+        expect(addItem("cover", it)(emptyDoc()).refused).toBeUndefined();
+      }
+    }
+    // the others keep 25 % and their own ratio even when the page is known
+    expect(assetItem(getAsset("shape.circle")!, "newone1", pageBox("A4"))).toMatchObject({
+      w: 250,
+      h: 250,
+    });
   });
   it("an image has its long side at 50 % of the page width, `contain`, its aspect kept", () => {
     expect(imageItem({ id: "M", width: 4000, height: 3000 }, "newone1")).toMatchObject({

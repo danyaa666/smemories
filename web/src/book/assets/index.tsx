@@ -16,6 +16,8 @@ export type Asset = {
   tags: string[];
   /** True when the SVG paints its one tint colour with `currentColor` (CSS `color` or the `tint` prop). */
   tintable: boolean;
+  /** True for a plain shape that is drawn edge to edge in its box, whatever the box's width and height (`preserveAspectRatio="none"`, T-171). Absent on the rest. */
+  stretch?: boolean;
   /** The viewBox is `0 0 width height`. */
   width: number;
   height: number;
@@ -109,6 +111,7 @@ export function AssetSvg({ id, tint, size = 64, label, className, fill }: AssetS
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox={`0 0 ${asset.width} ${asset.height}`}
+      preserveAspectRatio={asset.stretch ? "none" : undefined}
       style={style}
       className={className}
       data-asset={id}
