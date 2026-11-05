@@ -682,7 +682,7 @@ Spec: .team/epics/E09-customisation-editor/26-class-book-layouts.md (read it fro
 - 2026-11-05 19:24Z · leader · Leader: merged PR #170 (squash) at head 42a9cbf8f634c6db24b309bd4606c37c1dc79bea after QA_PASS (product head a3fa250 + QA test-only commits): make test-integration 33 pkg ok, go test -race 32 ok, e2e 39/0 twice, print-check 199/0, 60-place class: body 8002395 <= 8388608, truncated_layouts = last 22; Postman baseline identical to develop (28).
 
 ### T-168 — [E09] History e2e hardening: friendly mysql-missing message, QA probe cases (tests only)
-- **Status:** READY_FOR_QA
+- **Status:** IN_QA
 - **Priority:** P3
 - **Type:** test
 - **Milestone:** M4
@@ -690,10 +690,10 @@ Spec: .team/epics/E09-customisation-editor/26-class-book-layouts.md (read it fro
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** qa
 - **Branch:** task/t-168-e09-history-e2e-hardening-friendly-mysql
 - **PR:** https://github.com/danyaa666/smemories/pull/172
-- **Updated:** 2026-11-05 19:49Z by dev
+- **Updated:** 2026-11-05 19:59Z by qa
 - **Comments-seen:** 3
 
 Spec: .team/epics/E09-customisation-editor/27-history-e2e-hardening.md (read it from the main checkout). Friendly message when the mysql client is missing, QA's three probe cases committed (30-row cap, restores in a row, pending autosave), spec time under about 60 s
@@ -869,7 +869,7 @@ Spec: .team/epics/E09-customisation-editor/31-page-templates-model-and-shipped.m
 - 2026-11-05 10:03Z · leader · merged 44f339a; QA: integration 33 pkgs ok (-race, matrix incl template-list), postman 186/420/0 x2, e2e 38/0, print-check 193/193, vitest 1120; gate negative controls fail go test; non-blocking: comment in web/src/api/bookLayout.ts says save rate limit but layout read limit is used; prod skip path verified by code read only
 
 ### T-173 — [E09] Own page templates and the apply API (Go): save my page, apply a template per section
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -877,11 +877,11 @@ Spec: .team/epics/E09-customisation-editor/31-page-templates-model-and-shipped.m
 - **Risk:** high
 - **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-173-e09-own-page-templates-and-the-apply-api
 - **PR:** https://github.com/danyaa666/smemories/pull/169
-- **Updated:** 2026-11-05 19:50Z by dev
-- **Comments-seen:** 8
+- **Updated:** 2026-11-05 20:08Z by dev
+- **Comments-seen:** 11
 
 Spec: .team/epics/E09-customisation-editor/32-own-templates-and-apply-api.md (read it from the main checkout). book_template_tab migration, template-create/delete/list, apply-template in one write with one apply snapshot, limits 20 and 64 KiB, concurrency tests. Risk high: owner approval before merge
 
@@ -894,6 +894,9 @@ Spec: .team/epics/E09-customisation-editor/32-own-templates-and-apply-api.md (re
 - 2026-11-05 15:55Z · leader · Leader review (QA_PASS accepted, head 4af81307e440910719d750f48036d4c1cbae09be, MERGEABLE, go/web/security green, no .team files). Read: migration book_template_tab (expand-only, no FKs, owner-scoped unique key, down drops the table), create (take rate limit, Clean(name,1,60), book read as owner, page kind validated against the book's block, strip of image items and picture bg then Validate with NO media, 64 KiB cap, limit under the user row lock), apply (params validated first, rate limit, store.get as owner, mismatch and conflict mapped to metric labels, log line without layout content). QA: integration 33 pkg ok, race x20 ok, migration up/down/up ok, newman T-173 folder 90/0 twice, live probe (strip, limit 6 parallel creates, 64 KiB, 401/404, 5 rounds of parallel applies = one 200 and one 409, atomic failures, snapshot kind apply, retention 30, no layout in logs/metrics), print-check 199/199, e2e 39/39 on run 2 (run 1: T-174 touch flake). Open items, none blocking: dropped-asset count and rate limits covered only by Go integration tests. NEEDS OWNER: risk high, merge only after 'team approve T-173'.
 - 2026-11-05 19:41Z · leader · Leader: PR #169 now CONFLICTS with develop (T-167 merged: class book, metrics, openapi/schema, docs). Not a QA failure. Dev: merge origin/develop into the branch (no force-push), resolve (keep both sides: T-167's class-book/layouts additions and T-173's routes, metrics, openapi paths and regenerated schema.d.ts, docs rows, migration timestamp stays 20261105120000 unless develop has a later one), regenerate web/src/api/schema.d.ts, then re-run: make test-integration (full), go test -race ./..., migration up/down/up, newman T-173 folder (with --working-dir postman), check:api, web checks; put counts + full head SHA in the board comment and set READY_FOR_QA. QA will re-run the mandatory high-risk lines on the merged head; the owner's approve is still pending and will be asked for after that re-test.
 - 2026-11-05 19:41Z · leader · Leader rework brief (conflict only, no behaviour change expected): resolve the merge with develop as described in the status note; do not change any T-173 behaviour; if a conflict touches the class book test (internal/class/page_integration_test.go) or metrics.go, keep both sides and re-run those packages. R1 re-run list: full make test-integration, go test -race ./..., migration up/down/up, newman T-173 folder, check:api, vitest/lint/tsc/build. Nothing under .team/.
+- 2026-11-05 20:08Z · dev · R1 conflict-only rework done. PR #169 head acbaa5daafdd94bf1cbe2ea3f4c1e071af412a26 (origin/develop merged in, no force-push, no T-173 behaviour change; nothing under .team in the PR diff). Only conflict: internal/metrics/metrics.go MustRegister line, resolved keeping both sides (develop's classLayoutsCut + T-173's tplCreated/tplDeleted/tplStripped/tplApplies); openapi, main.go, docs auto-merged; web/src/api/schema.d.ts regenerated (gen:api) = identical to merged file, check:api 'api schema ok'. Results on private stack t173dev2 (ports 13931/16931/19931, API :18931, SMEM_TEST_S3_ENDPOINT set, stopped without -v): (1) make -e test-integration (full, -race -count=1 -tags integration ./...): 33 packages ok, 0 FAIL. (2) go test -race -count=1 ./... unit: all ok, 0 FAIL; go vet + vet -tags integration clean; golangci-lint 0 issues. (3) go test -race -count=20 -tags integration -run 'TestConcurrentAppliesExactlyOneWins|TestTemplateLimitTwenty' ./internal/booklayout/: ok 40s. (4) migration on private DB: up (20261105120000 applied, last), down --allow-down, up again: book_template_tab present. (5) newman --working-dir postman, API SMEM_ENV=dev (needs SMEM_S3_* keys in env, make verify-newman-users + reset-limits before): folder T-173 88/0 twice; whole customisation-editor collection 223 requests, 508 assertions, 0 failed (includes T-172 46, T-163 79, T-152, T-153, book-design). (6) web: vitest 65 files / 1154 tests passed, eslint+prettier ok, tsc ok, vite build ok. Not re-run by dev: e2e/print-check (no web/API behaviour changed); QA re-runs the mandatory high-risk lines on this head. GitHub showed mergeable state right after push; verify. Risk high: no merge request, owner approve after QA.
+- 2026-11-05 20:08Z · dev · Rework R1 (conflict only): develop merged, metrics.go resolved keeping both sides, schema.d.ts regenerated; head acbaa5daafdd94bf1cbe2ea3f4c1e071af412a26; full integration 33 ok, race unit ok, x20 concurrency ok, migration up/down/up ok, newman 508/0 (T-173 88/0), web 1154 pass. Risk high: owner approve after QA.
+- 2026-11-05 20:08Z · leader · Leader to QA (queued after T-168): PR #169 head acbaa5daafdd94bf1cbe2ea3f4c1e071af412a26 (verify the full SHA). Re-test of the merge with develop only (T-167). Previous QA_PASS was on 4af81307; behaviour is unchanged, the only conflict was the MustRegister line in internal/metrics/metrics.go (both sides kept). HIGH RISK, mandatory result lines on this head: full make test-integration, go test -race ./..., migration up/down/up, newman T-173 folder (--working-dir postman; whole customisation-editor collection 223 requests/508 assertions/0 failed per dev), the two-parallel-applies probe (-race -count=20 plus your live two-client probe), a quick re-run of your 401/404 cells for the new routes, the class matrix, check:api (schema.d.ts regenerated), full e2e once and print-check once (T-167 landed class-book changes in between). Diff against the earlier head: confirm nothing but the merge and the schema regeneration changed in T-173 files (git diff 4af81307 acbaa5da -- on the T-173 paths). Counts + full SHA in your comment.
 
 ### T-174 — [E09] Stabilise the editor-gestures touch test (flake: 2 to 3 px against 0.5 allowed)
 - **Status:** MERGED
