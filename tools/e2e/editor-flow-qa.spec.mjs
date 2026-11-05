@@ -124,6 +124,9 @@ test("T-170 QA: keyboard walk with a notes page, offline Done, two tabs, Back af
   console.log("QA-FOCUS-AFTER-DONE", JSON.stringify(await active()));
 
   // 3. Back after Done goes to the editor (not a loop), Forward returns to the manage page
+  // The URL changes before React commits the new screen: Back pressed in that gap cancels the navigation and leaves the editor mounted on the page it was on
+  // (a test race, not a remount; found by running this spec 20 times with logging). Wait for the manage page, then go Back.
+  await expect(owner.getByRole("link", { name: "Edit notes pages" })).toBeVisible();
   await owner.goBack();
   await expect(owner).toHaveURL(new RegExp(`/yearbooks/${bookId}/editor`));
   await expect(position()).toHaveText("Page 3 of 4: Notes page 1"); // the entry was the deep link ?page=notes, so Back opens that page again
