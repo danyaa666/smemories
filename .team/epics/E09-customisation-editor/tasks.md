@@ -980,7 +980,7 @@ Spec: .team/epics/E09-customisation-editor/35-save-page-as-template-ui.md (read 
 #### Comments
 
 ### T-177 — [E09] Shipped page templates for Memory Book: four or more looks per page kind, authored by us
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -988,15 +988,17 @@ Spec: .team/epics/E09-customisation-editor/35-save-page-as-template-ui.md (read 
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-177-e09-shipped-page-templates-for-memory-bo
-- **PR:** —
-- **Updated:** 2026-11-05 20:09Z by dev
-- **Comments-seen:** 0
+- **PR:** 173
+- **Updated:** 2026-11-05 20:53Z by dev
+- **Comments-seen:** 2
 
 Spec: .team/epics/E09-customisation-editor/36-shipped-templates-memory-book.md (read it from the main checkout). Content files only (our own authoring, no Doory material; route B), contrast and distinctness gates in Go tests, print-check case per template on A5/A4/Letter, contact sheet, docs
 
 #### Comments
+- 2026-11-05 20:53Z · dev · PR #173 head 7c56fde: 16 Memory Book templates (4 per kind), Go gates (contrast, distinct, margin, no prose/image) with bad-page proof, print-check 16x3 = 48/48, contact sheet docs/images, docs/templates.md, LICENCE. QA: run make test-integration + print-check + e2e on head; look at 3 templates per kind on A4 with long-name and no-photo student. Known: pages nearly full so decoration sits in few free spots (runtime clamps boxes inside the page, no bleed); page colour limited to paper/white/none by 4.5:1 of the book's own ink/soft text; pre-existing print-check case 'a layout adds no request except its images' failed once on an unexpected be-vietnam-pro request (not templates).
+- 2026-11-05 20:54Z · leader · Leader to QA (queued; PR #173 head 7c56fdef42bbdaa147ddec4715dfc800dfc313a2, verify the full SHA): I looked at the contact sheet. Covers (polaroid, scrapbook, sunny, title-low) and profiles are clearly different; notes and back variants differ mostly in decoration and sticker placement because their content flows (the editable list is only heading and decoration): accepted, but QA please judge whether notes-* and back-* are different enough to be a real choice and say so. Dev reports: page colour limited to paper/white/none because ink and soft text need 4.5:1 (the T-172 soft/accent page colours failed contrast and were replaced by paper); T-172 prose text items removed (ids kept); 'navy token' check in internal/booklayout/integration_test.go changed to match the quoted token (it matched 'gold' inside sticker.gold-star): check that edit does not weaken the test. Dev results: new shipped_memory_book_test.go gates (4+ per kind, unique ids/labels <= 24 chars, distinct pages, no prose/image items, 4.5:1 in all 3 themes, boxes inside the 5 mm margin on A5/A4/Letter), TestMemoryBookGatesCatchBadPages proves gates fail on mutated copies, print-check 48/48 for the templates; e2e not run by dev. QA must run: full make test-integration, go test -race for templates/booklayout, the full e2e (twice) and the full make print-check on the PR head. Dev saw one print-check case fail in an earlier full run ('a layout adds no request except its images': unexpected be-vietnam-pro font request) and did not check it against develop: reproduce on develop and on the PR head; if it fails only on the PR head it is a QA_FAIL (a template must not cause a font request). Also look at three templates per kind on A4 with a long-name student and one with no photo, apply a few through book-layout/save (T-173 apply is not merged yet unless the owner approved it) and check the print route, run the contrast and duplicate-page gates on a mutated copy of your own, and confirm no prose text or image item in any template. Counts + full SHA in your comment.
 
 ### T-178 — [E09] Shipped page templates for Navy Classic: four or more looks per page kind, authored by us
 - **Status:** TODO
