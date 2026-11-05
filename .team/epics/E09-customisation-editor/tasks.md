@@ -643,7 +643,7 @@ Spec: .team/epics/E09-customisation-editor/25-navy-classic-layout.md (read it fr
 - 2026-11-05 08:48Z · leader · merged 7f6cc24; QA: integration 33 pkgs ok, e2e 38/0 (3 of 6 runs; gestures touch flake 3px in 2 runs), print-check 193/193, vitest 1093
 
 ### T-167 — [E09] Class book carries each member's layout (server cap, privacy, web wiring)
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -651,15 +651,17 @@ Spec: .team/epics/E09-customisation-editor/25-navy-classic-layout.md (read it fr
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-167-e09-class-book-carries-each-member-s-lay
-- **PR:** —
-- **Updated:** 2026-11-05 14:54Z by dev
-- **Comments-seen:** 0
+- **PR:** 170
+- **Updated:** 2026-11-05 15:38Z by dev
+- **Comments-seen:** 2
 
 Spec: .team/epics/E09-customisation-editor/26-class-book-layouts.md (read it from the main checkout). BookMember.layout read as the owner, layout before notes under the 8 MiB cap with truncated_layouts, privacy docs and matrix, web class book wiring, print-check and class e2e
 
 #### Comments
+- 2026-11-05 15:38Z · dev · PR #170, head a3fa250. Risk treated as medium. class-book/get carries member.layout (booklayout.Service.Resolved as the owner, no version) + top-level truncated_layouts; cap: layout paid before notes, dropped (with later layouts) when it would break the later members' 16 KiB reserve, notes retried without it; log line + smem_class_book_layouts_dropped_total. Web: real field, LeftOutNotice names left-out layouts (vi/en), one ack covers both. Results on private stack t167dev: make test-integration equivalent (go test -race -tags integration ./... full, S3 endpoint set) 33 pkgs ok, 1662 pass / 0 fail / 6 skip; class matrix script ok; web lint/tsc/prettier/i18n/check:api ok, vitest 1128 pass; scripts/e2e.sh 39 passed (class step 7c new); print-check 199 pass (two layouts + one dropped fixture); golangci-lint 0 issues. Postman class collection: Class book flow green incl. new steps; pre-existing unrelated failures remain (25 'without a session' steps due to newman cookie jar, 1 request hard-coded to localhost:8080). QA: run full integration, e2e, print-check, newman; build a 60-member class with 128 KiB layouts via DB inserts and check size/truncated_layouts (unit tests prove the rule); check leave/unlink, removed image, other-class admin 404, print on A5/A4/Letter. Docs updated (privacy review, permissions, book-export, templates, api-contract, observability, e2e, openapi).
+- 2026-11-05 15:39Z · leader · Leader to QA: PR #170 head a3fa250dbd8ab5a943095442e39989163f0875c5 (full SHA). Treat as MEDIUM risk (permissions and response cap): run the FULL make test-integration (default DSN) and go test -race, the class matrix script, the full e2e (own stack, twice), make print-check, web checks, and the Postman class collection. Dev's results on this head: go test -race -tags integration ./... 33 packages ok, 1662 pass, 0 fail, 6 skip; e2e 39/0 incl. new class step 7c; print-check 199/0; vitest 1128; golangci-lint 0. Dev says the class Postman collection still shows 28 assertion failures it did not fix (25 are 'without a session' steps where newman's cookie jar keeps the last session, 1 hard-coded to localhost:8080): confirm on develop that the same 28 fail there (baseline) and that the new T-167 steps pass; fixes of the old ones are not required. Dev stale-assert fixes in the collection (answers.message, keys): check they are right, not loosened. Verify per spec 26: build a 60-member class with 128 KiB layouts and long notes by direct DB insert (dev's integration test only covers 12 members): body <= MaxBookBytes, truncated_layouts lists the dropped members, earlier members keep layout, notes of all members are present when the reserve allows; a normal class loses nothing; member who unlinks or leaves loses theirs; image removed from the layout is no longer readable by the admin via media/get-content; admin of another class 404; non-member 404; anonymous 401; layout of member A never draws on member B pages; class book print on A5, A4, Letter with the 'layout left out' note; log line has counts only. Counts + full SHA in your comment.
 
 ### T-168 — [E09] History e2e hardening: friendly mysql-missing message, QA probe cases (tests only)
 - **Status:** TODO
@@ -711,7 +713,7 @@ Spec: .team/epics/E09-customisation-editor/28-canvas-foundation-spike.md (read i
 - 2026-11-05 08:52Z · leader · merged 64804e2; QA reproduced coverage 73%/85%, determinism, validator 52 ok/4 refused, parity 0.03-0.20%, 15/15 studio failure cases, licence quotes match pinned SHA a65c43a; ADR 0005 stays Proposed until Q-064 answered
 
 ### T-170 — [E09] Editor flow: page by page, Save and done, Print, back to the book manage page (web)
-- **Status:** QA_PASS
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M4
@@ -719,11 +721,11 @@ Spec: .team/epics/E09-customisation-editor/28-canvas-foundation-spike.md (read i
 - **Risk:** low
 - **Rework:** 2
 - **Owner-approved:** —
-- **Assignee:** leader
+- **Assignee:** —
 - **Branch:** task/t-170-e09-editor-flow-page-by-page-save-and-do
 - **PR:** https://github.com/danyaa666/smemories/pull/166
-- **Updated:** 2026-11-05 15:17Z by qa
-- **Comments-seen:** 13
+- **Updated:** 2026-11-05 15:39Z by leader
+- **Comments-seen:** 14
 
 Spec: .team/epics/E09-customisation-editor/29-editor-page-flow-done-print.md (read it from the main checkout). Previous/next page through the real book order, Done (settle then manage page, leave guard), Print after settle, deep links from the manage page, e2e editor-flow
 
@@ -765,6 +767,7 @@ Spec: .team/epics/E09-customisation-editor/29-editor-page-flow-done-print.md (re
   - Web on this head: eslint OK, prettier OK, tsc OK, lint:i18n ok, check:api ok, vitest 65 files / 1146 passed / 0 failed. Go/print-check not run (no Go or render change).
   - Reviewed 34736dd: requested page held as state and resolved against current list each render, moved user keeps their choice; unknown/hidden ?page= -> cover (covered by existing e2e step 3). Sound. Answer to dev's UX question: a ~20 ms URL-before-commit gap is acceptable.
 - 2026-11-05 15:17Z · leader · Leader: QA_PASS accepted (QA tested acbe283826d5c50200ca66c62b88caa113772e5d: dev spec 20/0, QA spec 20/0, full e2e 40/0 twice, stale-cache probe, R1/R3 verified; URL-before-commit gap measured 17-20 ms, not a product bug). QA pushed a test-only commit a19d9f2f8e9b3d953e5da88a7e855c6c96da7db5 (editor-flow-stale-qa.spec.mjs, not in testMatch: moved to T-168). Merge waits for CI go/web on a19d9f2.
+- 2026-11-05 15:39Z · leader · Leader: merged PR #166 (squash) at head a19d9f2f8e9b3d953e5da88a7e855c6c96da7db5 after QA_PASS (tested acbe283: e2e 40/0 twice, specs 20/0; test-only commit on top); go/web/security green.
 
 ### T-171 — [E09] Stretching shapes: rectangle and ellipse that fill their box (registry + web)
 - **Status:** MERGED
@@ -846,7 +849,7 @@ Spec: .team/epics/E09-customisation-editor/31-page-templates-model-and-shipped.m
 - 2026-11-05 10:03Z · leader · merged 44f339a; QA: integration 33 pkgs ok (-race, matrix incl template-list), postman 186/420/0 x2, e2e 38/0, print-check 193/193, vitest 1120; gate negative controls fail go test; non-blocking: comment in web/src/api/bookLayout.ts says save rate limit but layout read limit is used; prod skip path verified by code read only
 
 ### T-173 — [E09] Own page templates and the apply API (Go): save my page, apply a template per section
-- **Status:** READY_FOR_QA
+- **Status:** IN_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -854,10 +857,10 @@ Spec: .team/epics/E09-customisation-editor/31-page-templates-model-and-shipped.m
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** qa
 - **Branch:** task/t-173-e09-own-page-templates-and-the-apply-api
 - **PR:** https://github.com/danyaa666/smemories/pull/169
-- **Updated:** 2026-11-05 14:53Z by dev
+- **Updated:** 2026-11-05 15:17Z by qa
 - **Comments-seen:** 4
 
 Spec: .team/epics/E09-customisation-editor/32-own-templates-and-apply-api.md (read it from the main checkout). book_template_tab migration, template-create/delete/list, apply-template in one write with one apply snapshot, limits 20 and 64 KiB, concurrency tests. Risk high: owner approval before merge
