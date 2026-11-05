@@ -1,0 +1,7 @@
+Page templates for Memory Book (internal/templates/embed/pagetemplates/memory-book)
+
+These page templates were authored by the SMemories team in task T-172 from our own text and our own registry assets (licence "authored", CC0 1.0
+Universal, see web/src/book/assets/licences/authored.txt). They contain no third-party artwork, no photo and nothing derived from another
+project. The team dedicates them to the public domain under CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/).
+
+Date: 2026-11-05

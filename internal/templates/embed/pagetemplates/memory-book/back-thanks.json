@@ -1,0 +1,30 @@
+{
+ "id": "back-thanks",
+ "label_en": "Thank you back",
+ "label_vi": "Bìa sau cảm ơn",
+ "kind": "back",
+ "source": "authored",
+ "licence": "LICENCE.txt",
+ "page": {
+  "bg": {
+   "color": "accent"
+  },
+  "items": [
+   {
+    "id": "t1g2h3",
+    "t": "text",
+    "x": 100,
+    "w": 800,
+    "h": 70,
+    "cy": 905,
+    "r": 0,
+    "text": "Cảm ơn các bạn",
+    "font": "display",
+    "size": 26,
+    "color": "white",
+    "align": "center",
+    "bold": true
+   }
+  ]
+ }
+}
