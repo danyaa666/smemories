@@ -6,7 +6,7 @@ const root = path.resolve(new URL("../../../../", import.meta.url).pathname);
 const types = { ".html": "text/html", ".css": "text/css", ".woff2": "font/woff2", ".svg": "image/svg+xml", ".png": "image/png", ".js": "text/javascript", ".mjs": "text/javascript", ".json": "application/json", ".webp": "image/webp" };
 export function serve(dir = root) {
   const srv = createServer(async (req, res) => {
-    const p = path.resolve(dir, "." + decodeURIComponent(new URL(req.url, "http://x").pathname));
+    const p = path.resolve(dir, "." + decodeURIComponent(new URL(req.url, "http://x").pathname).replace(/\/$/, "/index.html"));
     if (!p.startsWith(dir)) { res.writeHead(403).end(); return; }
     try { const b = await readFile(p); res.writeHead(200, { "content-type": types[path.extname(p)] ?? "application/octet-stream" }).end(b); } catch { res.writeHead(404).end(); }
   });

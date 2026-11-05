@@ -48,3 +48,4 @@ docs/spikes/print/*.pdf
 # T-169 (ADR 0005): Doory clone at a pinned commit (never vendored), and the spike's generated files (template-derived layouts and renders)
 docs/spikes/canvas/doory/
 docs/spikes/canvas/out/
+docs/spikes/canvas/studio/dist/

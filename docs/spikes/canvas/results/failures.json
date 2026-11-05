@@ -1,0 +1,265 @@
+{
+ "chromium": "156.0.8078.4",
+ "passed": 15,
+ "failed": 0,
+ "results": [
+  {
+   "name": "studio chunk fails to load -> one message, book untouched, autosave alive",
+   "pass": true,
+   "detail": {
+    "message": "The studio could not be used. Your book is safe. close"
+   }
+  },
+  {
+   "name": "studio crashes mid-edit -> boundary message, book untouched, draft kept in the browser",
+   "pass": true,
+   "detail": {
+    "draft_bytes": 589
+   }
+  },
+  {
+   "name": "export cannot allocate (toBlob null) -> one message, no upload, draft kept",
+   "pass": true,
+   "detail": {
+    "msg": "export failed (memory), your draft is kept"
+   }
+  },
+  {
+   "name": "upload: server 500 -> \"upload failed, your draft is kept\"",
+   "pass": true,
+   "detail": {
+    "requests": 1,
+    "draft_kept": true,
+    "save_disabled": false
+   }
+  },
+  {
+   "name": "upload: network drop -> \"upload failed, your draft is kept\"",
+   "pass": true,
+   "detail": {
+    "requests": 1,
+    "draft_kept": true,
+    "save_disabled": false
+   }
+  },
+  {
+   "name": "upload: 429 with Retry-After 7 -> \"rate limited, retry in 7s\"",
+   "pass": true,
+   "detail": {
+    "requests": 1,
+    "draft_kept": true,
+    "save_disabled": true
+   }
+  },
+  {
+   "name": "upload: 30-image cap (ERROR_DESIGN_IMAGE_LIMIT) -> \"design image limit (30) reached: delete one first\"",
+   "pass": true,
+   "detail": {
+    "requests": 1,
+    "draft_kept": true,
+    "save_disabled": false
+   }
+  },
+  {
+   "name": "upload: quota (ERROR_QUOTA_EXCEEDED) -> \"storage quota exceeded\"",
+   "pass": true,
+   "detail": {
+    "requests": 1,
+    "draft_kept": true,
+    "save_disabled": false
+   }
+  },
+  {
+   "name": "upload: success -> \"saved\"",
+   "pass": true,
+   "detail": {
+    "requests": 1,
+    "draft_kept": false,
+    "save_disabled": false
+   }
+  },
+  {
+   "name": "double click on save -> exactly one upload",
+   "pass": true,
+   "detail": {
+    "requests": 1
+   }
+  },
+  {
+   "name": "leave with unsaved studio work -> the browser asks (beforeunload), the draft is restored on reopening",
+   "pass": true,
+   "detail": {
+    "beforeunload_dialog": true,
+    "objects_restored": 1
+   }
+  },
+  {
+   "name": "flag off -> no studio button and the studio chunk is never requested",
+   "pass": true,
+   "detail": {
+    "requests": 3
+   }
+  },
+  {
+   "name": "flag on, studio closed -> chunk not fetched until the button is pressed",
+   "pass": true,
+   "detail": {
+    "fetched_before_click": false
+   }
+  },
+  {
+   "name": "Fabric document round-trips unchanged; version pinned exactly in package.json",
+   "pass": true,
+   "detail": {
+    "fabric_json_version": "7.4.0",
+    "pinned": "7.4.0",
+    "json_bytes": 1131
+   }
+  },
+  {
+   "name": "flatten sizes, timings and bytes measured (see details)",
+   "pass": true,
+   "detail": {
+    "sizes": {
+     "A5": {
+      "flatten": {
+       "w": 1748,
+       "h": 2480,
+       "dpi": 300
+      },
+      "uncapped_300dpi": {
+       "w": 1748,
+       "mp": 4.3
+      }
+     },
+     "A4": {
+      "flatten": {
+       "w": 1783,
+       "h": 2521,
+       "dpi": 216
+      },
+      "uncapped_300dpi": {
+       "w": 2480,
+       "mp": 8.7
+      }
+     },
+     "Letter": {
+      "flatten": {
+       "w": 1864,
+       "h": 2412,
+       "dpi": 219
+      },
+      "uncapped_300dpi": {
+       "w": 2550,
+       "mp": 8.4
+      }
+     }
+    },
+    "timing": {
+     "A5@cpu1x": {
+      "png": {
+       "ms": 65,
+       "kib": 5652,
+       "type": "image/png"
+      },
+      "jpeg85": {
+       "ms": 27,
+       "kib": 1251,
+       "type": "image/jpeg"
+      },
+      "webp85": {
+       "ms": 354,
+       "kib": 1338,
+       "type": "image/webp"
+      }
+     },
+     "A4@cpu1x": {
+      "png": {
+       "ms": 71,
+       "kib": 5885,
+       "type": "image/png"
+      },
+      "jpeg85": {
+       "ms": 26,
+       "kib": 1298,
+       "type": "image/jpeg"
+      },
+      "webp85": {
+       "ms": 362,
+       "kib": 1379,
+       "type": "image/webp"
+      }
+     },
+     "Letter@cpu1x": {
+      "png": {
+       "ms": 68,
+       "kib": 5869,
+       "type": "image/png"
+      },
+      "jpeg85": {
+       "ms": 26,
+       "kib": 1297,
+       "type": "image/jpeg"
+      },
+      "webp85": {
+       "ms": 357,
+       "kib": 1381,
+       "type": "image/webp"
+      }
+     },
+     "A5@cpu4x": {
+      "png": {
+       "ms": 275,
+       "kib": 5652,
+       "type": "image/png"
+      },
+      "jpeg85": {
+       "ms": 109,
+       "kib": 1251,
+       "type": "image/jpeg"
+      },
+      "webp85": {
+       "ms": 373,
+       "kib": 1338,
+       "type": "image/webp"
+      }
+     },
+     "A4@cpu4x": {
+      "png": {
+       "ms": 298,
+       "kib": 5885,
+       "type": "image/png"
+      },
+      "jpeg85": {
+       "ms": 119,
+       "kib": 1298,
+       "type": "image/jpeg"
+      },
+      "webp85": {
+       "ms": 383,
+       "kib": 1379,
+       "type": "image/webp"
+      }
+     },
+     "Letter@cpu4x": {
+      "png": {
+       "ms": 288,
+       "kib": 5869,
+       "type": "image/png"
+      },
+      "jpeg85": {
+       "ms": 115,
+       "kib": 1297,
+       "type": "image/jpeg"
+      },
+      "webp85": {
+       "ms": 385,
+       "kib": 1381,
+       "type": "image/webp"
+      }
+     }
+    }
+   }
+  }
+ ]
+}

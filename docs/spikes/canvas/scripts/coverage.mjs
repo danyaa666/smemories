@@ -1,5 +1,6 @@
 // Question 1 and 2: converts every page of the 10 starter templates, writes results/coverage.json, results/objects.json and out/layouts/*.json
 //   node scripts/coverage.mjs
+import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { PAPERS, REF_RATIO, canonical, convertPage } from "../src/convert.mjs";
 
@@ -9,7 +10,7 @@ mkdirSync(outDir, { recursive: true });
 const slugs = readdirSync(dir).filter((f) => f.endsWith(".json") && f !== "manifest.json").map((f) => f.slice(0, -5)).sort();
 export const KINDS = ["cover", "profile", "notes", "back"];
 
-const summary = { doory_commit: readFileSync(new URL("../doory/.git/HEAD", import.meta.url), "utf8").trim(), templates: {}, totals: {}, by_mode: {} };
+const summary = { doory_commit: execFileSync("git", ["-C", new URL("../doory", import.meta.url).pathname, "rev-parse", "HEAD"], { encoding: "utf8" }).trim(), templates: {}, totals: {}, by_mode: {} };
 const objects = {};
 const tally = () => ({ objects: 0, exact: 0, approx: 0, cannot: 0, strict_exact: 0 });
 for (const variant of ["fit", "cover", "fit+stretch"]) {

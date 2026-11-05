@@ -1,0 +1,128 @@
+{
+ "modern-pitch-deck/A5": {
+  "size_mismatch": [
+   0,
+   1
+  ],
+  "diff_pct": 0.05,
+  "pages": 1,
+  "fonts": 5,
+  "fonts_all_embedded": true,
+  "text_in_pdf": true,
+  "shapes_checked": 3,
+  "max_shape_edge_offset_px_192dpi": 1,
+  "max_screen_vs_geometry_px": 0.9
+ },
+ "modern-pitch-deck/A4": {
+  "size_mismatch": [
+   1,
+   0
+  ],
+  "diff_pct": 0.03,
+  "pages": 1,
+  "fonts": 5,
+  "fonts_all_embedded": true,
+  "text_in_pdf": true,
+  "shapes_checked": 3,
+  "max_shape_edge_offset_px_192dpi": 1,
+  "max_screen_vs_geometry_px": 1
+ },
+ "modern-pitch-deck/Letter": {
+  "size_mismatch": [
+   0,
+   0
+  ],
+  "diff_pct": 0.04,
+  "pages": 1,
+  "fonts": 5,
+  "fonts_all_embedded": true,
+  "text_in_pdf": true,
+  "shapes_checked": 3,
+  "max_shape_edge_offset_px_192dpi": 1,
+  "max_screen_vs_geometry_px": 1
+ },
+ "night-bloom-concert-poster/A5": {
+  "size_mismatch": [
+   0,
+   1
+  ],
+  "diff_pct": 0.2,
+  "pages": 1,
+  "fonts": 9,
+  "fonts_all_embedded": true,
+  "text_in_pdf": true,
+  "shapes_checked": 2,
+  "max_shape_edge_offset_px_192dpi": 1,
+  "max_screen_vs_geometry_px": 1
+ },
+ "night-bloom-concert-poster/A4": {
+  "size_mismatch": [
+   1,
+   0
+  ],
+  "diff_pct": 0.15,
+  "pages": 1,
+  "fonts": 8,
+  "fonts_all_embedded": true,
+  "text_in_pdf": true,
+  "shapes_checked": 2,
+  "max_shape_edge_offset_px_192dpi": 0,
+  "max_screen_vs_geometry_px": 0.6
+ },
+ "night-bloom-concert-poster/Letter": {
+  "size_mismatch": [
+   0,
+   0
+  ],
+  "diff_pct": 0.15,
+  "pages": 1,
+  "fonts": 9,
+  "fonts_all_embedded": true,
+  "text_in_pdf": true,
+  "shapes_checked": 2,
+  "max_shape_edge_offset_px_192dpi": 1,
+  "max_screen_vs_geometry_px": 0.6
+ },
+ "rooftop-event-story/A5": {
+  "size_mismatch": [
+   0,
+   1
+  ],
+  "diff_pct": 0.07,
+  "pages": 1,
+  "fonts": 5,
+  "fonts_all_embedded": true,
+  "text_in_pdf": true,
+  "shapes_checked": 1,
+  "max_shape_edge_offset_px_192dpi": 1,
+  "max_screen_vs_geometry_px": 0.6
+ },
+ "rooftop-event-story/A4": {
+  "size_mismatch": [
+   1,
+   0
+  ],
+  "diff_pct": 0.05,
+  "pages": 1,
+  "fonts": 5,
+  "fonts_all_embedded": true,
+  "text_in_pdf": true,
+  "shapes_checked": 1,
+  "max_shape_edge_offset_px_192dpi": 1,
+  "max_screen_vs_geometry_px": 0.2
+ },
+ "rooftop-event-story/Letter": {
+  "size_mismatch": [
+   0,
+   0
+  ],
+  "diff_pct": 0.08,
+  "pages": 1,
+  "fonts": 5,
+  "fonts_all_embedded": true,
+  "text_in_pdf": true,
+  "shapes_checked": 1,
+  "max_shape_edge_offset_px_192dpi": 1,
+  "max_screen_vs_geometry_px": 0.3
+ }
+}
