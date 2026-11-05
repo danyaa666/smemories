@@ -159,6 +159,57 @@ describe("deep link", () => {
   });
 });
 
+// The page list can change after the first render (cached book-data answers first, a fresh answer follows): the REQUESTED page is resolved
+// against the current list on every render (the remount race QA found with browser Back, T-170 round 2).
+describe("the page list changes after the first render", () => {
+  const without = (d: BookData): BookData => ({
+    ...d,
+    notes: [],
+    note_count: 0,
+    approved_total: 0,
+  });
+  const shell = (d: BookData) => (
+    <MemoryRouter initialEntries={[`/yearbooks/${BOOK}/editor?page=notes`]}>
+      <Routes>
+        <Route
+          path="/yearbooks/:id/editor"
+          element={<EditorShell bookId={BOOK} data={d} safeMm={5} />}
+        />
+      </Routes>
+    </MemoryRouter>
+  );
+  const open = async (d: BookData) => {
+    mockServer({ version: 2, layout: null });
+    const r = render(shell(d));
+    await screen.findByRole("toolbar");
+    return r;
+  };
+
+  it("a notes link on stale data without notes opens the cover, then the notes page when the fresh data has one", async () => {
+    const r = await open(without(data()));
+    expect(position()).toBe("Page 1 of 3: Cover");
+    r.rerender(shell(data()));
+    expect(position()).toBe("Page 3 of 5: Notes page 1");
+    expect(screen.getByTestId("notes-shared")).toBeInTheDocument();
+  });
+
+  it("once the user moved, fresh data does not move them", async () => {
+    const r = await open(without(data()));
+    await userEvent.click(screen.getByRole("button", { name: "Next page" })); // profile
+    expect(position()).toBe("Page 2 of 3: Profile");
+    r.rerender(shell(data()));
+    expect(position()).toBe("Page 2 of 5: Profile");
+  });
+
+  it("the user's notes page stays when the notes pages become fewer", async () => {
+    const r = await open(data()); // the link opens notes page 1
+    await userEvent.click(screen.getByRole("button", { name: "Next page" })); // notes page 2
+    expect(position()).toBe("Page 4 of 5: Notes page 2");
+    r.rerender(shell({ ...data(), notes: data().notes.slice(0, 1) }));
+    expect(position()).toBe("Page 3 of 4: Notes page 1");
+  });
+});
+
 describe("notes pages share one layout (ADR 0004)", () => {
   it("says so on a notes page, in the live region on arrival, and only there", async () => {
     await mount();

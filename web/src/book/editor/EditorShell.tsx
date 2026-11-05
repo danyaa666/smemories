@@ -13,7 +13,7 @@ import { Skeleton } from "../../components/ui/Skeleton";
 import { useMediaQuery } from "../../components/useMediaQuery";
 import { resolveDesign } from "../design";
 import { useFitReport } from "../fit";
-import { listPages } from "../BookPages";
+import { listPages, type OnePage } from "../BookPages";
 import { pageBox } from "../layout/geometry";
 import { SIZES } from "../sizes";
 import { defaultColorOf, MissingImage } from "../layout/runtime";
@@ -74,16 +74,19 @@ export function EditorShell({
   const pages = useMemo(() => listPages(data), [data]);
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  // T-170: the page the link asked for (`?page=cover|profile|notes|back`); an unknown or hidden one opens the cover
-  const [pageIdx, setPageIdx] = useState(() =>
-    Math.max(
-      0,
-      pages.findIndex((p) => p.section === params.get("page")),
-    ),
+  // T-170: the page the user asked for is held as a REQUEST, not as an index, and resolved against the current page list on every render. The
+  // first request is the link's (`?page=cover|profile|notes|back`); once the user steps, their choice wins and is never overwritten. So a page
+  // list that changes after the first render (cached book-data answered first, a fresh answer with a notes page follows) cannot leave the
+  // editor on the wrong page. An unknown or hidden section, or one that does not exist (yet), opens the cover.
+  const [requested, setRequested] = useState<OnePage | null>(null);
+  const wanted: OnePage = requested ?? { section: params.get("page") as OnePage["section"] };
+  let index = pages.findIndex(
+    (p) => p.section === wanted.section && (p.index ?? 0) === (wanted.index ?? 0),
   );
+  if (index < 0 && requested) index = pages.findIndex((p) => p.section === requested.section); // the notes pages got fewer
+  index = Math.max(0, index);
   const [finishing, setFinishing] = useState(false);
   const [doneFailed, setDoneFailed] = useState(false);
-  const index = Math.min(pageIdx, pages.length - 1);
   const page = pages[index]!;
   const kind = page.section;
   // history (T-165): the panel replaces the property panel; a previewed version is drawn read-only instead of the edited document
@@ -282,7 +285,7 @@ export function EditorShell({
   };
   const pick = (i: number) => {
     if (i === index) return;
-    setPageIdx(i);
+    setRequested(pages[i]!);
     setEditing(null);
     setNotice("");
     select([]);
