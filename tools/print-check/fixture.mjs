@@ -238,6 +238,9 @@ export function makeLayout({ extra = 0 } = {}) {
   const text = (id, x, cy, w, h, t, o = {}) => ({ id, t: "text", x, w, h, cy, text: t, font: "body", size: 20, color: "ink", ...o });
   const cover = [
     { id: "sticker1", t: "asset", asset: "shape.heart", tint: "ink", x: 700, w: 160, h: 160, cy: 180, r: 15 },
+    // T-171: stretching shapes drawn edge to edge in a box that is not square: a thin banner (rotated, tinted) and a wide ellipse
+    { id: "stretch1", t: "asset", asset: "shape.rect", tint: "ink", x: 60, w: 560, h: 36, cy: 25, r: -3 },
+    { id: "stretch2", t: "asset", asset: "shape.ellipse", tint: "accent", x: 640, w: 320, h: 110, cy: 380, r: 12 },
     text("longtx", 60, 800, 700, 330, `${LAYOUT_MARK.cover} ${RUNES_500}`, { size: 30, font: "display" }),
     text("clipped", 60, 960, 260, 70, `${LAYOUT_MARK.clip} ${CLIP_300}`, { size: 22 }),
     { id: "image01", t: "image", media: DESIGN_IMAGE, fit: "cover", radius: 24, x: 600, w: 300, h: 240, cy: 600, r: -6 },

@@ -2,6 +2,7 @@ import { useRef, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import type { Media } from "../../../api/yearbooks";
 import type { Asset, AssetKind } from "../../assets";
+import type { PageBox } from "../../layout/geometry";
 import type { TemplateLayout } from "../../layout/runtime";
 import { setBg, type LayoutDoc, type Op, type Refusal } from "../document";
 import { Swatches } from "../Swatches";
@@ -37,6 +38,7 @@ export function Palette({
   readOnly,
   announce,
   spec,
+  pb,
   scope,
   images,
   uploads,
@@ -53,6 +55,8 @@ export function Palette({
   readOnly: boolean;
   announce: (s: string) => void;
   spec: TemplateLayout | undefined;
+  /** The page in design px: a stretching shape is added at 25 % of its height. */
+  pb: PageBox;
   scope: { theme?: string; fonts?: string };
   images: Images;
   uploads: Uploads;
@@ -110,7 +114,7 @@ export function Palette({
             disabled={readOnly || !spec}
             onPick={(a: Asset) =>
               onAdd(
-                assetItem(a, newItemId()),
+                assetItem(a, newItemId(), pb),
                 t("editor.palette.added", { name: assetLabel(a, i18n.language) }),
               )
             }

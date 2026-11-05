@@ -165,6 +165,8 @@ func box(b string) string {
 func TestValidateBoundaries(t *testing.T) {
 	ok := []struct{ name, doc string }{
 		{"w 10 and 2000", box(`"x":-5,"w":10,"h":10,"cy":0`)},
+		{"stretching shape as a thin banner (w 900, h 10)", page(item("abcdef", `"t":"asset","asset":"shape.rect","tint":"accent","x":50,"w":900,"h":10,"cy":500`))},
+		{"stretching shape, thinnest and widest (w 2000, h 10)", page(item("abcdef", `"t":"asset","asset":"shape.ellipse","x":-500,"w":2000,"h":10,"cy":500`))},
 		{"w 2000", box(`"x":-1000,"w":2000,"h":2000,"cy":500`)},
 		{"x at the left limit", box(`"x":-200,"w":400,"h":10,"cy":0`)},
 		{"x at the right limit", box(`"x":800,"w":400,"h":10,"cy":0`)},

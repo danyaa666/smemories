@@ -651,6 +651,7 @@ export function EditorShell({
             readOnly={readOnly}
             announce={say}
             spec={spec}
+            pb={pb}
             scope={scope}
             images={images}
             uploads={uploads}

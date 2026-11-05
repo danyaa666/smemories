@@ -20,6 +20,7 @@ type Asset struct {
 	LabelVI  string   `json:"label_vi"`
 	Tags     []string `json:"tags"`
 	Tintable bool     `json:"tintable"`
+	Stretch  bool     `json:"stretch"` // drawn edge to edge in its box, any width and height (T-171)
 	Width    int      `json:"width"`
 	Height   int      `json:"height"`
 	Licence  string   `json:"licence"` // CC0, OFL or authored

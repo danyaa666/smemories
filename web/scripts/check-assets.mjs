@@ -79,6 +79,7 @@ export function checkAssets(dir) {
     )
       bad("tags must be a non-empty list of strings");
     if (typeof a.tintable !== "boolean") bad("tintable must be true or false");
+    if ("stretch" in a && a.stretch !== true) bad("stretch, when present, must be true");
     if (!LICENCES.includes(a.licence)) bad(`licence must be one of ${LICENCES.join(", ")}`);
     if (typeof a.author !== "string" || a.author === "") bad("author missing");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(a.date_checked ?? "")) bad("date_checked must be YYYY-MM-DD");

@@ -42,6 +42,19 @@ func TestRegistry(t *testing.T) {
 	}
 }
 
+// T-171: the two shapes that fill their box are the only stretching assets and are tintable (the editor tints them with the manifest colours).
+func TestStretch(t *testing.T) {
+	for _, a := range All() {
+		want := a.ID == "shape.rect" || a.ID == "shape.ellipse"
+		if a.Stretch != want {
+			t.Errorf("%q: stretch = %v, want %v", a.ID, a.Stretch, want)
+		}
+		if want && (!a.Tintable || a.Kind != "shape" || a.Licence != "authored") {
+			t.Errorf("%q: a stretching shape must be a tintable authored shape: %+v", a.ID, a)
+		}
+	}
+}
+
 func TestGetAndHas(t *testing.T) {
 	first := All()[0]
 	if a, ok := Get(first.ID); !ok || a.ID != first.ID {

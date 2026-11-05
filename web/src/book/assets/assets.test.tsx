@@ -1,4 +1,4 @@
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { render, screen, waitFor } from "@testing-library/react";
@@ -28,6 +28,18 @@ describe("registry", () => {
 
   it("passes the pack check", () => {
     expect(checkAssets(DIR)).toEqual([]);
+  });
+
+  it("only shape.rect and shape.ellipse stretch; both are tintable authored shapes with a licence file (T-171)", () => {
+    expect(assets.filter((a) => a.stretch).map((a) => a.id)).toEqual([
+      "shape.ellipse",
+      "shape.rect",
+    ]);
+    for (const id of ["shape.rect", "shape.ellipse"]) {
+      const a = getAsset(id)!;
+      expect(a).toMatchObject({ kind: "shape", tintable: true, licence: "authored" });
+      expect(existsSync(resolve(DIR, a.licence_file))).toBe(true);
+    }
   });
 
   it("getAsset finds a listed id and nothing else", () => {
@@ -73,6 +85,16 @@ describe("pack check", () => {
     expect(problems).toContain(`${reg.assets[0].id}: licence must be one of`);
     expect(problems).toContain(`${reg.assets[1].id}: licence_file missing or not found`);
     expect(problems).toContain("svg/sticker.stray.svg: not listed in registry.json");
+  });
+
+  it("fails on a stretch flag that is not true", () => {
+    const d = copy();
+    const reg = JSON.parse(readFileSync(join(d, "registry.json"), "utf8"));
+    reg.assets[0].stretch = false;
+    writeFileSync(join(d, "registry.json"), JSON.stringify(reg));
+    expect(checkAssets(d).join("\n")).toContain(
+      `${reg.assets[0].id}: stretch, when present, must be true`,
+    );
   });
 
   it("rejects each unsafe construct", () => {
@@ -179,6 +201,20 @@ describe("AssetSvg", () => {
     expect(style).toContain("width: 100%");
     expect(style).toContain("height: 100%");
     expect(style).not.toContain("aspect-ratio");
+  });
+
+  it("a stretch asset is drawn edge to edge (preserveAspectRatio none, no inset); the rest keep the default (T-171)", async () => {
+    const rect = render(<AssetSvg id="shape.rect" size="100%" fill />);
+    await waitFor(() => expect(rect.container.querySelector("svg")).not.toBeNull());
+    expect(rect.container.querySelector("svg")?.getAttribute("preserveAspectRatio")).toBe("none");
+    expect(rect.container.querySelector("rect")?.getAttribute("width")).toBe("100");
+    const ell = render(<AssetSvg id="shape.ellipse" />);
+    await waitFor(() => expect(ell.container.querySelector("svg")).not.toBeNull());
+    expect(ell.container.querySelector("svg")?.getAttribute("preserveAspectRatio")).toBe("none");
+    expect(ell.container.querySelector("ellipse")?.getAttribute("rx")).toBe("50");
+    const circle = render(<AssetSvg id="shape.circle" />);
+    await waitFor(() => expect(circle.container.querySelector("svg")).not.toBeNull());
+    expect(circle.container.querySelector("svg")?.hasAttribute("preserveAspectRatio")).toBe(false);
   });
 
   it("draws nothing for an id that is not in the registry", async () => {
