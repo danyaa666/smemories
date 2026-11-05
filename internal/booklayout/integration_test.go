@@ -108,6 +108,10 @@ func newEnv(t *testing.T, limiters *ratelimit.Factory, perMinute int) *env {
 		Snapshot: func(k string) { e.bump("snapshot:"+k, 1) },
 		Pruned:   func(n int) { e.pruned.Add(int64(n)) },
 		Restore:  func(r string) { e.bump("restore:"+r, 1) },
+
+		TemplateCreated: func(n int) { e.bump("tpl:created", 1); e.bump("tpl:stripped", int64(n)) },
+		TemplateDeleted: func() { e.bump("tpl:deleted", 1) },
+		Apply:           func(src, r string) { e.bump("apply:"+src+":"+r, 1) },
 	})
 	ystore := yearbook.NewStore(d)
 	ystore.OnTemplateChange(design.DeleteByYearbook)

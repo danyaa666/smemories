@@ -88,6 +88,34 @@
     {
       "key": "templateCount",
       "value": ""
+    },
+    {
+      "key": "ownBookId",
+      "value": ""
+    },
+    {
+      "key": "ownVersion",
+      "value": ""
+    },
+    {
+      "key": "ownTemplateId",
+      "value": ""
+    },
+    {
+      "key": "shippedTemplateId",
+      "value": ""
+    },
+    {
+      "key": "ownSnapshotId",
+      "value": ""
+    },
+    {
+      "key": "ownEdgeId",
+      "value": ""
+    },
+    {
+      "key": "ownEdgeTemplateId",
+      "value": ""
     }
   ],
   "item": [
@@ -8224,9 +8252,9 @@
                     "exec": [
                       "pm.test('status 200', () => pm.response.to.have.status(200));",
                       "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
-                      "const j = pm.response.json();",
+                      "const j = pm.response.json(); j.data.items = j.data.items.filter(t => t.source === 'shipped'); // T-173: own templates follow the shipped ones in the same list",
                       "pm.test('{status,data} envelope with items and an empty next_id', () => { pm.expect(j.status).to.eql('OK'); pm.expect(j.data.items).to.be.an('array'); pm.expect(j.data.next_id).to.eql(''); });",
-                      "pm.test('every template has the contract members, only text and asset items, at most 40', () => j.data.items.forEach(t => { pm.expect(Object.keys(t).sort()).to.eql(['id','item_count','kind','label_en','label_vi','page']); pm.expect(t.item_count).to.be.at.most(40); pm.expect((t.page.items||[]).length).to.eql(t.item_count); (t.page.items||[]).forEach(i => pm.expect(['text','asset']).to.include(i.t)); pm.expect(t.page.bg && t.page.bg.media).to.be.oneOf([undefined, null]); }));",
+                      "pm.test('every template has the contract members, only text and asset items, at most 40', () => j.data.items.forEach(t => { pm.expect(Object.keys(t).sort()).to.eql(['id','item_count','kind','label_en','label_vi','page','source']); pm.expect(t.item_count).to.be.at.most(40); pm.expect((t.page.items||[]).length).to.eql(t.item_count); (t.page.items||[]).forEach(i => pm.expect(['text','asset']).to.include(i.t)); pm.expect(t.page.bg && t.page.bg.media).to.be.oneOf([undefined, null]); }));",
                       "pm.test('four page kinds, sorted by English label', () => { pm.expect([...new Set(j.data.items.map(t => t.kind))].sort()).to.eql(['back','cover','notes','profile']); const l = j.data.items.map(t => t.label_en); pm.expect(l).to.eql([...l].sort()); });",
                       "pm.collectionVariables.set('templateCount', String(j.data.items.length));"
                     ]
@@ -8276,7 +8304,7 @@
                     "exec": [
                       "pm.test('status 200', () => pm.response.to.have.status(200));",
                       "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
-                      "const j = pm.response.json();",
+                      "const j = pm.response.json(); j.data.items = j.data.items.filter(t => t.source === 'shipped'); // T-173: own templates follow the shipped ones in the same list",
                       "pm.test('{status,data} envelope with items and an empty next_id', () => { pm.expect(j.status).to.eql('OK'); pm.expect(j.data.items).to.be.an('array'); pm.expect(j.data.next_id).to.eql(''); });",
                       "pm.test('only cover templates, fewer than all', () => { pm.expect(j.data.items.length).to.be.above(0); pm.expect(j.data.items.length).to.be.below(Number(pm.collectionVariables.get('templateCount'))); j.data.items.forEach(t => pm.expect(t.kind).to.eql('cover')); });"
                     ]
@@ -8374,7 +8402,7 @@
                     "exec": [
                       "pm.test('status 200', () => pm.response.to.have.status(200));",
                       "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
-                      "const j = pm.response.json();",
+                      "const j = pm.response.json(); j.data.items = j.data.items.filter(t => t.source === 'shipped'); // T-173: own templates follow the shipped ones in the same list",
                       "pm.test('{status,data} envelope with items and an empty next_id', () => { pm.expect(j.status).to.eql('OK'); pm.expect(j.data.items).to.be.an('array'); pm.expect(j.data.next_id).to.eql(''); });",
                       "pm.test('navy tokens only', () => { pm.expect(j.data.items.length).to.be.above(0); const s = JSON.stringify(j.data.items); pm.expect(s).to.include('gold'); pm.expect(s).to.not.include('\"accent\"'); });"
                     ]
@@ -8995,6 +9023,1819 @@
                   }
                 }
               ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "book-layout own templates and apply (T-173)",
+      "item": [
+        {
+          "name": "Full flow",
+          "item": [
+            {
+              "name": "1. Login A",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session="
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"email\":\"{{emailA}}\",\"password\":\"{{password}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "const m = /smem_session=([^;]+)/.exec(pm.response.headers.get('Set-Cookie') || '');",
+                      "pm.test('session cookie issued', () => pm.expect(m).to.not.be.null);",
+                      "pm.collectionVariables.set('tokenA', m ? m[1] : '');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "2. Login B",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session="
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"email\":\"{{emailB}}\",\"password\":\"{{password}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "const m = /smem_session=([^;]+)/.exec(pm.response.headers.get('Set-Cookie') || '');",
+                      "pm.test('session cookie issued', () => pm.expect(m).to.not.be.null);",
+                      "pm.collectionVariables.set('tokenB', m ? m[1] : '');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "3. A creates a book on the memory-book template",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/yearbook/create",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "yearbook",
+                    "create"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"title\": \"Own templates book\", \"language\": \"en\", \"template_id\": \"memory-book\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "pm.collectionVariables.set('ownBookId', pm.response.json().data.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "4. A saves a cover with one text item (version 1)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/save",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "save"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{ownBookId}}\",\"base_version\":0,\"layout\":{\"v\":1,\"pages\":{\"cover\":{\"items\":[{\"id\":\"ownpg1\",\"t\":\"text\",\"text\":\"Lớp 12A1\",\"font\":\"display\",\"size\":28,\"color\":\"accent\",\"align\":\"center\",\"bold\":true,\"x\":100,\"w\":400,\"h\":120,\"cy\":850,\"r\":-4}]}}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "pm.test('version 1', () => pm.expect(pm.response.json().data.version).to.eql(1));",
+                      "pm.collectionVariables.set('ownVersion', pm.response.json().data.version);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "5. A saves the cover as an own template (nothing stripped)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/template-create",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "template-create"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{ownBookId}}\",\"kind\":\"cover\",\"name\":\"My cover\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "const d = pm.response.json().data;",
+                      "pm.test('real envelope fields', () => pm.expect(d).to.have.keys(['id','name','kind','template_id','item_count','bytes','created_at','stripped']));",
+                      "pm.test('nothing stripped, one item', () => { pm.expect(d.stripped).to.eql(0); pm.expect(d.item_count).to.eql(1); pm.expect(d.template_id).to.eql('memory-book'); });",
+                      "pm.collectionVariables.set('ownTemplateId', d.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "6. template-list holds the own template and shipped ones",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/template-list",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "template-list"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{ownBookId}}\",\"kind\":\"cover\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "const items = pm.response.json().data.items;",
+                      "const own = items.filter(i => i.source === 'own'), shipped = items.filter(i => i.source === 'shipped');",
+                      "pm.test('the own one is listed', () => { pm.expect(own.map(i => i.id)).to.include(pm.collectionVariables.get('ownTemplateId')); pm.expect(own[0].label_en).to.eql('My cover'); });",
+                      "pm.test('shipped ones come first', () => { pm.expect(shipped.length).to.be.above(0); pm.expect(items.indexOf(own[0])).to.be.above(items.indexOf(shipped[shipped.length-1])); });",
+                      "pm.collectionVariables.set('shippedTemplateId', shipped[0].id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "7. A applies the shipped template to the cover (version 2, one apply snapshot)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/apply-template",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "apply-template"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{ownBookId}}\",\"base_version\":{{ownVersion}},\"kind\":\"cover\",\"source\":\"shipped\",\"template_id\":\"{{shippedTemplateId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "const d = pm.response.json().data;",
+                      "pm.test('new version, nothing dropped', () => { pm.expect(d.version).to.eql(2); pm.expect(d.dropped).to.eql(0); });",
+                      "pm.test('the cover is the template, the text is gone', () => pm.expect(JSON.stringify(d.layout.pages.cover)).to.not.include('ownpg1'));",
+                      "pm.collectionVariables.set('ownVersion', d.version);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "8. version-list: the newest snapshot is of kind apply",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/version-list",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "version-list"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{ownBookId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "const it = pm.response.json().data.items[0];",
+                      "pm.test('kind apply, holds version 1', () => { pm.expect(it.kind).to.eql('apply'); pm.expect(it.version).to.eql(1); });",
+                      "pm.collectionVariables.set('ownSnapshotId', it.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "9. A applies the own template back (version 3)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/apply-template",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "apply-template"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{ownBookId}}\",\"base_version\":{{ownVersion}},\"kind\":\"cover\",\"source\":\"own\",\"template_id\":\"{{ownTemplateId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "const d = pm.response.json().data;",
+                      "pm.test('version 3 with the own text', () => { pm.expect(d.version).to.eql(3); pm.expect(JSON.stringify(d.layout.pages.cover)).to.include('ownpg1'); });",
+                      "pm.collectionVariables.set('ownVersion', d.version);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "10. Restore the first apply snapshot (undo, version 4)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/restore",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "restore"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{ownBookId}}\",\"id\":\"{{ownSnapshotId}}\",\"base_version\":{{ownVersion}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "pm.test('version 4', () => pm.expect(pm.response.json().data.version).to.eql(4));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "11. A deletes the own template",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/template-delete",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "template-delete"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"id\":\"{{ownTemplateId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "pm.test('empty data', () => pm.expect(pm.response.json().data).to.eql({}));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "12. The deleted template is gone from the list",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/template-list",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "template-list"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{ownBookId}}\",\"kind\":\"cover\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "pm.test('the deleted id is not listed', () => pm.expect(pm.response.json().data.items.map(i => i.id)).to.not.include(pm.collectionVariables.get('ownTemplateId')));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "13. A deletes the book",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/yearbook/delete",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "yearbook",
+                    "delete"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"id\":\"{{ownBookId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// The layout routes share a burst limit of 20 per 10 s per user (ERROR_RATE_LIMITED, 429): space the steps out so a whole run stays under it.",
+                  "setTimeout(function () {}, 700);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Edge cases",
+          "item": [
+            {
+              "name": "1. Login A",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session="
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"email\":\"{{emailA}}\",\"password\":\"{{password}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "const m = /smem_session=([^;]+)/.exec(pm.response.headers.get('Set-Cookie') || '');",
+                      "pm.test('session cookie issued', () => pm.expect(m).to.not.be.null);",
+                      "pm.collectionVariables.set('tokenA', m ? m[1] : '');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "2. Login B",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session="
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"email\":\"{{emailB}}\",\"password\":\"{{password}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "const m = /smem_session=([^;]+)/.exec(pm.response.headers.get('Set-Cookie') || '');",
+                      "pm.test('session cookie issued', () => pm.expect(m).to.not.be.null);",
+                      "pm.collectionVariables.set('tokenB', m ? m[1] : '');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "3. A creates a book",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/yearbook/create",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "yearbook",
+                    "create"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"title\": \"Own templates book\", \"language\": \"en\", \"template_id\": \"memory-book\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "pm.collectionVariables.set('ownEdgeId', pm.response.json().data.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "4. template-create on a book with no saved page: 400 ERROR_PARAM",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/template-create",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "template-create"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{ownEdgeId}}\",\"kind\":\"cover\",\"name\":\"x\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "5. A saves a cover",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/save",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "save"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{ownEdgeId}}\",\"base_version\":0,\"layout\":{\"v\":1,\"pages\":{\"cover\":{\"items\":[{\"id\":\"ownpg1\",\"t\":\"text\",\"text\":\"Lớp 12A1\",\"font\":\"display\",\"size\":28,\"color\":\"accent\",\"align\":\"center\",\"bold\":true,\"x\":100,\"w\":400,\"h\":120,\"cy\":850,\"r\":-4}]}}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "6. A creates a template to test against",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/template-create",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "template-create"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{ownEdgeId}}\",\"kind\":\"cover\",\"name\":\"Edge\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "pm.collectionVariables.set('ownEdgeTemplateId', pm.response.json().data.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "7. Anonymous template-create: 401",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session="
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/template-create",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "template-create"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{ownEdgeId}}\",\"kind\":\"cover\",\"name\":\"x\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 401', () => pm.response.to.have.status(401));",
+                      "pm.test('ERROR_UNAUTHORIZED', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNAUTHORIZED'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "8. Anonymous template-delete: 401",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session="
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/template-delete",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "template-delete"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"id\":\"{{ownEdgeTemplateId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 401', () => pm.response.to.have.status(401));",
+                      "pm.test('ERROR_UNAUTHORIZED', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNAUTHORIZED'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "9. Anonymous apply-template: 401",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session="
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/apply-template",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "apply-template"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{ownEdgeId}}\",\"base_version\":1,\"kind\":\"cover\",\"source\":\"shipped\",\"template_id\":\"cover-sunny\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 401', () => pm.response.to.have.status(401));",
+                      "pm.test('ERROR_UNAUTHORIZED', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNAUTHORIZED'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "10. B creates a template on A's book: 404",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenB}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/template-create",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "template-create"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{ownEdgeId}}\",\"kind\":\"cover\",\"name\":\"x\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 404', () => pm.response.to.have.status(404));",
+                      "pm.test('ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "11. B applies A's own template to A's book: 404",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenB}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/apply-template",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "apply-template"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{ownEdgeId}}\",\"base_version\":1,\"kind\":\"cover\",\"source\":\"own\",\"template_id\":\"{{ownEdgeTemplateId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 404', () => pm.response.to.have.status(404));",
+                      "pm.test('ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "12. B deletes A's template: 404, and it survives",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenB}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/template-delete",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "template-delete"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"id\":\"{{ownEdgeTemplateId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 404', () => pm.response.to.have.status(404));",
+                      "pm.test('ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "13. Name too long: 400",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/template-create",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "template-create"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{ownEdgeId}}\",\"kind\":\"cover\",\"name\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "14. Unknown page kind: 400",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/template-create",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "template-create"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{ownEdgeId}}\",\"kind\":\"poster\",\"name\":\"x\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "15. Delete with a bad id: 400",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/template-delete",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "template-delete"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"id\":\"nope\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "16. Delete an unknown id: 404",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/template-delete",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "template-delete"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"id\":\"01K7QB1B2C3D4E5F6G7H8J9K0M\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 404', () => pm.response.to.have.status(404));",
+                      "pm.test('ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "17. Apply with a bad source: 400",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/apply-template",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "apply-template"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{ownEdgeId}}\",\"base_version\":1,\"kind\":\"cover\",\"source\":\"other\",\"template_id\":\"cover-sunny\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "18. Apply without base_version: 400",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/apply-template",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "apply-template"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{ownEdgeId}}\",\"kind\":\"cover\",\"source\":\"shipped\",\"template_id\":\"cover-sunny\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "19. Apply an unknown shipped template: 404",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/apply-template",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "apply-template"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{ownEdgeId}}\",\"base_version\":1,\"kind\":\"cover\",\"source\":\"shipped\",\"template_id\":\"no-such-template\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 404', () => pm.response.to.have.status(404));",
+                      "pm.test('ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "20. Apply a cover template to the profile page: 400",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/apply-template",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "apply-template"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{ownEdgeId}}\",\"base_version\":1,\"kind\":\"profile\",\"source\":\"own\",\"template_id\":\"{{ownEdgeTemplateId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "21. Apply with a stale base_version: 409 with the stored document",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/apply-template",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "apply-template"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{ownEdgeId}}\",\"base_version\":7,\"kind\":\"cover\",\"source\":\"own\",\"template_id\":\"{{ownEdgeTemplateId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 409', () => pm.response.to.have.status(409));",
+                      "pm.test('ERROR_VERSION_CONFLICT', () => pm.expect(pm.response.json().status).to.eql('ERROR_VERSION_CONFLICT'));",
+                      "pm.test('data carries the stored version and layout', () => { const d = pm.response.json().data; pm.expect(d.version).to.eql(1); pm.expect(d.layout.pages.cover).to.be.an('object'); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "22. The refused calls changed nothing: the layout is still version 1",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/get?yearbook_id={{ownEdgeId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "get"
+                  ],
+                  "query": [
+                    {
+                      "key": "yearbook_id",
+                      "value": "{{ownEdgeId}}"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "pm.test('version 1, text intact', () => { const d = pm.response.json().data; pm.expect(d.version).to.eql(1); pm.expect(JSON.stringify(d.layout)).to.include('ownpg1'); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "23. A deletes the own template of the edge cases",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/template-delete",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "template-delete"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"id\":\"{{ownEdgeTemplateId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "24. A deletes the edge-case book",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/yearbook/delete",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "yearbook",
+                    "delete"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"id\":\"{{ownEdgeId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// The layout routes share a burst limit of 20 per 10 s per user (ERROR_RATE_LIMITED, 429): space the steps out so a whole run stays under it.",
+                  "setTimeout(function () {}, 700);"
+                ]
+              }
             }
           ]
         }

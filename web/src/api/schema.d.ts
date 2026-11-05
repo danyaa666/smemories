@@ -808,8 +808,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * List the shipped page templates of a book's template
-         * @description Called by the signed-in owner's template gallery (T-172). Returns the page templates shipped with the server for the book's **current** template, optionally only those of one page `kind`, sorted by English label then id. A page template is the value of `pages.<kind>` of a layout document (`page`, see `BookLayoutPage`) with a name in both languages; it holds only `text` and `asset` items (never an `image` item or a picture background), at most 40 items, and every shipped one passes the layout validator (a build test). Applying one to a book is a later task (T-173); this route only reads. A book whose template cannot hold a layout gets an empty list. `kind` must be a page kind of the book's template (else `ERROR_PARAM`). A missing book and someone else's both answer `ERROR_NOT_FOUND`; a class admin has no access. Takes from the same per-user limits as `save`. A request with the session cookie must come from an allowed Origin.
+         * List the shipped and the owner's own page templates of a book's template
+         * @description Called by the signed-in owner's template gallery (T-172). Returns the page templates shipped with the server for the book's **current** template, optionally only those of one page `kind`, sorted by English label then id. A page template is the value of `pages.<kind>` of a layout document (`page`, see `BookLayoutPage`) with a name in both languages; it holds only `text` and `asset` items (never an `image` item or a picture background), at most 40 items, and every shipped one passes the layout validator (a build test). From T-173 the owner's own templates made on the same book template follow the shipped ones (`source: own`, newest first, `id` a ULID, both labels the name given); applying is `apply-template`. A book whose template cannot hold a layout gets an empty list. `kind` must be a page kind of the book's template (else `ERROR_PARAM`). A missing book and someone else's both answer `ERROR_NOT_FOUND`; a class admin has no access. Takes from the same per-user limits as `save`. A request with the session cookie must come from an allowed Origin.
          */
         post: operations["listBookLayoutTemplates"];
         delete?: never;
@@ -832,6 +832,66 @@ export interface paths {
          * @description Called by the signed-in owner's layout editor to preview a snapshot before `restore` (T-163). Returns the stored document as it was saved (it is not re-validated here; `restore` validates it against the current template and images). `id` is the snapshot's public id from `version-list`. A missing book, someone else's and an unknown or foreign snapshot id all answer `ERROR_NOT_FOUND`. Takes from the same per-user limits as `save`. A request with the session cookie must come from an allowed Origin.
          */
         post: operations["getBookLayoutVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/book-layout/template-create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Save one page of the book as the owner's own page template
+         * @description Called by the signed-in owner's editor ("Save as my template", T-173). Copies the book's **current** `pages.<kind>` into a new template that only the owner can read. **`image` items and a picture `bg.media` are not copied** (an own image is not shareable); `stripped` says how many were left out so the student can be told. What is left is validated like any page and must be at most 64 KiB (`ERROR_TOO_LARGE` otherwise). `name` is plain text of 1 to 60 characters (NFC, trimmed, no control characters). A kind the book has no saved page of is `ERROR_PARAM`. A user keeps at most **20** templates: the 21st is `ERROR_TEMPLATE_LIMIT` (409, `data.limit`). A missing book and someone else's both answer `ERROR_NOT_FOUND`; a class admin has no access. Takes from the same per-user limits as `save`. A request with the session cookie must come from an allowed Origin.
+         */
+        post: operations["createBookLayoutTemplate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/book-layout/template-delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Delete one of the owner's own page templates
+         * @description Called by the signed-in owner's template gallery (T-173). Deletes the own template `id`. Books that used the template do not change (applying copies the page). Another user's template and an unknown id both answer `ERROR_NOT_FOUND`; a class admin has no access. Takes from the same per-user limits as `save`. A request with the session cookie must come from an allowed Origin.
+         */
+        post: operations["deleteBookLayoutTemplate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/book-layout/apply-template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Apply a shipped or own page template to one page of a book
+         * @description Called by the signed-in owner's template gallery (T-173). Replaces `pages.<kind>` (`bg`, `overrides`, `items`, nothing else) of the book's layout with the page of the template `template_id` (`source` `shipped`: a shipped template of the book's template; `own`: one of the owner's own templates) in **one write**: the whole document is validated like a restore (an item or a page background that names an asset that no longer exists or a design image that was deleted is **dropped** and counted in `dropped`; any other problem is `ERROR_INVALID_LAYOUT`, `data.problems`), one new version is written and the document it replaces is stored as **one** snapshot of kind `apply`, in the same transaction. `base_version` is the version the editor holds, as for `save`: a stale one is `ERROR_VERSION_CONFLICT` (409, `data` is the stored `{version, layout}`). An own template made on another book template than the book has now is `ERROR_TEMPLATE_MISMATCH` (409); a template of another page kind than `kind` is `ERROR_PARAM`. A failed apply changes neither the layout nor the history. A book without a layout gets one. Undo is `restore` of the new snapshot. A missing book, someone else's, an unknown shipped id and an unknown or foreign own id all answer `ERROR_NOT_FOUND`; a class admin has no access. Takes from the same per-user limits as `save`. A request with the session cookie must come from an allowed Origin.
+         */
+        post: operations["applyBookLayoutTemplate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2321,10 +2381,10 @@ export interface components {
                      */
                     version: number;
                     /**
-                     * @description What replaced it: `auto` a save that began a new editing burst, `reset` the reset endpoint, `restore` a restore.
+                     * @description What replaced it: `auto` a save that began a new editing burst, `reset` the reset endpoint, `restore` a restore, `apply` an apply-template (T-173).
                      * @enum {string}
                      */
-                    kind: "auto" | "reset" | "restore";
+                    kind: "auto" | "reset" | "restore" | "apply";
                     /**
                      * Format: int64
                      * @description Unix ms, when the document was replaced.
@@ -2349,14 +2409,24 @@ export interface components {
              * @constant
              */
             status: "OK";
-            /** @description The shipped page templates. */
+            /** @description The shipped page templates, then the owner's own ones. */
             data: {
                 /** @description Always the empty string: the list is short and has no next page (the shape of docs/api-contract.md section 5). */
                 next_id: string;
-                /** @description The templates, sorted by English label then id. */
+                /** @description The shipped templates sorted by English label then id, then the owner's own ones, newest first. */
                 items: {
-                    /** @description Template id (lower-case letters, digits, hyphens), unique within the book template and kind. */
+                    /** @description Template id: lower-case letters, digits, hyphens for a shipped one (unique within the book template and kind); a ULID for an own one. */
                     id: string;
+                    /**
+                     * @description `shipped`: a file of the server; `own`: the owner's saved page (T-173).
+                     * @enum {string}
+                     */
+                    source: "shipped" | "own";
+                    /**
+                     * Format: int64
+                     * @description Own templates only: Unix ms.
+                     */
+                    created_at?: number;
                     /** @description English name */
                     label_en: string;
                     /** @description Vietnamese name */
@@ -2367,6 +2437,72 @@ export interface components {
                     item_count: number;
                     page: components["schemas"]["BookLayoutPage"];
                 }[];
+            };
+        };
+        BookLayoutTemplateCreateRequest: {
+            /** @description Required. ULID of the yearbook. */
+            yearbook_id: string;
+            /** @description Required. The page kind to copy (`cover`, `profile`, `notes`, `back`); the book must have a saved page of it. */
+            kind: string;
+            /** @description Required. Plain text, 1 to 60 characters. */
+            name: string;
+        };
+        BookLayoutTemplateCreateResponse: {
+            /**
+             * @description Always `OK` on success.
+             * @constant
+             */
+            status: "OK";
+            /** @description The new own template (without its page). */
+            data: {
+                /** @description ULID of the template; the `id` of `template-delete` and the `template_id` of `apply-template` with `source` `own`. */
+                id: string;
+                /** @description The name as stored (trimmed). */
+                name: string;
+                /** @description The page kind. */
+                kind: string;
+                /** @description The book template the page was made on. */
+                template_id: string;
+                /** @description Items kept. */
+                item_count: number;
+                /** @description Size of the stored page. */
+                bytes: number;
+                /**
+                 * Format: int64
+                 * @description Unix ms.
+                 */
+                created_at: number;
+                /** @description Image items and picture backgrounds that were not copied. */
+                stripped: number;
+            };
+        };
+        BookLayoutTemplateDeleteRequest: {
+            /** @description Required. ULID of the own template. */
+            id: string;
+        };
+        BookLayoutApplyTemplateRequest: {
+            /** @description Required. ULID of the yearbook. */
+            yearbook_id: string;
+            /**
+             * Format: int64
+             * @description Required. The layout version the editor holds (as for `save`); 0 when the book had no layout.
+             */
+            base_version: number;
+            /** @description Required. The page kind to replace; the template must be for the same kind. */
+            kind: string;
+            /**
+             * @description Required. Where the template comes from.
+             * @enum {string}
+             */
+            source: "shipped" | "own";
+            /** @description Required. A shipped template's id (lower-case letters, digits, hyphens) or an own template's ULID. */
+            template_id: string;
+        };
+        /** @description `ERROR_TEMPLATE_LIMIT`: the user already has the most own templates allowed. */
+        BookLayoutTemplateLimitError: components["schemas"]["ApiError"] & {
+            data: {
+                /** @description The limit (20). */
+                limit: number;
             };
         };
         BookLayoutVersionGetResponse: {
@@ -2388,7 +2524,7 @@ export interface components {
                  * @description What replaced it (see `version-list`).
                  * @enum {string}
                  */
-                kind: "auto" | "reset" | "restore";
+                kind: "auto" | "reset" | "restore" | "apply";
                 /**
                  * Format: int64
                  * @description Unix ms, when the document was replaced.
@@ -4668,7 +4804,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description The shipped page templates. */
+            /** @description The shipped and own page templates. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -4714,6 +4850,139 @@ export interface operations {
             401: components["responses"]["ApiUnauthorized"];
             403: components["responses"]["ApiForbidden"];
             404: components["responses"]["ApiNotFound"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    createBookLayoutTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookLayoutTemplateCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description The new template. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookLayoutTemplateCreateResponse"];
+                };
+            };
+            /** @description `ERROR_PARAM` or `ERROR_INVALID_LAYOUT` with `data.problems`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookLayoutInvalidError"];
+                };
+            };
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            /** @description `ERROR_TEMPLATE_LIMIT`: the user already has 20 own templates; `data.limit` is 20. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookLayoutTemplateLimitError"];
+                };
+            };
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    deleteBookLayoutTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookLayoutTemplateDeleteRequest"];
+            };
+        };
+        responses: {
+            /** @description Deleted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmptyResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    applyBookLayoutTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookLayoutApplyTemplateRequest"];
+            };
+        };
+        responses: {
+            /** @description Applied as a new version. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookLayoutRestoredResponse"];
+                };
+            };
+            /** @description `ERROR_PARAM` or `ERROR_INVALID_LAYOUT` with `data.problems`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookLayoutInvalidError"];
+                };
+            };
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            /** @description `ERROR_VERSION_CONFLICT` (`data` is the stored version and document) or `ERROR_TEMPLATE_MISMATCH`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookLayoutConflictError"];
+                };
+            };
             413: components["responses"]["ApiTooLarge"];
             415: components["responses"]["ApiUnsupportedMediaType"];
             429: components["responses"]["ApiRateLimited"];

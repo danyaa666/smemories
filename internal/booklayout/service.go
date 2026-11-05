@@ -45,10 +45,15 @@ const (
 
 // Observer receives what the history does, for metrics and one log line per restore. Every member may be nil.
 type Observer struct {
-	Snapshot func(kind string) // a snapshot was stored (KindAuto, KindReset, KindRestore)
+	Snapshot func(kind string) // a snapshot was stored (KindAuto, KindReset, KindRestore, KindApply)
 	Pruned   func(n int)       // old snapshots were deleted
 	Restore  func(result string)
-	Log      *slog.Logger // one line per restore: the book's public id, the version numbers and dropped; never document content
+	// T-173: an own template was created (stripped = image items and picture backgrounds left out) or deleted; a template was applied
+	// (source SourceShipped or SourceOwn, result Apply*).
+	TemplateCreated func(stripped int)
+	TemplateDeleted func()
+	Apply           func(source, result string)
+	Log             *slog.Logger // one line per restore and per apply: the book's public id, the version numbers and dropped; never document content
 }
 
 // Results of a save, the label of smem_layout_saves_total.
@@ -430,7 +435,8 @@ func (s *Service) restore(ctx context.Context, ownerID uint64, publicID, id stri
 
 // Templates lists the shipped page templates of the owner's book, optionally of one page kind (T-172): those of the book's current template,
 // sorted by label. Another user's and an unknown book are ERROR_NOT_FOUND. A book whose template has no layout block gets an empty list.
-// Own templates are added by T-173. It spends the same rate limit as the other layout reads.
+// The owner's own templates made on the book's template follow the shipped ones, newest first (T-173). It spends the same rate limit as the
+// other layout reads.
 func (s *Service) Templates(ctx context.Context, ownerID uint64, publicID, kind string) ([]PageTemplate, error) {
 	if err := s.take(ctx, ownerID); err != nil {
 		return nil, err
@@ -447,6 +453,11 @@ func (s *Service) Templates(ctx context.Context, ownerID uint64, publicID, kind 
 		return nil, apperr.New(apperr.Param, "kind must be a page kind of the book's template")
 	}
 	out := templatesFor(*st.templateID, kind)
+	own, err := s.store.ownTemplates(ctx, ownerID, *st.templateID, kind)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, own...)
 	if out == nil {
 		out = []PageTemplate{}
 	}
