@@ -869,7 +869,7 @@ Spec: .team/epics/E09-customisation-editor/31-page-templates-model-and-shipped.m
 - 2026-11-05 10:03Z · leader · merged 44f339a; QA: integration 33 pkgs ok (-race, matrix incl template-list), postman 186/420/0 x2, e2e 38/0, print-check 193/193, vitest 1120; gate negative controls fail go test; non-blocking: comment in web/src/api/bookLayout.ts says save rate limit but layout read limit is used; prod skip path verified by code read only
 
 ### T-173 — [E09] Own page templates and the apply API (Go): save my page, apply a template per section
-- **Status:** CHANGES_REQUESTED
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -877,10 +877,10 @@ Spec: .team/epics/E09-customisation-editor/31-page-templates-model-and-shipped.m
 - **Risk:** high
 - **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** dev
 - **Branch:** task/t-173-e09-own-page-templates-and-the-apply-api
 - **PR:** https://github.com/danyaa666/smemories/pull/169
-- **Updated:** 2026-11-05 19:41Z by leader
+- **Updated:** 2026-11-05 19:50Z by dev
 - **Comments-seen:** 8
 
 Spec: .team/epics/E09-customisation-editor/32-own-templates-and-apply-api.md (read it from the main checkout). book_template_tab migration, template-create/delete/list, apply-template in one write with one apply snapshot, limits 20 and 64 KiB, concurrency tests. Risk high: owner approval before merge
@@ -896,7 +896,7 @@ Spec: .team/epics/E09-customisation-editor/32-own-templates-and-apply-api.md (re
 - 2026-11-05 19:41Z · leader · Leader rework brief (conflict only, no behaviour change expected): resolve the merge with develop as described in the status note; do not change any T-173 behaviour; if a conflict touches the class book test (internal/class/page_integration_test.go) or metrics.go, keep both sides and re-run those packages. R1 re-run list: full make test-integration, go test -race ./..., migration up/down/up, newman T-173 folder, check:api, vitest/lint/tsc/build. Nothing under .team/.
 
 ### T-174 — [E09] Stabilise the editor-gestures touch test (flake: 2 to 3 px against 0.5 allowed)
-- **Status:** IN_QA
+- **Status:** MERGED
 - **Priority:** P3
 - **Type:** test
 - **Milestone:** M4
@@ -904,17 +904,24 @@ Spec: .team/epics/E09-customisation-editor/32-own-templates-and-apply-api.md (re
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** —
 - **Branch:** task/t-174-e09-stabilise-the-editor-gestures-touch-
 - **PR:** https://github.com/danyaa666/smemories/pull/171
-- **Updated:** 2026-11-05 19:27Z by qa
-- **Comments-seen:** 2
+- **Updated:** 2026-11-05 19:58Z by leader
+- **Comments-seen:** 4
 
 Spec: .team/epics/E09-customisation-editor/33-gestures-touch-test-flake.md (read it from the main checkout). The touch pan assertion failed in 3 runs (T-165 dev, T-166 QA twice); find the cause (test timing or a product pan moving an item), fix at the source, 30 isolated and 10 full-suite runs clean
 
 #### Comments
 - 2026-11-05 19:26Z · dev · PR #171 head d3b7781554da0eed500c8a1b8faa556067f9f55e. Cause = test timing, proven: per-frame sampling after touchEnd shows the stage still gliding (scrollLeft 347 -> 368 over ~190 ms) while the item's stored style is identical in every frame and the atomic item-minus-sheet delta is 0; the old test polled scroll>20 (mid-fling) then read sheet and item in two evaluations (2-3 px apart). No product change. Fix: settledRects helper (scroll unchanged 3 frames, one evaluate returns item, sheet, style, scroll), 0.5 px kept, adds style-unchanged and vertical checks; one paragraph in docs/e2e.md. Private stack t174dev (13741/16741/19741, SMEM_TEST_S3_ENDPOINT set). Before: reproduced at once, old spec 2 fails in 10 isolated runs. After: 30/30 isolated, 30/30 isolated under full CPU load (11 busy loops; note QA's concurrent stack loads the machine, flake is load/timing sensitive), 10/10 full-suite runs 41 passed 0 failed. QA: run the touch test 20x isolated (-g 'setup:|touch at 768' --repeat-each) and full suite 3x, compare to old spec if wanted. Stack stopped, not removed.
 - 2026-11-05 19:27Z · leader · Leader to QA: PR #171 head d3b7781554da0eed500c8a1b8faa556067f9f55e (verify full SHA with gh pr view). Test-only change (tools/e2e/editor-gestures.spec.mjs + docs/e2e.md); dev's diagnosis: the stage keeps gliding after the swipe (scrollLeft 347 -> 368 over ~190 ms), the old test read sheet and item in two evaluations 2-3 px apart; the new settledRects helper waits for 3 stable frames and reads everything in one evaluate; tolerance unchanged 0.5 px. Verify: (1) read the diff: tolerance not loosened, new assertions (stage panned, item style unchanged, vertical axis) meaningful, no waitForTimeout sleep as the fix; (2) run -g 'setup:|touch at 768' --repeat-each=20 in isolation, then again under load (a few busy loops) and the full e2e suite 3 times, report counts + full SHA; (3) mutation check: temporarily make the product pan move an item by ~3 px (or shrink the settle wait to 0) and confirm the test FAILS, then revert (do not push the mutation). Any touch failure = QA_FAIL.
+- 2026-11-05 19:58Z · qa · QA_PASS. PR #171 head d3b7781554da0eed500c8a1b8faa556067f9f55e (gh pr view confirms; MERGEABLE, git merge-tree against current develop 18e8041 clean; CI go/security/web pass, go-integration/e2e/image paused). No commits pushed by QA. Private stack: compose project smemqa174, ports 14201/14202/14203, SMEM_TEST_S3_ENDPOINT=http://127.0.0.1:14203, api/web 14211/14212, db smem_test_e2e; stack stopped, not removed.
+  DIFF REVIEW: tools/e2e/editor-gestures.spec.mjs +37/-4 and docs/e2e.md +2 only; no .team/, no product code, no new dep. 0.5 px tolerance unchanged (both assertions still toBeLessThanOrEqual(0.5)); no waitForTimeout. Fix = settledRects (rAF loop until scrollLeft/Top unchanged 3 frames, then ONE evaluate returns item, sheet, style, scrollLeft). New assertions are meaningful: stage panned >20 px, item style attribute unchanged (stored box), vertical axis delta <=0.5. AC1 cause stated with evidence by dev (test timing: two reads during fling), fix at source.
+  RESULTS (all on head d3b7781554da0eed500c8a1b8faa556067f9f55e, -g 'setup:|touch at 768' --repeat-each=20 --workers=1): (a) isolated, quiet: 100 passed 0 failed (20 touch + 80 setup tests). (b) isolated under load (10 busy shell loops on 11 cores, plus other agents' playwright runs on the machine): 100 passed 0 failed, touch 20/20. (c) full e2e suite, own logs, 3 runs: 41 passed 0 failed, 41 passed 0 failed, 41 passed 0 failed (exit 0 each; touch test 510 passed each). Total touch passes 63/63 on this head, 0 failures.
+  MUTATION CHECK (all reverted with git checkout, nothing pushed, worktree clean): M1 product: touch pan on an unselected item sets item style.translate=3px: test FAILS at 'a swipe over the unselected item pans the stage and does not move the item' with the style check (stored style gained translate: 3px). M2 same product mutation plus the style assertion commented out locally: FAILS on the 0.5 px rect check, Received 4.11 (vertical/horizontal drift measured), so the tolerance itself catches a ~3 px move. M3 product: removed the touch early-return (touch selects and drags) fails the later step 'the first tap selects' (not at the pan step; the CDP swipe pans rather than drags). Note: a settle-wait of 0 would not by itself fail the test, because the atomic one-evaluate read is what removes the drift; the settle only makes the scroll comparison stable.
+  Lint/format: tools/e2e has no eslint/prettier config; prettier --check warns on the develop version of the same file too (pre-existing, not part of CI web lint). No product code changed so web vitest not re-run; go not touched.
+  Non-blocking: (1) an earlier set of my background full runs wrote to scratchpad full1..3.log which another agent also used, so I discarded them and reran 3 times with unique logs; the numbers above are from the clean rerun. (2) docs/e2e.md line is accurate. Not run: full make test-integration (no Go change, test-only JS diff).
+- 2026-11-05 19:58Z · leader · Leader: merged PR #171 (squash) at head d3b7781554da0eed500c8a1b8faa556067f9f55e after QA_PASS (isolated 100/100 quiet and under load, full e2e 41/0 x3, touch 63/63, mutation checks fail as expected); go/web/security green.
 
 ### T-175 — [E09] Template gallery and apply, per section (web): shipped and own templates, preview, apply, delete own
 - **Status:** BACKLOG
