@@ -682,7 +682,7 @@ Spec: .team/epics/E09-customisation-editor/26-class-book-layouts.md (read it fro
 - 2026-11-05 19:24Z · leader · Leader: merged PR #170 (squash) at head 42a9cbf8f634c6db24b309bd4606c37c1dc79bea after QA_PASS (product head a3fa250 + QA test-only commits): make test-integration 33 pkg ok, go test -race 32 ok, e2e 39/0 twice, print-check 199/0, 60-place class: body 8002395 <= 8388608, truncated_layouts = last 22; Postman baseline identical to develop (28).
 
 ### T-168 — [E09] History e2e hardening: friendly mysql-missing message, QA probe cases (tests only)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P3
 - **Type:** test
 - **Milestone:** M4
@@ -690,10 +690,10 @@ Spec: .team/epics/E09-customisation-editor/26-class-book-layouts.md (read it fro
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-168-e09-history-e2e-hardening-friendly-mysql
 - **PR:** —
-- **Updated:** 2026-11-02 05:35Z by leader
+- **Updated:** 2026-11-05 19:27Z by dev
 - **Comments-seen:** 1
 
 Spec: .team/epics/E09-customisation-editor/27-history-e2e-hardening.md (read it from the main checkout). Friendly message when the mysql client is missing, QA's three probe cases committed (30-row cap, restores in a row, pending autosave), spec time under about 60 s
@@ -867,19 +867,19 @@ Spec: .team/epics/E09-customisation-editor/31-page-templates-model-and-shipped.m
 - 2026-11-05 10:03Z · leader · merged 44f339a; QA: integration 33 pkgs ok (-race, matrix incl template-list), postman 186/420/0 x2, e2e 38/0, print-check 193/193, vitest 1120; gate negative controls fail go test; non-blocking: comment in web/src/api/bookLayout.ts says save rate limit but layout read limit is used; prod skip path verified by code read only
 
 ### T-173 — [E09] Own page templates and the apply API (Go): save my page, apply a template per section
-- **Status:** QA_PASS
+- **Status:** CHANGES_REQUESTED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
 - **Depends-on:** T-172
 - **Risk:** high
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** leader
+- **Assignee:** —
 - **Branch:** task/t-173-e09-own-page-templates-and-the-apply-api
 - **PR:** https://github.com/danyaa666/smemories/pull/169
-- **Updated:** 2026-11-05 15:54Z by qa
-- **Comments-seen:** 6
+- **Updated:** 2026-11-05 19:41Z by leader
+- **Comments-seen:** 8
 
 Spec: .team/epics/E09-customisation-editor/32-own-templates-and-apply-api.md (read it from the main checkout). book_template_tab migration, template-create/delete/list, apply-template in one write with one apply snapshot, limits 20 and 64 KiB, concurrency tests. Risk high: owner approval before merge
 
@@ -890,9 +890,11 @@ Spec: .team/epics/E09-customisation-editor/32-own-templates-and-apply-api.md (re
 - 2026-11-05 14:56Z · leader · Leader to QA (queued; QA picks it after T-170): PR #169 head 4af81307e440910719d750f48036d4c1cbae09be (full SHA). HIGH RISK: run the FULL integration suite (make test-integration, default DSN), migration down then up on a private DB, go test -race ./..., the class matrix, the Postman T-173 folder with newman (dev: 88/0; T-172 steps 4 and 8 were edited to ignore own templates: check that edit does not weaken them), and result lines (counts + full SHA) in your comment. Verify per spec 32: create strips image items and bg.media and reports the count; the 21st is refused (ERROR_TEMPLATE_LIMIT, data.limit 20); 64 KiB limit; another user, a class admin, a member, another class admin and anonymous get 404/401 on every new route; apply replaces only the chosen kind, one new version, one snapshot of kind apply, retention still 30; stale base_version conflicts with the stored document and changes nothing; template of another book template is ERROR_TEMPLATE_MISMATCH; a dropped asset is counted; invalid page leaves layout and history byte-identical; no layout yet -> created; two parallel applies (-race -count=20 in the package, and a real two-client probe against the stack); delete does not change books that used the template; account deletion note on T-025. Check logs and metrics carry no layout content. The leader merges only after the owner's approve.
 - 2026-11-05 15:54Z · qa · QA_PASS T-173, PR #169, head 4af81307e440910719d750f48036d4c1cbae09be (unchanged, MERGEABLE, develop merges cleanly: git merge-tree exit 0 against origin/develop 2cc6751 after T-171). No test commits pushed by QA. Stack: private compose project t173qa, ports 13831/16831/19831, SMEM_TEST_S3_ENDPOINT set; torn down without -v. RESULT LINES: (1) make -e test-integration (go test -race -count=1 -timeout 30m -tags integration ./..., default smemories DSN grants, my ports via env): 33 packages ok, 0 FAIL, exit 0 (booklayout 179s, class 269s, db 233s, notes 298s, media 151s all ok). (2) go test -race -count=1 ./... (unit): 32 ok, 0 FAIL. go vet and go vet -tags integration clean, golangci-lint 0 issues, gofmt clean, web npm run check:api 'api schema ok'. (3) Concurrency: go test -race -count=20 -tags integration -run 'TestConcurrentAppliesExactlyOneWins|TestTemplateLimitTwenty' ./internal/booklayout/ ok (41s). (4) Migration on private DB: up (20261105120000_book_template_tab applied), SHOW CREATE TABLE matches spec (owner_id+public_id unique, (owner_id,created_at DESC) index, no FK), down --allow-down removed the table and goose version fell to 20261102120000, up again recreated it. (5) newman 6.2.3 against API in SMEM_ENV=dev on my stack: folder T-173 run twice back to back: 90 assertions / 0 failed each (88 + 2 setup); T-172 48/0; T-163 81/0; book-design 132/0; T-152 61/0 and T-153 106/0 when run with --working-dir postman (without it they fail on fixture file load errors: 'Form param file, file load error fixtures/media/...' = relative fixture path, not a product bug and not from this PR; I did not need a develop comparison since they are green with the right cwd). T-172 edit check: I diffed old vs new script of steps 4, 5, 7 (dev said 4 and 8): the only changes are a filter source==='shipped' on the items and 'source' added to the exact key list, so the assertions are not weaker (stricter on keys); own-template behaviour is asserted in the T-173 folder. (6) e2e (make -e e2e, private ports 18781/14781): run 1 37 passed, 1 failed (editor-gestures touch at 768 px swipe: item moved 3 px vs 0.5 px budget; pure web gesture timing, no API or layout change in this PR), 1 did not run; run 2 on the same head: 39 passed, 0 failed (flaky, not this PR). print-check (make -e print-check): 199 tests, 199 pass, 0 fail. EVIDENCE per AC (my own real two-client HTTP probe, python script against the running API, plus newman): AC1 create on a cover with 2 text items + image item + bg.media: 200, stripped=2, item_count=2, own template page has no media/image; 60-char name 200, 61 chars and empty 400; no saved page of the kind 400; fill to exactly 20, the 21st: 409 ERROR_TEMPLATE_LIMIT data {limit:20}; 6 parallel creates on the last free place: exactly one 200, five 409, total 20; a page over 64 KiB (40 text items x 500 four-byte runes) saved fine then template-create 413 ERROR_TOO_LARGE and no row stored; anonymous 401 and other user B 404 on create, delete, apply and list; B cannot see, delete or apply A's template and vice versa (B's list has no A data); delete twice 404. AC2 apply shipped to each of back, cover, notes, profile: 200, version +1, the other kinds byte-equal to before; apply own to cover: version +1, items equal to the template's; version-list newest snapshot kind 'apply'; stale base_version: 409 ERROR_VERSION_CONFLICT with data.version and layout and nothing changed; restore of an apply snapshot returned that snapshot's document (200). AC3 failed applies (unknown shipped 404, bad kind 400, unknown own id 404, future base_version 409, base_version -1 400, own cover template onto profile 400): layout (get) and version-list byte-identical before/after; own template made on memory-book after the book switched to navy-classic: 409 ERROR_TEMPLATE_MISMATCH and the navy template-list has 0 own; two parallel applies with the same base_version from two clients (threads, barrier), 5 rounds: every round exactly one 200 and one 409, version +1 only, snapshot count +1 only; retention: 35 further applies leave exactly 30 snapshots (smem_layout_snapshots_pruned_total moved). No layout yet: apply with base_version 0 creates v1 (no snapshot, nothing existed before). Delete of the template leaves the book document equal. AC4: class matrix: TestAdminStillHasNoRightsOverAStudentsBook and TestAdminRoutesAreAllInTheMatrix in internal/class pass in the full integration run (cells admin, member, other class admin all 404 for template-create, template-delete, apply-template with the SECRET strings and DB snapshots unchanged); docs rows present in class-permissions.md, class-privacy-review.md (3 route rows plus the T-025 account-deletion note). Logs and metrics: the API log has 55 'page template applied' lines holding only yearbook_id, kind, source, from/new version, dropped; grep of the whole log for the layout strings I used (COVER-ONE, PROFILE-KEEP, NOTES-KEEP, B-SECRET, Cover <b>, Lớp 12A1) = 0 hits; /metrics shows only counters smem_page_template_applies_total{source,result}, created/deleted/stripped totals and snapshots{kind=apply}, no ids or content. NOT probed live by me: dropped-asset count on apply (covered by TestApplyOwnAndDropped, green in the integration run), rate limiting of the three routes (TestOwnTemplateRoutesAreRateLimited green; my probe hit the 20 per 10 s burst once and got 429 ERROR_RATE_LIMITED as designed, with a throttled probe all other calls were 200). Non-blocking: (a) template names are stored as plain text exactly as typed ('Cover <b>one</b>' is kept, the UI must render it as text; same as other labels); (b) postman folder has no class admin/member steps (they are in the Go matrix); (c) dev's comment says T-172 steps 4 and 8 were edited, in the file they are steps 4, 5 and 7; (d) editor-gestures touch test is flaky locally (1 of 2 runs). Risk high: needs the owner's approve before merge.
 - 2026-11-05 15:55Z · leader · Leader review (QA_PASS accepted, head 4af81307e440910719d750f48036d4c1cbae09be, MERGEABLE, go/web/security green, no .team files). Read: migration book_template_tab (expand-only, no FKs, owner-scoped unique key, down drops the table), create (take rate limit, Clean(name,1,60), book read as owner, page kind validated against the book's block, strip of image items and picture bg then Validate with NO media, 64 KiB cap, limit under the user row lock), apply (params validated first, rate limit, store.get as owner, mismatch and conflict mapped to metric labels, log line without layout content). QA: integration 33 pkg ok, race x20 ok, migration up/down/up ok, newman T-173 folder 90/0 twice, live probe (strip, limit 6 parallel creates, 64 KiB, 401/404, 5 rounds of parallel applies = one 200 and one 409, atomic failures, snapshot kind apply, retention 30, no layout in logs/metrics), print-check 199/199, e2e 39/39 on run 2 (run 1: T-174 touch flake). Open items, none blocking: dropped-asset count and rate limits covered only by Go integration tests. NEEDS OWNER: risk high, merge only after 'team approve T-173'.
+- 2026-11-05 19:41Z · leader · Leader: PR #169 now CONFLICTS with develop (T-167 merged: class book, metrics, openapi/schema, docs). Not a QA failure. Dev: merge origin/develop into the branch (no force-push), resolve (keep both sides: T-167's class-book/layouts additions and T-173's routes, metrics, openapi paths and regenerated schema.d.ts, docs rows, migration timestamp stays 20261105120000 unless develop has a later one), regenerate web/src/api/schema.d.ts, then re-run: make test-integration (full), go test -race ./..., migration up/down/up, newman T-173 folder (with --working-dir postman), check:api, web checks; put counts + full head SHA in the board comment and set READY_FOR_QA. QA will re-run the mandatory high-risk lines on the merged head; the owner's approve is still pending and will be asked for after that re-test.
+- 2026-11-05 19:41Z · leader · Leader rework brief (conflict only, no behaviour change expected): resolve the merge with develop as described in the status note; do not change any T-173 behaviour; if a conflict touches the class book test (internal/class/page_integration_test.go) or metrics.go, keep both sides and re-run those packages. R1 re-run list: full make test-integration, go test -race ./..., migration up/down/up, newman T-173 folder, check:api, vitest/lint/tsc/build. Nothing under .team/.
 
 ### T-174 — [E09] Stabilise the editor-gestures touch test (flake: 2 to 3 px against 0.5 allowed)
-- **Status:** READY_FOR_QA
+- **Status:** IN_QA
 - **Priority:** P3
 - **Type:** test
 - **Milestone:** M4
@@ -900,10 +902,10 @@ Spec: .team/epics/E09-customisation-editor/32-own-templates-and-apply-api.md (re
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** qa
 - **Branch:** task/t-174-e09-stabilise-the-editor-gestures-touch-
 - **PR:** https://github.com/danyaa666/smemories/pull/171
-- **Updated:** 2026-11-05 19:26Z by dev
+- **Updated:** 2026-11-05 19:27Z by qa
 - **Comments-seen:** 2
 
 Spec: .team/epics/E09-customisation-editor/33-gestures-touch-test-flake.md (read it from the main checkout). The touch pan assertion failed in 3 runs (T-165 dev, T-166 QA twice); find the cause (test timing or a product pan moving an item), fix at the source, 30 isolated and 10 full-suite runs clean
@@ -947,6 +949,63 @@ Spec: .team/epics/E09-customisation-editor/34-template-gallery-apply-ui.md (read
 - **Comments-seen:** 0
 
 Spec: .team/epics/E09-customisation-editor/35-save-page-as-template-ui.md (read it from the main checkout). Button in the Templates panel, dialog with name (60 code points) and a hint of how many images are not saved, template-create after settle, limit 20 message, own list refreshed, e2e editor-save-template
+
+#### Comments
+
+### T-177 — [E09] Shipped page templates for Memory Book: four or more looks per page kind, authored by us
+- **Status:** TODO
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M4
+- **Depends-on:** none
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-11-05 by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E09-customisation-editor/36-shipped-templates-memory-book.md (read it from the main checkout). Content files only (our own authoring, no Doory material; route B), contrast and distinctness gates in Go tests, print-check case per template on A5/A4/Letter, contact sheet, docs
+
+#### Comments
+
+### T-178 — [E09] Shipped page templates for Navy Classic: four or more looks per page kind, authored by us
+- **Status:** TODO
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M4
+- **Depends-on:** none
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-11-05 by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E09-customisation-editor/37-shipped-templates-navy-classic.md (read it from the main checkout). Same as T-177 for the formal template: keep the frame and tone, stay inside the frame's inner rule
+
+#### Comments
+
+### T-179 — [E09] Stage 2 hardening: fuzz the layout parsers, storage budget per user, abuse limits, no content in logs
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** test
+- **Milestone:** M4
+- **Depends-on:** T-173
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-11-05 by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E09-customisation-editor/38-stage2-hardening-fuzz-storage-abuse.md (read it from the main checkout). Go fuzz targets with seeds in CI, depth/size limits before decode, docs/layout-storage-budget.md with measured numbers, rate-limit and body-cap test per layout route, sentinel test for logs and metrics, text safety, threat model note
 
 #### Comments
 
