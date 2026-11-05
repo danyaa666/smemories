@@ -3,8 +3,11 @@
 package class
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"slices"
 	"strconv"
@@ -225,6 +228,33 @@ func TestQA167NormalClassLosesNothing(t *testing.T) {
 	for i, m := range ms {
 		if (m.Layout != nil) != (i < 30) || len(m.Notes) != 5 {
 			t.Fatalf("member %d: layout %v notes %d", i, m.Layout != nil, len(m.Notes))
+		}
+	}
+}
+
+// The log line and the counter of T-167: counts only (no ids, no layout text), and the counter gets the number of dropped layouts.
+func TestQA167LogLineAndCounterCarryCountsOnly(t *testing.T) {
+	e := newEnv(t)
+	q := e.qaFill(60, 40, 700, func(int) bool { return true })
+	var buf bytes.Buffer
+	dropped := 0
+	svc := e.serviceOn(e.db)
+	svc.SetBookObserver(BookObserver{Log: slog.New(slog.NewJSONHandler(&buf, nil)), Dropped: func(n int) { dropped += n }})
+	b, err := svc.Book(context.Background(), q.admin.row, q.cls)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("T167-QA log: %s", strings.TrimSpace(buf.String()))
+	if dropped != len(b.TruncatedLayouts) || dropped == 0 {
+		t.Fatalf("counter got %d, truncated_layouts has %d", dropped, len(b.TruncatedLayouts))
+	}
+	line := buf.String()
+	if strings.Count(line, "class book read") != 1 || !strings.Contains(line, `"layouts_dropped":`+strconv.Itoa(dropped)) {
+		t.Fatalf("log line: %s", line)
+	}
+	for _, leak := range []string{"ế", b.TruncatedLayouts[0], q.cls, "Student"} {
+		if strings.Contains(line, leak) {
+			t.Fatalf("the log line carries %q: %s", leak, line)
 		}
 	}
 }
