@@ -201,7 +201,8 @@ func main() {
 	bookStore.OnTemplateChange(layoutSvc.DeleteByYearbook)                                                                // so is a layout
 	bookSvc := yearbook.NewService(bookStore, cursors, mediaSvc, nil, mediaSvc, notesSvc, classSvc, designSvc, layoutSvc) // classSvc clears a deleted book's class link
 	bookSvc.SetLimiters(limiters)
-	classSvc.SetBookSources(bookSvc, notesSvc, designSvc) // the class book reads each member's own book, approved notes and design
+	classSvc.SetBookSources(bookSvc, notesSvc, designSvc, layoutSvc) // the class book reads each member's own book, approved notes, design and layout
+	classSvc.SetBookObserver(class.BookObserver{Log: logger, Dropped: mt.ClassLayoutsDropped})
 	bookH := yearbook.NewHandler(bookSvc, authH.RequireUser, cfg.AllowedOrigins)
 	classH := class.NewHandler(classSvc, authH.RequireUser, cfg.AllowedOrigins, authH.ClientIP)
 	designH := bookdesign.NewHandler(designSvc, authH.RequireUser, cfg.AllowedOrigins)

@@ -28,6 +28,7 @@ import (
 
 	"github.com/danyaa666/smemories/internal/auth"
 	"github.com/danyaa666/smemories/internal/bookdesign"
+	"github.com/danyaa666/smemories/internal/booklayout"
 	"github.com/danyaa666/smemories/internal/config"
 	"github.com/danyaa666/smemories/internal/db/dbtest"
 	"github.com/danyaa666/smemories/internal/httpx"
@@ -294,7 +295,7 @@ func TestClassBookHasApprovedContentOnly(t *testing.T) {
 
 	r := e.classBook(admin, cls).status(200, "OK")
 	d := r.data()
-	wantKeys(t, "class-book/get", d, "class", "front_pages", "members", "back_pages", "truncated")
+	wantKeys(t, "class-book/get", d, "class", "front_pages", "members", "back_pages", "truncated", "truncated_layouts")
 	wantKeys(t, "class", d["class"].(map[string]any), "id", "name", "school_name", "graduation_year", "language")
 	if len(d["front_pages"].([]any)) != 0 || len(d["back_pages"].([]any)) != 0 {
 		t.Fatalf("pages: %v %v", d["front_pages"], d["back_pages"])
@@ -316,7 +317,7 @@ func TestClassBookHasApprovedContentOnly(t *testing.T) {
 	by := map[string]map[string]any{}
 	for _, m := range ms {
 		mm := m.(map[string]any)
-		wantKeys(t, "member", mm, "member_id", "name", "linked", "yearbook", "profile", "design", "notes", "note_count", "approved_total", "truncated")
+		wantKeys(t, "member", mm, "member_id", "name", "linked", "yearbook", "profile", "design", "layout", "notes", "note_count", "approved_total", "truncated")
 		by[mm["name"].(string)] = mm
 	}
 	l := by["Linh"]
@@ -686,7 +687,7 @@ func (e *env) serviceOn(d *sql.DB) *Service {
 	notesSvc := notes.NewService(notes.NewStore(d), mediaSvc, cursors, limiters, logger, e.now)
 	bookSvc := yearbook.NewService(yearbook.NewStore(d), cursors, mediaSvc, e.now, mediaSvc, notesSvc)
 	s := NewService(NewStore(d), cursors, limiters, e.now)
-	s.SetBookSources(bookSvc, notesSvc, bookdesign.NewService(bookdesign.NewStore(d), nil, e.now))
+	s.SetBookSources(bookSvc, notesSvc, bookdesign.NewService(bookdesign.NewStore(d), nil, e.now), booklayout.NewService(booklayout.NewStore(d), mediaSvc, nil, 0, e.now))
 	return s
 }
 
@@ -1040,5 +1041,161 @@ func TestPhotoCacheControlByReader(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+// ---- T-167: each member's layout in the class book --------------------------------------------------------------------------
+
+// The admin gets each linked member's stored layout on that member only, as the owner's book-data/get would print it; a member without
+// one, with one for another template, unlinked, or departed carries none; nobody but the class admin gets any of it.
+func TestClassBookCarriesEachMembersLayout(t *testing.T) {
+	e := newEnv(t)
+	admin, a, b, none, stale, unlinked, gone := e.user("Admin"), e.user("A"), e.user("B"), e.user("None"), e.user("Stale"), e.user("Unlinked"), e.user("Gone")
+	classmate, stranger, outsider := e.user("Classmate"), e.user("Stranger"), e.user("Outsider")
+	cls, members := e.seedClass([]person{admin}, a, b, none, stale, unlinked, gone, classmate)
+	e.seedClass([]person{outsider})
+	books := map[string]string{}
+	for name, p := range map[string]person{"A": a, "B": b, "None": none, "Stale": stale, "Unlinked": unlinked, "Gone": gone} {
+		books[name] = e.newBook(p)
+		e.profile(books[name], name, "")
+		e.setBook(p, cls, books[name]).status(200, "OK")
+		if name != "None" {
+			e.layoutRef(books[name], "", name+"-LAYOUT-TEXT", e.designImage(books[name]))
+		}
+	}
+	e.exec(`UPDATE yearbook_tab SET template_id = 'navy-classic' WHERE id = ?`, e.bookRow(books["Stale"])) // the row was made for memory-book
+	e.setBook(unlinked, cls, nil).status(200, "OK")
+	e.do(gone, "POST", "/api/class-member/leave", body("class_id", cls)).status(200, "OK")
+
+	r := e.classBook(admin, cls).status(200, "OK")
+	data := r.data()
+	if tl, ok := data["truncated_layouts"].([]any); !ok || len(tl) != 0 {
+		t.Fatalf("truncated_layouts must be []: %v", data["truncated_layouts"])
+	}
+	got := map[string]map[string]any{}
+	for _, m := range data["members"].([]any) {
+		mm := m.(map[string]any)
+		got[mm["name"].(string)] = mm
+	}
+	for _, name := range []string{"A", "B"} {
+		l, _ := got[name]["layout"].(map[string]any)
+		raw, _ := json.Marshal(got[name]["layout"])
+		if l == nil || l["v"] != float64(1) || !strings.Contains(string(raw), name+"-LAYOUT-TEXT") {
+			t.Fatalf("%s layout: %s", name, raw)
+		}
+		for _, other := range []string{"A", "B", "Stale", "Unlinked", "Gone"} {
+			if other != name && strings.Contains(string(raw), other+"-LAYOUT-TEXT") {
+				t.Fatalf("the layout of %s is in the member %s", other, name)
+			}
+		}
+		if _, has := l["version"]; has || len(got[name]) != 11 {
+			t.Fatalf("%s: only the document is sent, no version or ids: %v", name, got[name])
+		}
+	}
+	for _, name := range []string{"None", "Stale", "Unlinked"} {
+		if l, has := got[name]["layout"]; !has || l != nil {
+			t.Fatalf("%s: layout %v, want null", name, l)
+		}
+	}
+	for _, name := range []string{"Unlinked", "Gone"} {
+		if strings.Contains(r.Body.String(), name+"-LAYOUT-TEXT") {
+			t.Fatalf("the layout of %s (unlinked or departed) is in the class book", name)
+		}
+	}
+	if got["Unlinked"]["linked"] != false || got["Gone"] != nil {
+		t.Fatalf("unlinked %v, gone %v", got["Unlinked"]["linked"], got["Gone"])
+	}
+	_ = members
+	// a layout is sent only by class-book/get to this class's admin: nobody else, and no other class route
+	for who, p := range map[string]person{"student": a, "classmate": classmate, "stranger": stranger, "admin of another class": outsider} {
+		if strings.Contains(e.classBook(p, cls).Body.String(), "-LAYOUT-TEXT") {
+			t.Fatalf("%s reads a layout through class-book/get", who)
+		}
+	}
+	for _, path := range []string{"/api/class/get?id=" + cls, "/api/class-member/get-list?class_id=" + cls, "/api/class-page/get-list?class_id=" + cls} {
+		if strings.Contains(e.do(admin, "GET", path, "").Body.String(), "-LAYOUT-TEXT") {
+			t.Fatalf("%s carries a layout", path)
+		}
+	}
+	// the owner's own book-data/get still has the same document (one read rule)
+	var own struct {
+		Data struct{ Layout json.RawMessage }
+	}
+	_ = json.Unmarshal(e.do(a, "GET", "/api/book-data/get?yearbook_id="+books["A"], "").Body.Bytes(), &own)
+	var viaClass, viaOwn any
+	_ = json.Unmarshal(own.Data.Layout, &viaOwn)
+	viaClass = got["A"]["layout"]
+	if fmt.Sprint(viaClass) != fmt.Sprint(viaOwn) || viaOwn == nil {
+		t.Fatalf("class book layout %v, owner's %v", viaClass, viaOwn)
+	}
+	// the student resets the layout: it is gone from the next class book at once
+	e.exec(`DELETE FROM book_layout_tab WHERE yearbook_id = ?`, e.bookRow(books["A"]))
+	for _, m := range e.classBook(admin, cls).status(200, "OK").data()["members"].([]any) {
+		if mm := m.(map[string]any); mm["name"] == "A" && mm["layout"] != nil {
+			t.Fatalf("a reset layout is still in the class book: %v", mm["layout"])
+		}
+	}
+}
+
+// An image the member removed from the layout stops being readable by the admin while the layout (now without it) is still sent.
+func TestClassBookLayoutImageFollowsTheLayout(t *testing.T) {
+	e := newEnv(t)
+	admin, student := e.user("Admin"), e.user("Student")
+	cls, _ := e.seedClass([]person{admin}, student)
+	book := e.newBook(student)
+	e.profile(book, "Linh", "")
+	e.setBook(student, cls, book).status(200, "OK")
+	kept, removed := e.designImage(book), e.designImage(book)
+	e.layoutRef(book, "", "x", kept, removed)
+	e.wantPhoto(admin, kept)
+	e.wantPhoto(admin, removed)
+	if b := e.classBook(admin, cls).Body.String(); !strings.Contains(b, kept) || !strings.Contains(b, removed) {
+		t.Fatalf("the layout does not name its images: %s", b)
+	}
+	e.layoutRef(book, "", "x", kept)
+	e.wantPhoto(admin, kept)
+	e.wantNoPhoto(admin, removed, "image removed from the layout")
+	if b := e.classBook(admin, cls).Body.String(); !strings.Contains(b, kept) || strings.Contains(b, removed) {
+		t.Fatalf("the class book still names the removed image: %s", b)
+	}
+}
+
+// A real class of 12 members, each with a stored layout: all 12 are in the answer and nothing is dropped (the cap rule itself is
+// proven by the unit tests in book_test.go, with 128 KiB layouts).
+func TestClassBookCarriesLayoutsOfAFullClass(t *testing.T) {
+	e := newEnv(t)
+	admin := e.user("Admin")
+	cls := e.fillClass(admin, 12, 2)
+	rows, err := e.db.Query(`SELECT y.id FROM class_member_tab m JOIN yearbook_tab y ON y.id = m.yearbook_id JOIN class_tab c ON c.id = m.class_id WHERE c.public_id = ?`, cls)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var ids []uint64
+	for rows.Next() {
+		var id uint64
+		_ = rows.Scan(&id)
+		ids = append(ids, id)
+	}
+	_ = rows.Close()
+	for _, id := range ids {
+		e.exec(`UPDATE yearbook_tab SET template_id = 'memory-book' WHERE id = ?`, id)
+		e.exec(`INSERT INTO book_layout_tab (yearbook_id, template_id, layout_json, version, created_at, updated_at) VALUES (?, 'memory-book', ?, 1, 1, 1)`,
+			id, `{"v":1,"pages":{"cover":{"items":[{"id":"t","t":"text","text":"x","x":0,"w":300,"h":200,"cy":500}]}}}`)
+	}
+	r := e.classBook(admin, cls).status(200, "OK")
+	if r.Body.Len() > MaxBookBytes {
+		t.Fatalf("%d bytes", r.Body.Len())
+	}
+	if tl := r.data()["truncated_layouts"].([]any); len(tl) != 0 {
+		t.Fatalf("a normal class lost layouts: %v", tl)
+	}
+	n := 0
+	for _, m := range r.data()["members"].([]any) {
+		if m.(map[string]any)["layout"] != nil {
+			n++
+		}
+	}
+	if n != 12 {
+		t.Fatalf("%d of 12 members have a layout", n)
 	}
 }
