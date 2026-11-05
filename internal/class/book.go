@@ -5,11 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log/slog"
 	"strconv"
 
 	"github.com/danyaa666/smemories/internal/apperr"
 	"github.com/danyaa666/smemories/internal/bookdata"
 	"github.com/danyaa666/smemories/internal/bookdesign"
+	"github.com/danyaa666/smemories/internal/booklayout"
 	"github.com/danyaa666/smemories/internal/notes"
 	"github.com/danyaa666/smemories/internal/yearbook"
 )
@@ -36,10 +38,27 @@ type Designs interface {
 	Resolved(ctx context.Context, ownerID uint64, publicID string, templateID *string) (*bookdesign.Resolved, error)
 }
 
-// SetBookSources wires the yearbook, notes and design services the class book reads through (once, at start-up).
-func (s *Service) SetBookSources(b Books, n ApprovedNotes, d Designs) {
-	s.books, s.notes, s.designs = b, n, d
+// Layouts is the part of the book layout service the class book uses: the same re-validated layout as book-data/get (nil when the
+// member has none, or it no longer fits the template), read as the book's owner (T-167).
+type Layouts interface {
+	Resolved(ctx context.Context, ownerID uint64, publicID string, templateID *string) (*booklayout.Resolved, error)
 }
+
+// SetBookSources wires the yearbook, notes, design and layout services the class book reads through (once, at start-up). l may be nil
+// (no member then carries a layout).
+func (s *Service) SetBookSources(b Books, n ApprovedNotes, d Designs, l Layouts) {
+	s.books, s.notes, s.designs, s.layouts = b, n, d, l
+}
+
+// BookObserver receives what one class-book/get did with the members' layouts: log gets one line with counts (never content or
+// ids), dropped the number of layouts left out because of the size cap. Either may be nil.
+type BookObserver struct {
+	Log     *slog.Logger
+	Dropped func(n int)
+}
+
+// SetBookObserver wires the class book's log line and layout counter (once, at start-up).
+func (s *Service) SetBookObserver(o BookObserver) { s.obs = o }
 
 // BookClass is the class as the book's cover needs it.
 type BookClass struct {
@@ -67,6 +86,7 @@ type BookMember struct {
 	Yearbook      *BookStyle            `json:"yearbook"`
 	Profile       *bookdata.ProfileInfo `json:"profile"`
 	Design        *bookdesign.Resolved  `json:"design"`         // the student's customisation, defaults filled in (E09, T-146); null when the template has none
+	Layout        json.RawMessage       `json:"layout"`         // the student's free layout document (T-167), as book-data/get re-validates it; null when none, when it no longer fits the template or when it was cut (truncated_layouts)
 	Notes         []*notes.BookNote     `json:"notes"`          // approved only, at most notes.MaxClassBookNotes
 	NoteCount     int                   `json:"note_count"`     // the number of notes returned
 	ApprovedTotal int                   `json:"approved_total"` // every approved note of the page
@@ -78,24 +98,27 @@ type BookMember struct {
 const MaxBookBytes = 8 << 20
 
 const (
-	// strippedMemberMax is the most a member costs once their notes are dropped: the profile at its longest (1250 characters, six
+	// strippedMemberMax is the most a member costs once their notes and layout are dropped: the profile at its longest (1250 characters, six
 	// bytes each when every one is "<"), the name, the style, the design (T-146) and the keys. Every member after the one that does not fit is reserved
 	// this much, so the cut itself can never push the body over MaxBookBytes. A unit test builds the worst member and checks it.
 	strippedMemberMax = 16 << 10
-	// bookFrameBytes covers the envelope, the keys and the list of truncated members (60 ids of 26 characters).
-	bookFrameBytes = 1<<10 + MaxMembers*idJSONBytes
+	// bookFrameBytes covers the envelope, the keys and the two lists of truncated members (60 ids of 26 characters each).
+	bookFrameBytes = 1<<10 + 2*MaxMembers*idJSONBytes
 	idJSONBytes    = 26 + 3 // a ULID in quotes, and the comma
 )
 
 // ClassBook is the response of GET /api/class-book/get. The class pages (intro, teachers, ...) are in the stored order (T-127).
 // Members are encoded one by one as they are read, so the whole body exists once, never twice, and never above MaxBookBytes
-// (Encode writes it straight to the response). Truncated lists the members whose notes were left out to stay within the cap.
+// (Encode writes it straight to the response). Truncated lists the members whose notes were left out to stay within the cap, and
+// TruncatedLayouts those whose layout was (T-167; a layout is included before the member's notes, see encodeMembers).
 type ClassBook struct {
 	Class      BookClass         `json:"class"`
 	FrontPages []Page            `json:"front_pages"`
 	Members    []json.RawMessage `json:"members"` // each one an encoded BookMember, in book order
 	BackPages  []Page            `json:"back_pages"`
 	Truncated  []string          `json:"truncated"` // member ids whose notes did not fit in MaxBookBytes; [] for a normal class
+
+	TruncatedLayouts []string `json:"truncated_layouts"` // member ids whose layout did not fit in MaxBookBytes; [] for a normal class
 }
 
 // Encode writes the book as JSON to w piece by piece: the same bytes as json.Marshal, without a second copy of the body.
@@ -128,6 +151,8 @@ func (b *ClassBook) Encode(w io.Writer) (err error) {
 	val(b.BackPages)
 	str(`,"truncated":`)
 	val(b.Truncated)
+	str(`,"truncated_layouts":`)
+	val(b.TruncatedLayouts)
 	str("}")
 	return err
 }
@@ -199,41 +224,81 @@ func (s *Service) Book(ctx context.Context, userID uint64, classID string) (*Cla
 	front, _ := json.Marshal(out.FrontPages)
 	back, _ := json.Marshal(out.BackPages)
 	class, _ := json.Marshal(out.Class)
-	out.Members, out.Truncated, err = s.encodeMembers(ctx, members, MaxBookBytes-bookFrameBytes-len(class)-len(front)-len(back))
+	var included int
+	out.Members, out.Truncated, out.TruncatedLayouts, included, err = s.encodeMembers(ctx, members, MaxBookBytes-bookFrameBytes-len(class)-len(front)-len(back))
 	if err != nil {
 		return nil, err
+	}
+	if s.obs.Dropped != nil && len(out.TruncatedLayouts) > 0 {
+		s.obs.Dropped(len(out.TruncatedLayouts))
+	}
+	if s.obs.Log != nil {
+		s.obs.Log.InfoContext(ctx, "class book read", "members", len(members), "layouts_included", included, "layouts_dropped", len(out.TruncatedLayouts), "notes_truncated_members", len(out.Truncated))
 	}
 	return out, nil
 }
 
-// encodeMembers reads the members in book order and encodes each one, keeping the encoded sizes under budget. The first member
-// whose notes would pass the budget loses them, and so does every later one (earlier members stay complete); their ids are the
-// second result. A cut member keeps its profile and approved_total and has truncated=true and no notes. Memory is the encoded
-// members (at most the budget) plus one member's notes, never the whole class.
-func (s *Service) encodeMembers(ctx context.Context, members []bookMember, budget int) ([]json.RawMessage, []string, error) {
-	out, cut, used := make([]json.RawMessage, 0, len(members)), []string{}, 0
-	over := false
+// encodeMembers reads the members in book order and encodes each one, keeping the encoded sizes under budget. A member's layout
+// goes in before their notes (T-167): when the member does not fit complete, the layout stays if the member with the layout and no
+// notes still leaves every later member its strippedMemberMax reserve (the notes are cut); if even that does not fit, the layout is
+// dropped (and every later layout with it) and the notes get another try without it. The first member whose notes would pass the
+// budget loses them, and so does every later one (earlier members stay complete). Results: the ids of the members whose notes were
+// cut, the ids whose layout was dropped, and how many layouts are in. A cut member keeps its profile and approved_total and has
+// truncated=true and no notes. Memory is the encoded members (at most the budget) plus one member's notes and layout, never the class.
+func (s *Service) encodeMembers(ctx context.Context, members []bookMember, budget int) (out []json.RawMessage, cut, cutLayouts []string, layouts int, err error) {
+	out, cut, cutLayouts, used := make([]json.RawMessage, 0, len(members)), []string{}, []string{}, 0
+	over, layoutOver := false, false // notes, and layouts, are being left out from here on
 	for i, m := range members {
 		bm, err := s.bookMember(ctx, m)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, 0, err
 		}
+		room := budget - used - 1 - (len(members)-i-1)*strippedMemberMax // what this member may take and leave the others their reserve
+		ns, nc, tr := bm.Notes, bm.NoteCount, bm.Truncated
 		var raw []byte
-		if !over {
-			raw, _ = json.Marshal(bm) // a plain struct plus raw JSON the notes service validated: cannot fail
-			over = used+len(raw)+1+(len(members)-i-1)*strippedMemberMax > budget
+		fits := func() bool {
+			raw, _ = json.Marshal(bm) // a plain struct plus raw JSON the services validated: cannot fail
+			return len(raw) <= room
 		}
-		if over {
-			if len(bm.Notes) > 0 {
-				cut = append(cut, bm.MemberID)
+		cutNotes := func() {
+			if len(ns) > 0 {
 				bm.Notes, bm.NoteCount, bm.Truncated = []*notes.BookNote{}, 0, true
 			}
+		}
+		dropLayout := func() {
+			if bm.Layout != nil {
+				bm.Layout = nil
+				cutLayouts = append(cutLayouts, bm.MemberID)
+			}
+		}
+		if layoutOver {
+			dropLayout()
+		}
+		notesFit := !over && fits()
+		if !notesFit && bm.Layout != nil { // the layout is paid before the notes
+			cutNotes()
+			if !fits() { // it alone breaks the reserve: it goes, and the notes try again without it
+				layoutOver = true
+				dropLayout()
+				bm.Notes, bm.NoteCount, bm.Truncated = ns, nc, tr
+				notesFit = !over && fits()
+			}
+		}
+		if !notesFit {
+			over = true
+			if len(ns) > 0 {
+				cut = append(cut, bm.MemberID)
+			}
+			cutNotes()
 			raw, _ = json.Marshal(bm)
+		}
+		if bm.Layout != nil {
+			layouts++
 		}
 		used += len(raw) + 1
 		out = append(out, raw)
 	}
-	return out, cut, nil
+	return out, cut, cutLayouts, layouts, nil
 }
 
 // throttleRead takes one read of class-book/get from the user's budget for this class: a *RetryAfterError when it is used up, the
@@ -280,6 +345,17 @@ func (s *Service) bookMember(ctx context.Context, m bookMember) (BookMember, err
 			return bm, nil
 		} else if err != nil {
 			return bm, err
+		}
+	}
+	if s.layouts != nil { // read as the book's owner through the service that validates it: the same rule as book-data/get
+		l, err := s.layouts.Resolved(ctx, m.userID, m.book, y.TemplateID)
+		if apperr.Is(err, apperr.NotFound) { // deleted meanwhile: no page
+			return bm, nil
+		} else if err != nil {
+			return bm, err
+		}
+		if l != nil {
+			bm.Layout = l.Layout
 		}
 	}
 	bm.Linked, bm.Profile, bm.Design, bm.Notes = true, &p, design, ns

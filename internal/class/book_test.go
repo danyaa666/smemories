@@ -15,6 +15,7 @@ import (
 
 	"github.com/danyaa666/smemories/internal/apperr"
 	"github.com/danyaa666/smemories/internal/bookdesign"
+	"github.com/danyaa666/smemories/internal/booklayout"
 	"github.com/danyaa666/smemories/internal/media"
 	"github.com/danyaa666/smemories/internal/notes"
 	"github.com/danyaa666/smemories/internal/templates"
@@ -95,7 +96,7 @@ func TestBookMemberJSON(t *testing.T) {
 	s := &Service{books: fakeBooks{}, notes: fakeNotes{}}
 	bm, _ := s.bookMember(context.Background(), bookMember{id: "m", name: "N"})
 	b, _ := json.Marshal(bm)
-	want := `{"member_id":"m","name":"N","linked":false,"yearbook":null,"profile":null,"design":null,"notes":[],"note_count":0,"approved_total":0,"truncated":false}`
+	want := `{"member_id":"m","name":"N","linked":false,"yearbook":null,"profile":null,"design":null,"layout":null,"notes":[],"note_count":0,"approved_total":0,"truncated":false}`
 	if string(b) != want {
 		t.Fatalf("%s\nwant %s", b, want)
 	}
@@ -155,7 +156,7 @@ func encodeClass(t *testing.T, s *Service, ms []bookMember) (*ClassBook, int) {
 	class, _ := json.Marshal(b.Class)
 	front, _ := json.Marshal(b.FrontPages)
 	var err error
-	b.Members, b.Truncated, err = s.encodeMembers(context.Background(), ms, MaxBookBytes-bookFrameBytes-len(class)-len(front)-2)
+	b.Members, b.Truncated, b.TruncatedLayouts, _, err = s.encodeMembers(context.Background(), ms, MaxBookBytes-bookFrameBytes-len(class)-len(front)-2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -293,8 +294,8 @@ func TestNormalClassIsNotCut(t *testing.T) {
 	}
 	var out bytes.Buffer
 	_ = b.Encode(&out)
-	if !strings.Contains(out.String(), `"truncated":[]`) {
-		t.Fatal("truncated is not []")
+	if !strings.Contains(out.String(), `"truncated":[]`) || !strings.Contains(out.String(), `"truncated_layouts":[]`) {
+		t.Fatal("truncated and truncated_layouts are not []")
 	}
 }
 
@@ -346,7 +347,7 @@ func TestMaximalClassPeakAllocation(t *testing.T) {
 	}()
 	b := &ClassBook{FrontPages: worstPages(), BackPages: []Page{}}
 	var err error
-	b.Members, b.Truncated, err = s.encodeMembers(context.Background(), ms, MaxBookBytes-bookFrameBytes-100<<10)
+	b.Members, b.Truncated, b.TruncatedLayouts, _, err = s.encodeMembers(context.Background(), ms, MaxBookBytes-bookFrameBytes-100<<10)
 	w := &countWriter{}
 	if err == nil {
 		err = b.Encode(w)
@@ -361,5 +362,214 @@ func TestMaximalClassPeakAllocation(t *testing.T) {
 	t.Logf("response %d bytes, peak %d (%.2fx)", w.n, got, float64(got)/float64(w.n))
 	if got > 3*w.n {
 		t.Fatalf("peak %d bytes for a %d byte response (limit 3x)", got, w.n)
+	}
+}
+
+// ---- T-167: the members' layouts in the class book ----------------------------------------------------------------------------
+
+// fakeLayouts answers a layout document per owner (nil when the owner has none), and remembers who it was read as.
+type fakeLayouts struct {
+	docs  map[uint64]json.RawMessage
+	err   error
+	owner *uint64
+}
+
+func (f fakeLayouts) Resolved(_ context.Context, owner uint64, _ string, _ *string) (*booklayout.Resolved, error) {
+	if f.owner != nil {
+		*f.owner = owner
+	}
+	if f.err != nil || f.docs[owner] == nil {
+		return nil, f.err
+	}
+	return &booklayout.Resolved{Layout: f.docs[owner], Version: 9}, nil
+}
+
+// layoutDoc is a layout document of n bytes (a stand-in: the class book never parses it, the layout service validated it).
+func layoutDoc(n int) json.RawMessage {
+	const head = `{"v":1,"pad":"`
+	return json.RawMessage(head + strings.Repeat("x", n-len(head)-2) + `"}`)
+}
+
+// maxLayout is the largest layout the layout service stores (128 KiB).
+const maxLayout = 128 << 10
+
+func allLayouts(doc json.RawMessage) fakeLayouts {
+	f := fakeLayouts{docs: map[uint64]json.RawMessage{}}
+	for i := range MaxMembers {
+		f.docs[uint64(i+1)] = doc
+	}
+	return f
+}
+
+// The layout is read as the book's owner, sent as the document only (no version), and null when the owner has none or it no longer
+// validates (the service answers nil: the template changed, the document is stale).
+func TestBookMemberLayout(t *testing.T) {
+	var owner uint64
+	doc := layoutDoc(300)
+	y := &yearbook.Yearbook{TemplateID: new(string), Profile: yearbook.Profile{FullName: "Linh"}}
+	s := &Service{books: fakeBooks{y: y}, notes: fakeNotes{}, layouts: fakeLayouts{docs: map[uint64]json.RawMessage{42: doc}, owner: &owner}}
+	bm, err := s.bookMember(context.Background(), bookMember{id: "m", book: "b", userID: 42})
+	if err != nil || owner != 42 || string(bm.Layout) != string(doc) {
+		t.Fatalf("read as %d, %v, %s", owner, err, bm.Layout)
+	}
+	if raw, _ := json.Marshal(bm); strings.Contains(string(raw), "version") {
+		t.Fatalf("only the document is sent: %s", raw)
+	}
+	bm, err = s.bookMember(context.Background(), bookMember{id: "m", book: "b", userID: 43}) // no layout, or one that no longer validates
+	if raw, _ := json.Marshal(bm); err != nil || bm.Layout != nil || !strings.Contains(string(raw), `"layout":null`) {
+		t.Fatalf("%v %s", err, raw)
+	}
+	// an unlinked member has none, and is not even read
+	s.layouts = fakeLayouts{docs: map[uint64]json.RawMessage{0: doc}, err: apperr.New(apperr.Internal, "must not be read")}
+	if bm, err = s.bookMember(context.Background(), bookMember{id: "m", name: "N"}); err != nil || bm.Layout != nil {
+		t.Fatalf("%v %s", err, bm.Layout)
+	}
+	// a book deleted meanwhile is no page; any other failure fails the request
+	s.layouts = fakeLayouts{err: apperr.New(apperr.NotFound, "yearbook not found")}
+	if bm, err = s.bookMember(context.Background(), bookMember{id: "m", book: "b", userID: 1}); err != nil || bm.Linked || bm.Layout != nil {
+		t.Fatalf("%+v %v", bm, err)
+	}
+	boom := apperr.New(apperr.Internal, "boom")
+	s.layouts = fakeLayouts{err: boom}
+	if _, err = s.bookMember(context.Background(), bookMember{id: "m", book: "b", userID: 1}); err != boom {
+		t.Fatalf("%v", err)
+	}
+}
+
+// The reserve proof is unchanged: a member with no notes and no layout (the worst profile) fits strippedMemberMax.
+func TestStrippedMemberIgnoresLayout(t *testing.T) {
+	s, ms := maximalClass()
+	s.layouts = allLayouts(layoutDoc(maxLayout))
+	bm, _ := s.bookMember(context.Background(), ms[0])
+	if len(bm.Layout) != maxLayout {
+		t.Fatalf("layout %d bytes", len(bm.Layout))
+	}
+	bm.Notes, bm.NoteCount, bm.Layout = []*notes.BookNote{}, 0, nil
+	if raw, _ := json.Marshal(bm); len(raw) > strippedMemberMax {
+		t.Fatalf("a stripped member is %d bytes, the reserve is %d", len(raw), strippedMemberMax)
+	}
+}
+
+// AC2: 60 members with a 128 KiB layout and 40 maximal notes each: at most 8 MiB, layouts dropped from some member on (never a later
+// one kept), every dropped member listed in book order, and every kept layout is whole.
+func TestClassBookStaysUnderTheCapWithMaximalLayouts(t *testing.T) {
+	s, ms := maximalClass()
+	doc := layoutDoc(maxLayout)
+	s.layouts = allLayouts(doc)
+	b, size := encodeClass(t, s, ms)
+	t.Logf("%d bytes (%.2f MiB), %d notes cut, %d layouts dropped", size, float64(size)/(1<<20), len(b.Truncated), len(b.TruncatedLayouts))
+	if size > MaxBookBytes || len(b.Members) != MaxMembers || len(b.TruncatedLayouts) == 0 || len(b.TruncatedLayouts) == MaxMembers {
+		t.Fatalf("%d bytes, %d members, %d layouts dropped", size, len(b.Members), len(b.TruncatedLayouts))
+	}
+	kept := MaxMembers - len(b.TruncatedLayouts)
+	for i, raw := range b.Members {
+		var m BookMember
+		if err := json.Unmarshal(raw, &m); err != nil {
+			t.Fatal(err)
+		}
+		if (i < kept) != (string(m.Layout) == string(doc)) || (i >= kept && (string(m.Layout) != "null" || b.TruncatedLayouts[i-kept] != m.MemberID)) {
+			t.Fatalf("member %d: layout %d bytes, truncated_layouts %v", i, len(m.Layout), b.TruncatedLayouts)
+		}
+	}
+	// layouts come first: while they are kept the notes were cut before the layout of the same member was
+	for i, raw := range b.Members[:kept] {
+		var m BookMember
+		_ = json.Unmarshal(raw, &m)
+		if len(m.Notes) == 0 && !m.Truncated {
+			t.Fatalf("member %d lost notes without being listed", i)
+		}
+	}
+}
+
+// The cap holds with layouts of every size from nothing to the maximum, with and without notes, and a small layout that fits is never
+// dropped (a normal class loses nothing).
+func TestClassBookCapWithLayoutSizes(t *testing.T) {
+	for _, n := range []int{200, 2 << 10, 16 << 10, 64 << 10, maxLayout} {
+		s, ms := maximalClass()
+		s.layouts = allLayouts(layoutDoc(n))
+		b, size := encodeClass(t, s, ms)
+		if size > MaxBookBytes || len(b.Members) != MaxMembers {
+			t.Fatalf("layout %d: %d bytes", n, size)
+		}
+		s.notes = fakeNotes{}
+		b, size = encodeClass(t, s, ms)
+		if size > MaxBookBytes {
+			t.Fatalf("layout %d, no notes: %d bytes", n, size)
+		}
+		if n <= 2<<10 && len(b.TruncatedLayouts) != 0 {
+			t.Fatalf("layout %d without notes lost %d layouts", n, len(b.TruncatedLayouts))
+		}
+	}
+	// a normal class: 30 members, a few KiB of layout and one note each
+	s, ms := maximalClass()
+	s.notes = fakeNotes{ns: []*notes.BookNote{maximalNote(1)}, total: 1}
+	s.layouts = allLayouts(layoutDoc(8 << 10))
+	b, _ := encodeClass(t, s, ms[:30])
+	if len(b.Truncated) != 0 || len(b.TruncatedLayouts) != 0 || b.TruncatedLayouts == nil {
+		t.Fatalf("a normal class lost %v %v", b.Truncated, b.TruncatedLayouts)
+	}
+}
+
+// QA T-133 boundary with layouts: a member whose layout (notes cut) just fits keeps it and loses the notes; one byte less and the layout
+// goes, the notes come back if they fit; a member that is only a layout is dropped at the same boundary and listed once.
+func TestClassBookLayoutBoundary(t *testing.T) {
+	ns := []*notes.BookNote{maximalNote(1)}
+	y := &yearbook.Yearbook{PageSize: "A4", Language: "vi", Profile: yearbook.Profile{FullName: "A"}}
+	doc := layoutDoc(60 << 10) // bigger than the note, so that dropping the layout is what lets the note in
+	ms := []bookMember{{id: "01K7Q8W3ZR5N2M4X6V8B0C1001", name: "A", book: "b", userID: 1}}
+	build := func(withNotes bool) *Service {
+		s := &Service{books: fakeBooks{y: y}, layouts: fakeLayouts{docs: map[uint64]json.RawMessage{1: doc}}}
+		s.notes = notesByOwner{}
+		if withNotes {
+			s.notes = notesByOwner{1: ns}
+		}
+		return s
+	}
+	ctx := context.Background()
+	s := build(true)
+	full, cut, cutL, in, err := s.encodeMembers(ctx, ms, 1<<40)
+	if err != nil || len(cut) != 0 || len(cutL) != 0 || in != 1 {
+		t.Fatalf("%v %v %v %d", err, cut, cutL, in)
+	}
+	// budget == the whole member: nothing is cut
+	if _, cut, cutL, _, _ = s.encodeMembers(ctx, ms, len(full[0])+1); len(cut) != 0 || len(cutL) != 0 {
+		t.Fatalf("exact: %v %v", cut, cutL)
+	}
+	// one byte less: the notes go (the layout is paid first), the layout stays
+	got, cut, cutL, in, _ := s.encodeMembers(ctx, ms, len(full[0]))
+	var m BookMember
+	_ = json.Unmarshal(got[0], &m)
+	if len(cut) != 1 || len(cutL) != 0 || in != 1 || string(m.Layout) != string(doc) || len(m.Notes) != 0 || !m.Truncated {
+		t.Fatalf("notes cut: %v %v %d %+v", cut, cutL, in, m)
+	}
+	// the budget cannot hold the layout: it is dropped instead, and the notes (which fit alone) stay
+	noLayout := &Service{books: s.books, notes: s.notes}
+	plain, _, _, _, _ := noLayout.encodeMembers(ctx, ms, 1<<40)
+	got, cut, cutL, in, _ = s.encodeMembers(ctx, ms, len(plain[0])+1)
+	m = BookMember{}
+	_ = json.Unmarshal(got[0], &m)
+	if len(cut) != 0 || len(cutL) != 1 || cutL[0] != ms[0].id || in != 0 || string(m.Layout) != "null" || len(m.Notes) != 1 {
+		t.Fatalf("layout dropped, notes kept: %v %v %d %+v", cut, cutL, in, m)
+	}
+	// a member that is only a layout (no notes): dropped at the same boundary, listed once, never in truncated
+	s = build(false)
+	only, _, _, _, _ := s.encodeMembers(ctx, ms, 1<<40)
+	_, cut, cutL, in, _ = s.encodeMembers(ctx, ms, len(only[0])) // one byte short
+	if len(cut) != 0 || len(cutL) != 1 || in != 0 {
+		t.Fatalf("layout only: %v %v %d", cut, cutL, in)
+	}
+	if _, cut, cutL, in, _ = s.encodeMembers(ctx, ms, len(only[0])+1); len(cut)+len(cutL) != 0 || in != 1 {
+		t.Fatalf("layout only fits: %v %v %d", cut, cutL, in)
+	}
+}
+
+// Encode writes truncated_layouts between truncated and the end, [] when none, and the same bytes as json.Marshal.
+func TestEncodeTruncatedLayouts(t *testing.T) {
+	b := &ClassBook{FrontPages: []Page{}, BackPages: []Page{}, Members: []json.RawMessage{}, Truncated: []string{}, TruncatedLayouts: []string{"01K7Q8W3ZR5N2M4X6V8B0C1001"}}
+	var got bytes.Buffer
+	_ = b.Encode(&got)
+	want, _ := json.Marshal(b)
+	if !bytes.Equal(got.Bytes(), want) || !strings.HasSuffix(got.String(), `"truncated":[],"truncated_layouts":["01K7Q8W3ZR5N2M4X6V8B0C1001"]}`) {
+		t.Fatalf("%s", got.Bytes())
 	}
 }

@@ -1,6 +1,6 @@
 // The class yearbook journey end to end (T-131, docs/e2e.md "The class journey"): an admin makes a class and an invite, two students join through the
 // link and build their pages, each collects friend notes and approves one, the admin assembles and orders the book, adds an intro page and opens the
-// print route. The privacy half: student A must not see student B's notes anywhere, the admin must never get a pending note.
+// print route (T-167: a student's free layout is in the admin's class book and print). The privacy half: student A must not see student B's notes anywhere, the admin must never get a pending note.
 //   make e2e        (same API and web server as journey.spec.mjs; scripts/e2e.sh)
 // Every step is a test.step with a hard limit; no fixed sleeps. Credentials: the registered fixed email code (DEV-SHORTCUT(otp), SMEM_ENV=test only).
 // The invite token and the note-link tokens are bearer secrets: only ever in `secrets`, scrubbed from every error leaving a step.
@@ -245,6 +245,60 @@ test("class journey: admin, invite, two students, assemble, print, and nobody se
     }
   });
 
+  // T-167: student B puts a free layout on their page (memory-book: the profile title moved, a sticker and a typed text); the admin's class book
+  // carries it on B's pages only, on screen and in the PDF, and nobody else gets it.
+  const LAYOUT_TEXT = `Chữ tự do của B ${RUN}`;
+  await step("7c. student B's free layout is in the admin's class book and print, on B's pages only", async () => {
+    const tpl = await b.request.post("/api/yearbook/update", { data: { id: book.b, template_id: "memory-book" }, headers: { Origin: BASE } });
+    expect(tpl.ok(), `template change ${tpl.status()} ${await tpl.text()}`).toBe(true);
+    const doc = {
+      v: 1,
+      pages: {
+        profile: {
+          overrides: { "profile.heading": { x: 120, w: 700, h: 160, cy: 120, r: -3, hidden: false } },
+          items: [
+            { id: "e2e001", t: "text", text: LAYOUT_TEXT, x: 100, w: 600, h: 120, cy: 880 },
+            { id: "e2e002", t: "asset", asset: "sticker.doodle-squiggle", x: 700, w: 200, h: 200, cy: 700 },
+          ],
+        },
+      },
+    };
+    const base = (await (await b.request.get(`/api/book-layout/get?yearbook_id=${book.b}`)).json()).data.version; // a template change moves the version on
+    const saved = await b.request.post("/api/book-layout/save", { headers: { Origin: BASE }, data: { yearbook_id: book.b, base_version: base, layout: doc } });
+    expect(saved.ok(), `book-layout/save ${await saved.text()}`).toBe(true);
+    const cb = (await (await admin.request.get(`/api/class-book/get?class_id=${classId}`)).json()).data;
+    const mb = cb.members.find((m) => m.name === B.name);
+    const ma = cb.members.find((m) => m.name === A.name);
+    expect(JSON.stringify(mb.layout)).toContain(LAYOUT_TEXT);
+    expect(mb.layout.pages.profile.overrides["profile.heading"].x).toBe(120);
+    expect(Object.keys(mb.layout).sort(), "only the document, no version").toEqual(["pages", "v"]);
+    expect(ma.layout, "A has no layout").toBeNull();
+    expect(cb.truncated_layouts).toEqual([]);
+    // the screen: the moved title and the sticker are on B's profile sheet, nowhere else
+    await admin.goto(`/classes/${classId}/book`);
+    await admin.waitForFunction(() => document.documentElement.dataset.bookReady);
+    const sheets = admin.locator(".bk-sheet");
+    await expect(sheets.filter({ hasText: LAYOUT_TEXT })).toHaveCount(1);
+    const mine = sheets.filter({ hasText: LAYOUT_TEXT });
+    await expect(mine).toHaveAttribute("data-page", "profile");
+    await expect(mine.locator("[data-layout-id='profile.heading']")).toHaveCount(1);
+    await expect(mine.locator("svg[data-asset='sticker.doodle-squiggle']")).toHaveCount(1);
+    await expect(admin.locator("svg[data-asset='sticker.doodle-squiggle']")).toHaveCount(1); // not on any other page
+    await expect(admin.locator("[data-layout-item]")).toHaveCount(2); // B's text and sticker only
+    // the print: the PDF is made from the same pages and carries the typed text
+    await admin.emulateMedia({ media: "print" });
+    const pdf = await admin.pdf({ preferCSSPageSize: true });
+    expect(pdf.subarray(0, 4).toString(), "a PDF").toBe("%PDF");
+    expect(pdf.length).toBeGreaterThan(10_000);
+    await admin.emulateMedia({ media: "screen" });
+    // nobody else gets the layout
+    for (const [who, ctx] of [["student A", a], ["student B", b]]) {
+      const r = await ctx.request.get(`/api/class-book/get?class_id=${classId}`);
+      expect(r.status(), `${who} reads class-book/get`).toBe(403);
+      expect(await r.text()).not.toContain(LAYOUT_TEXT);
+    }
+  });
+
   await step("8. the admin's class-book answer holds the approved notes only, and the admin still has no right over a student's book", async () => {
     const res = await admin.request.get(`/api/class-book/get?class_id=${classId}`);
     expect(res.status()).toBe(200);
@@ -264,7 +318,7 @@ test("class journey: admin, invite, two students, assemble, print, and nobody se
   });
 
   await step("9. student A can not see student B's notes anywhere: screens, direct API calls, the class book", async () => {
-    const everything = [NOTE.b.approved, NOTE.b.pending].flatMap((n) => [n.name, n.message]).concat(B.name, B.email);
+    const everything = [NOTE.b.approved, NOTE.b.pending].flatMap((n) => [n.name, n.message]).concat(B.name, B.email, LAYOUT_TEXT);
     const none = async (label, text) => {
       for (const s of everything) expect(text, `${label} shows "${s}" of student B`).not.toContain(s);
     };

@@ -1473,6 +1473,9 @@ describe("layout layer: the printed page is the page on screen (T-154)", () => {
     cb.members[0].layout = mark(0); // memory-book (every 5th student)
     cb.members[2].layout = mark(2); // built-in layout (no template): no layout block, so nothing is drawn
     cb.members[3].layout = mark(3); // navy-classic (T-166): has a layout block, drawn on its own pages
+    cb.members[5].layout = mark(5); // memory-book again, a different layout (T-167: two members with the same template and different layouts)
+    cb.members[1].layout = null; // navy-classic whose layout the 8 MiB cap dropped (T-167): listed in truncated_layouts, drawn as without one
+    cb.truncated_layouts = [cb.members[1].member_id];
     const want = classBookPages(cb);
     const page = await browser.newPage();
     await serveBook(page, null, cb);
@@ -1488,7 +1491,41 @@ describe("layout layer: the printed page is the page on screen (T-154)", () => {
     assert.ok(squash(pages[hit("Layoutmark3")[0]]).includes(squash(studentName(3))), "on that student's own profile page");
     assert.equal(hit("Layoutmark2").length, 0, "a student on a template without a layout block draws none");
     assert.ok(squash(pages[hit("Layoutmark0")[0]]).includes(squash(studentName(0))), "on that student's own profile page");
+    assert.equal(hit("Layoutmark5").length, 1, "student 5's own, different layout (same template as student 0)");
+    assert.ok(squash(pages[hit("Layoutmark5")[0]]).includes(squash(studentName(5))), "on student 5's own profile page");
+    assert.notEqual(hit("Layoutmark5")[0], hit("Layoutmark0")[0], "two layouts, two pages");
+    assert.ok(squash(text(file)).includes(squash(studentName(1))), "the member whose layout was dropped is still printed");
+    assert.equal(hit("Layoutmark1").length, 0, "and has no layout");
   });
+
+  // QA of T-167: the same class book on the other two papers; the student whose layout was dropped is still printed, the others keep theirs on their own page.
+  for (const size of ["A4", "Letter"]) {
+    test(`the class book draws each student's layout on their own pages only, on ${size} (QA T-167)`, async () => {
+      const cb = makeClassBook({ students: 6 });
+      const mark = (i) => ({ v: 1, pages: { profile: { items: [{ id: "cb00001", t: "text", x: 100, w: 600, h: 80, cy: 900, text: `Layoutmark${i}`, size: 28, color: "ink" }] } } });
+      cb.members[0].layout = mark(0);
+      cb.members[3].layout = mark(3);
+      cb.members[5].layout = mark(5);
+      cb.members[1].layout = null;
+      cb.truncated_layouts = [cb.members[1].member_id];
+      const want = classBookPages(cb);
+      const page = await browser.newPage();
+      await serveBook(page, null, cb);
+      const opened = await openClassBook(page, size);
+      assert.equal(opened.pages, want);
+      const file = path.join(tmp, `class-layout-${size}.pdf`);
+      await savePdf(page, file);
+      await page.close();
+      const pages = text(file).split("\f");
+      const hit = (m) => pages.map((t, n) => (squash(t).includes(m) ? n : -1)).filter((n) => n >= 0);
+      for (const i of [0, 3, 5]) {
+        assert.equal(hit(`Layoutmark${i}`).length, 1, `student ${i}'s layout is printed once`);
+        assert.ok(squash(pages[hit(`Layoutmark${i}`)[0]]).includes(squash(studentName(i))), `on student ${i}'s own profile page`);
+      }
+      assert.equal(hit("Layoutmark1").length, 0, "the dropped layout is not drawn");
+      assert.ok(squash(text(file)).includes(squash(studentName(1))), "the student is still printed");
+    });
+  }
 });
 
 // ---- T-154 QA: hostile layouts. The server validates a layout, but the runtime treats it as untrusted: it must print the same number of pages, never throw and never HTML-inject. ----

@@ -321,6 +321,40 @@ describe("print the class book (T-130)", () => {
     expect(button).toBeDisabled();
   });
 
+  it("names the students whose layout was left out, keeps their notes, and asks for the admin's yes before printing (T-167)", async () => {
+    const id = (n: number) => `01J9Z3K6V8Q4M7N2P5R8T0M${String(n).padStart(3, "0")}`;
+    const book = classBook([member(1, { member_id: id(1) }), member(2, { member_id: id(2) })], {
+      truncated_layouts: [id(2)],
+    });
+    serve(book);
+    open();
+    expect(
+      await screen.findByText(/layouts are left out of the class book.*\(1\): Học sinh 2/),
+    ).toBeVisible();
+    const button = screen.getByRole("button", { name: "Print or save as PDF" });
+    await waitFor(() => expect(screen.getByText(/Ready to print/)).toBeVisible());
+    expect(button).toBeDisabled();
+    await userEvent.click(screen.getByRole("checkbox", { name: /layouts will be missing/ }));
+    expect(button).toBeEnabled();
+  });
+
+  it("one checkbox covers notes and layouts left out together", async () => {
+    const id = (n: number) => `01J9Z3K6V8Q4M7N2P5R8T0M${String(n).padStart(3, "0")}`;
+    serve(
+      classBook([member(1, { member_id: id(1) }), member(2, { member_id: id(2) })], {
+        truncated: [id(1)],
+        truncated_layouts: [id(1), id(2)],
+      }),
+    );
+    open();
+    expect(
+      await screen.findByText(/notes are left out of the class book|notes are left out/),
+    ).toBeVisible();
+    expect(screen.getByText(/layouts are left out of the class book.*\(2\)/)).toBeVisible();
+    expect(screen.getAllByRole("checkbox")).toHaveLength(1);
+    expect(screen.getByRole("checkbox", { name: /notes and layouts listed above/ })).toBeVisible();
+  });
+
   it("shows no warning, and no checkbox, when nothing was left out (empty or missing list)", async () => {
     serve(classBook([member(1)], { truncated: [] }));
     const { unmount } = open();

@@ -34,6 +34,7 @@ type Metrics struct {
 
 	layoutSnapshots *prometheus.CounterVec
 	layoutPruned    prometheus.Counter
+	classLayoutsCut prometheus.Counter
 	layoutRestores  *prometheus.CounterVec
 	pageTemplateBad prometheus.Counter
 }
@@ -74,6 +75,9 @@ func New() *Metrics {
 		layoutPruned: prometheus.NewCounter(prometheus.CounterOpts{
 			Namespace: namespace, Name: "layout_snapshots_pruned_total", Help: "Layout history snapshots deleted because a book already held 30 (T-163).",
 		}),
+		classLayoutsCut: prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: namespace, Name: "class_book_layouts_dropped_total", Help: "Member layouts left out of class-book/get because the 8 MiB cap would have been passed (T-167). Counts only.",
+		}),
 		layoutRestores: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Namespace: namespace, Name: "layout_restores_total", Help: "Layout restores (book-layout/restore) by result (ok, conflict, invalid, template_changed; T-163). No ids or document content.",
 		}, []string{"result"}),
@@ -99,7 +103,7 @@ func New() *Metrics {
 		m.publicMedia.WithLabelValues(r) // present at 0 from the first scrape
 	}
 	m.reg.MustRegister(collectors.NewGoCollector(), collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-		m.duration, m.inFlight, m.rateLimited, m.mailFailed, m.publicMedia, m.mediaPanics, m.mediaUploads, m.layoutSaves, m.layoutSnapshots, m.layoutPruned, m.layoutRestores, m.pageTemplateBad)
+		m.duration, m.inFlight, m.rateLimited, m.mailFailed, m.publicMedia, m.mediaPanics, m.mediaUploads, m.layoutSaves, m.layoutSnapshots, m.layoutPruned, m.classLayoutsCut, m.layoutRestores, m.pageTemplateBad)
 	return m
 }
 
@@ -177,6 +181,9 @@ func (m *Metrics) LayoutSnapshot(kind string) {
 
 // LayoutSnapshotsPruned counts n snapshots deleted by the keep-30 rule.
 func (m *Metrics) LayoutSnapshotsPruned(n int) { m.layoutPruned.Add(float64(n)) }
+
+// ClassLayoutsDropped counts n member layouts left out of one class book by the size cap.
+func (m *Metrics) ClassLayoutsDropped(n int) { m.classLayoutsCut.Add(float64(n)) }
 
 // LayoutRestore counts one book-layout/restore by result (booklayout.Restore*); another value is counted as invalid.
 func (m *Metrics) LayoutRestore(result string) {

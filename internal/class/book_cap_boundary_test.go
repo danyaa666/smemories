@@ -29,7 +29,7 @@ func TestClassBookCapBoundary(t *testing.T) {
 		{id: "01K7Q8W3ZR5N2M4X6V8B0C1001", name: "A", book: "b", userID: 1},
 		{id: "01K7Q8W3ZR5N2M4X6V8B0C1002", name: "B", book: "b", userID: 2},
 	}
-	big, cut, err := s.encodeMembers(context.Background(), ms, 1<<40)
+	big, cut, _, _, err := s.encodeMembers(context.Background(), ms, 1<<40)
 	if err != nil || len(cut) != 0 {
 		t.Fatalf("%v %v", err, cut)
 	}
@@ -38,11 +38,11 @@ func TestClassBookCapBoundary(t *testing.T) {
 		t.Fatal("fixture too small to exercise the reserve")
 	}
 
-	got, cut, err := s.encodeMembers(context.Background(), ms, exact)
+	got, cut, _, _, err := s.encodeMembers(context.Background(), ms, exact)
 	if err != nil || len(cut) != 0 || len(got[1]) != len(big[1]) {
 		t.Fatalf("budget == size: cut %v err %v", cut, err)
 	}
-	got, cut, err = s.encodeMembers(context.Background(), ms, exact-1)
+	got, cut, _, _, err = s.encodeMembers(context.Background(), ms, exact-1)
 	if err != nil || len(cut) != 1 || cut[0] != ms[1].id || len(got[0]) != len(big[0]) {
 		t.Fatalf("budget == size-1: cut %v err %v", cut, err)
 	}
@@ -54,7 +54,7 @@ func TestClassBookCapBoundary(t *testing.T) {
 	// member 1 does not fit at all: it and the later member are cut; a third member with a profile and zero notes is not listed
 	s.notes = notesByOwner{1: ns, 2: ns, 3: nil}
 	ms = append(ms, bookMember{id: "01K7Q8W3ZR5N2M4X6V8B0C1003", name: "C", book: "b", userID: 3})
-	_, cut, err = s.encodeMembers(context.Background(), ms, len(big[0])/2)
+	_, cut, _, _, err = s.encodeMembers(context.Background(), ms, len(big[0])/2)
 	if err != nil || len(cut) != 2 || cut[0] != ms[0].id || cut[1] != ms[1].id {
 		t.Fatalf("zero-note member listed or cut wrong: %v %v", cut, err)
 	}

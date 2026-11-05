@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "SMemories - class yearbook: classes, memberships and roles (E07, T-026, T-125, T-126, T-027, T-127, T-133)",
-    "description": "Classes, the two roles and the permission matrix (docs/class-permissions.md). Run against an API started with SMEM_ENV=dev and SMEM_DEV_FIXED_OTP set (.env.example does: 123123), because the flow verifies its two fresh accounts with the dev email code; the session token is read from the register response's Set-Cookie header and sent in an explicit Cookie header, so users A (teacher, admin) and B (not in A's class) act in one run. Each run registers 3 users (the register limit is 5 per hour per IP: run `make reset-limits` before a second run within the hour) and every run uses new accounts, so it can run twice in a row. Run the whole collection in order: the Edge cases folder reuses the users from the Full flow. What it cannot cover: the last-admin race with two admins, the 60-member cap and the concurrent accepts are covered by internal/class/*_integration_test.go (a Postman run is one client). T-125 adds the invite flow (create, list, revoke, public lookup, accept; the token is a secret and is never echoed after creation) and its edge cases. The invite flow needs users A and B and B's class from the full flow, so run the folders in order. Lookup misses count against 20 per 10 minutes per client IP and accepts against 60 per hour: `make reset-limits` between runs. (The server budgets are 600 lookups per 10 minutes and 300 accepts per hour since T-126; a Newman run stays far below them.) T-126 adds the Student page flow (set-book: only the owner links their own yearbook, one yearbook one class, roster counts and flags only, the admin still gets 404 on the student's yearbook, notes and photos, deleting the yearbook clears the link) and its edge cases; it needs users A and B from the full flow and uses two new classes it deletes at the end. T-027 adds the Class book flow (class-book/get: approved notes only, in the student's order; the admin opens exactly the approved notes' photos and nothing else; a student, a non-member and a hidden note all get 403 or 404) and uses users A, B and C from the earlier folders; it sends two public notes with photos (fixtures/media, so run Newman from the postman folder) and deletes its class at the end. T-127 adds the Class pages and order flow (class-page/create, update, delete, get-list and class-book/update-order: admin only, students 403, non-members 404; the body is plain text and comes back unchanged; the order must be a full permutation and a refused one changes nothing; deleting the class deletes its pages). It uses users A, B and C from the earlier folders and deletes its class at the end. The 30-page cap and the concurrent reorders are covered by internal/class/pages_integration_test.go (a Postman run is one client).",
+    "description": "Classes, the two roles and the permission matrix (docs/class-permissions.md). Run against an API started with SMEM_ENV=dev and SMEM_DEV_FIXED_OTP set (.env.example does: 123123), because the flow verifies its two fresh accounts with the dev email code; the session token is read from the register response's Set-Cookie header and sent in an explicit Cookie header, so users A (teacher, admin) and B (not in A's class) act in one run. Each run registers 3 users (the register limit is 5 per hour per IP: run `make reset-limits` before a second run within the hour) and every run uses new accounts, so it can run twice in a row. Run the whole collection in order: the Edge cases folder reuses the users from the Full flow. What it cannot cover: the last-admin race with two admins, the 60-member cap and the concurrent accepts are covered by internal/class/*_integration_test.go (a Postman run is one client). T-125 adds the invite flow (create, list, revoke, public lookup, accept; the token is a secret and is never echoed after creation) and its edge cases. The invite flow needs users A and B and B's class from the full flow, so run the folders in order. Lookup misses count against 20 per 10 minutes per client IP and accepts against 60 per hour: `make reset-limits` between runs. (The server budgets are 600 lookups per 10 minutes and 300 accepts per hour since T-126; a Newman run stays far below them.) T-126 adds the Student page flow (set-book: only the owner links their own yearbook, one yearbook one class, roster counts and flags only, the admin still gets 404 on the student's yearbook, notes and photos, deleting the yearbook clears the link) and its edge cases; it needs users A and B from the full flow and uses two new classes it deletes at the end. T-027 adds the Class book flow (class-book/get: approved notes only, in the student's order; the admin opens exactly the approved notes' photos and nothing else; a student, a non-member and a hidden note all get 403 or 404) and uses users A, B and C from the earlier folders; it sends two public notes with photos (fixtures/media, so run Newman from the postman folder) and deletes its class at the end. T-167 adds each member's free layout to it: B saves a layout (book-layout/save) and the admin's class-book/get carries exactly that document in the member's `layout` (no version, `null` after a reset or while the page is empty) with `truncated_layouts: []`; the 8 MiB cap rule with layouts is proven by the unit tests (internal/class/book_test.go), not by a Postman run. T-127 adds the Class pages and order flow (class-page/create, update, delete, get-list and class-book/update-order: admin only, students 403, non-members 404; the body is plain text and comes back unchanged; the order must be a full permutation and a refused one changes nothing; deleting the class deletes its pages). It uses users A, B and C from the earlier folders and deletes its class at the end. The 30-page cap and the concurrent reorders are covered by internal/class/pages_integration_test.go (a Postman run is one client).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -5417,7 +5417,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"title\":\"Newman class book page\",\"language\":\"en\"}"
+              "raw": "{\"title\":\"Newman class book page\",\"language\":\"en\",\"template_id\":\"memory-book\"}"
             }
           },
           "event": [
@@ -5647,8 +5647,8 @@
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
                   "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
                   "const items = pm.response.json().data.items;",
-                  "const one = items.find(n => n.answers.error_message.includes('first'));",
-                  "const two = items.find(n => n.answers.error_message.includes('second'));",
+                  "const one = items.find(n => n.answers.message.includes('first'));",
+                  "const two = items.find(n => n.answers.message.includes('second'));",
                   "pm.test('both notes are there with a photo each', () => { pm.expect(one.photos).to.have.length(1); pm.expect(two.photos).to.have.length(1); });",
                   "pm.collectionVariables.set('cbNote1', one.id);",
                   "pm.collectionVariables.set('cbPhoto1', one.photos[0].id);",
@@ -5747,7 +5747,7 @@
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
                   "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
                   "const d = pm.response.json().data;",
-                  "pm.test('keys', () => pm.expect(Object.keys(d).sort()).to.eql(['back_pages', 'class', 'front_pages', 'members']));",
+                  "pm.test('keys', () => pm.expect(Object.keys(d).sort()).to.eql(['back_pages', 'class', 'front_pages', 'members', 'truncated', 'truncated_layouts']));",
                   "pm.test('no class pages yet', () => { pm.expect(d.front_pages).to.eql([]); pm.expect(d.back_pages).to.eql([]); });",
                   "const b = d.members.find(m => m.member_id === pm.collectionVariables.get('cbMemberB'));",
                   "pm.test('B is listed, not linked, no content', () => { pm.expect(b.linked).to.eql(false); pm.expect(b.profile).to.eql(null); pm.expect(b.yearbook).to.eql(null); pm.expect(b.notes).to.eql([]); pm.expect(b.note_count).to.eql(0); });"
@@ -5854,6 +5854,53 @@
           ]
         },
         {
+          "name": "Book: B saves a free layout for the class page (the editor's own endpoint)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/book-layout/save",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "book-layout",
+                "save"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"yearbook_id\":\"{{cbBook}}\",\"base_version\":0,\"layout\":{\"v\":1,\"pages\":{\"cover\":{\"items\":[{\"id\":\"a1b2c3\",\"t\":\"text\",\"text\":\"NEWMAN-LAYOUT-TEXT\",\"font\":\"display\",\"size\":28,\"color\":\"accent\",\"align\":\"center\",\"bold\":true,\"x\":100,\"w\":400,\"h\":120,\"cy\":850,\"r\":-4}]}}}}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Book: A reads the class book: B's page holds the approved note only",
           "request": {
             "method": "GET",
@@ -5895,11 +5942,13 @@
                   "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
                   "const d = pm.response.json().data;",
                   "const b = d.members.find(m => m.member_id === pm.collectionVariables.get('cbMemberB'));",
-                  "pm.test('member keys', () => pm.expect(Object.keys(b).sort()).to.eql(['approved_total', 'linked', 'member_id', 'name', 'note_count', 'notes', 'profile', 'truncated', 'yearbook']));",
+                  "pm.test('member keys', () => pm.expect(Object.keys(b).sort()).to.eql(['approved_total', 'design', 'layout', 'linked', 'member_id', 'name', 'note_count', 'notes', 'profile', 'truncated', 'yearbook']));",
                   "pm.test('linked, with the book style and a profile without a birthday', () => { pm.expect(b.linked).to.eql(true); pm.expect(Object.keys(b.yearbook).sort()).to.eql(['language', 'page_size', 'template_id']); pm.expect(Object.keys(b.profile).sort()).to.eql(['full_name', 'future_plans', 'hobbies', 'nickname', 'photo_media_id', 'quote']); });",
                   "pm.test('one approved note with its photo, in order', () => { pm.expect(b.notes).to.have.length(1); pm.expect(b.notes[0].id).to.eql(pm.collectionVariables.get('cbNote1')); pm.expect(b.notes[0].photo_ids).to.eql([pm.collectionVariables.get('cbPhoto1')]); pm.expect(b.note_count).to.eql(1); pm.expect(b.approved_total).to.eql(1); pm.expect(b.truncated).to.eql(false); });",
                   "pm.test('nothing left out for a class that fits: truncated is []', () => pm.expect(d.truncated).to.eql([]));",
                   "const text = pm.response.text();",
+                  "pm.test('the layout is the stored document only: no version, no ids of history; null design for this book', () => { pm.expect(b.layout.v).to.eql(1); pm.expect(JSON.stringify(b.layout)).to.include('NEWMAN-LAYOUT-TEXT'); pm.expect(Object.keys(b.layout).sort()).to.eql(['pages', 'v']); });",
+                  "pm.test('nothing left out for a class that fits: truncated_layouts is []', () => pm.expect(d.truncated_layouts).to.eql([]));",
                   "pm.test('the pending note and its photo are not in the book', () => { pm.expect(text).to.not.include('second note'); pm.expect(text).to.not.include(pm.collectionVariables.get('cbNote2')); pm.expect(text).to.not.include(pm.collectionVariables.get('cbPhoto2')); pm.expect(text).to.not.include('@'); });"
                 ]
               }
@@ -6452,6 +6501,99 @@
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
                   "pm.test('code ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book: B resets the layout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/book-layout/reset",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "book-layout",
+                "reset"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"yearbook_id\":\"{{cbBook}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book: the next class book has no layout for B (and the note is still gone)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-book/get?class_id={{cbClassId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-book",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "class_id",
+                  "value": "{{cbClassId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "const b = d.members.find(m => m.member_id === pm.collectionVariables.get('cbMemberB'));",
+                  "pm.test('layout is null after the reset, the key stays', () => { pm.expect(b).to.have.property('layout', null); pm.expect(d.truncated_layouts).to.eql([]); pm.expect(pm.response.text()).to.not.include('NEWMAN-LAYOUT-TEXT'); });"
                 ]
               }
             }
