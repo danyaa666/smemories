@@ -126,7 +126,7 @@ test("T-170 QA: keyboard walk with a notes page, offline Done, two tabs, Back af
   // 3. Back after Done goes to the editor (not a loop), Forward returns to the manage page
   await owner.goBack();
   await expect(owner).toHaveURL(new RegExp(`/yearbooks/${bookId}/editor`));
-  await expect(position()).toHaveText("Page 1 of 4: Cover");
+  await expect(position()).toHaveText("Page 3 of 4: Notes page 1"); // the entry was the deep link ?page=notes, so Back opens that page again
   await owner.goForward();
   await expect(owner).toHaveURL(new RegExp(`/yearbooks/${bookId}$`));
 
