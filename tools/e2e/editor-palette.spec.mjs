@@ -174,6 +174,58 @@ test("a sticker, a shape and a frame: added centred at 25 %, tinted, saved, the 
   });
 });
 
+test("a stretching rectangle: added at 40 % by 25 %, dragged to a thin banner, tinted, the same after a reload (T-171)", async ({ browser }) => {
+  test.skip(!BASE || !OTP || !bookId, "needs the setup test");
+  const page = await ownerPage(browser);
+  await resetLayout(page);
+  await openEditor(page);
+  const rect = (loc) => loc.evaluate((el) => { const r = el.getBoundingClientRect(); return { cx: r.left + r.width / 2, cy: r.top + r.height / 2, w: r.width, h: r.height }; });
+  await step("add the rectangle", async () => {
+    await tab(page, "Shapes").click();
+    await palette(page).getByRole("button", { name: "Rectangle" }).click();
+    await expect(items(page)).toHaveCount(1);
+    await expect.poll(async () => (await storedCover(page)).items?.[0], { timeout: 15_000 }).toMatchObject({ asset: "shape.rect", w: 400, x: 300, cy: 500 });
+    const h = (await storedCover(page)).items[0].h; // 25 % of the A5 page height, in thousandths of its width
+    expect(Math.abs(h - 250 * (210 / 148))).toBeLessThan(2);
+  });
+  await step("drag the bottom handle up: a thin banner, the width is kept", async () => {
+    const handle = page.getByRole("button", { name: "Resize from bottom", exact: true });
+    const hb = await rect(handle);
+    const before = (await storedCover(page)).items[0];
+    await page.mouse.move(hb.cx, hb.cy);
+    await page.mouse.down();
+    await page.mouse.move(hb.cx, hb.cy - 60, { steps: 4 });
+    await page.mouse.move(hb.cx, hb.cy - 400, { steps: 4 });
+    await page.mouse.up();
+    await expect.poll(async () => (await storedCover(page)).items?.[0]?.h, { timeout: 15_000 }).toBeLessThan(40);
+    const now = (await storedCover(page)).items[0];
+    expect(now.w).toBe(before.w); // an edge handle changes one side only
+    expect(now.h).toBeGreaterThanOrEqual(10);
+  });
+  await step("tint the banner", async () => {
+    await page.getByRole("radio", { name: "Accent" }).click();
+    await expect.poll(async () => (await storedCover(page)).items?.[0]?.tint, { timeout: 15_000 }).toBe("accent");
+  });
+  await step("add the ellipse (it is 40 % by 25 % too)", async () => {
+    await palette(page).getByRole("button", { name: "Ellipse" }).click();
+    await expect(items(page)).toHaveCount(2);
+    await expect.poll(async () => (await storedCover(page)).items?.[1], { timeout: 15_000 }).toMatchObject({ asset: "shape.ellipse", w: 400, x: 300 });
+  });
+  await step("the banner is drawn edge to edge and is the same after a reload", async () => {
+    const stored = (await storedCover(page)).items;
+    await page.reload();
+    await showPalette(page);
+    await expect(items(page)).toHaveCount(2);
+    expect((await storedCover(page)).items).toEqual(stored);
+    const svg = page.locator(".ed-pagebox [data-layout-item='" + stored[0].id + "'] svg");
+    await expect(svg).toHaveAttribute("preserveAspectRatio", "none");
+    const box = await svg.evaluate((el) => { const r = el.getBoundingClientRect(), p = el.parentElement.getBoundingClientRect(); return { sw: r.width, sh: r.height, pw: p.width, ph: p.height }; });
+    expect(Math.abs(box.sw - box.pw)).toBeLessThan(1);
+    expect(Math.abs(box.sh - box.ph)).toBeLessThan(1);
+    expect(box.sw / box.sh).toBeGreaterThan(8); // a banner, not the 1:1 of the SVG's viewBox
+  });
+});
+
 test("keyboard only: find by search, add with Enter, tint, move with the arrows, delete", async ({ browser }) => {
   test.skip(!BASE || !OTP || !bookId, "needs the setup test");
   const page = await ownerPage(browser);

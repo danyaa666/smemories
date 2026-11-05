@@ -11,12 +11,17 @@ function centred(w: number, aspect: number) {
   return { x: Math.round((1000 - bw) / 2), w: bw, h: clamp(bw / aspect), cy: 500, r: 0 };
 }
 
-/** A sticker, shape or frame: 25 % of the page width, the SVG's own aspect ratio, centred. */
-export const assetItem = (asset: Asset, id: string): LayoutItem => ({
+/**
+ * A sticker, shape or frame: 25 % of the page width, the SVG's own aspect ratio, centred. A `stretch` shape (T-171) is 40 % of the page width by 25 % of
+ * the page height (`h` is in thousandths of the page width, so 250 * page height / page width).
+ */
+export const assetItem = (asset: Asset, id: string, pb?: PageBox): LayoutItem => ({
   id,
   t: "asset",
   asset: asset.id,
-  ...centred(250, asset.width / asset.height),
+  ...(asset.stretch && pb
+    ? centred(400, 400 / ((250 * pb.h) / pb.w))
+    : centred(250, asset.width / asset.height)),
 });
 
 /** A design image: its long side is 50 % of the page width, its aspect ratio kept, `contain` so nothing is cut. */

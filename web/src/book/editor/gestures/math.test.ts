@@ -96,6 +96,29 @@ describe("resize", () => {
     const nw = resizeRect(r0, 0, "nw", -10, -10, false, pb);
     expect(nw).toEqual({ left: 190, top: 290, width: 110, height: 60 });
   });
+  it("a stretching shape can be dragged to a thin banner and a tall bar without Shift (T-171)", () => {
+    const banner = resizeRect(
+      { left: 100, top: 300, width: 300, height: 200 },
+      0,
+      "se",
+      400,
+      -190,
+      false,
+      pb,
+    );
+    expect(banner.width).toBe(700);
+    expect(banner.height).toBeCloseTo(0.02 * pb.w, 9); // the floor is 2 % of the page width
+    const bar = resizeRect(
+      { left: 100, top: 300, width: 300, height: 200 },
+      0,
+      "s",
+      0,
+      400,
+      false,
+      pb,
+    );
+    expect({ w: bar.width, h: bar.height }).toEqual({ w: 300, h: 600 });
+  });
   it("an edge handle changes one side only", () => {
     expect(resizeRect(r0, 0, "e", 30, 99, false, pb)).toEqual({ ...r0, width: 130 });
     expect(resizeRect(r0, 0, "n", 99, -20, false, pb)).toEqual({ ...r0, top: 280, height: 70 });

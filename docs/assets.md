@@ -18,7 +18,7 @@ curate, and the server accepts only ids from that pack. Built in T-151; the edit
 | `web/scripts/check-assets.mjs`, `scripts/check-assets.sh` | The safety and registry check (CI `web` job, `make web-lint`). |
 | `scripts/sync-assets.sh` | Copies the registry to `internal/assets/`. |
 
-The pack has 51 assets: 34 stickers, 11 shapes, 6 frames. 25 are authored by the team (licence `authored`, placed under CC0) and 26 are
+The pack has 53 assets: 34 stickers, 13 shapes, 6 frames. 27 are authored by the team (licence `authored`, placed under CC0) and 26 are
 curated CC0 stickers.
 
 ## Registry entry
@@ -30,6 +30,14 @@ curated CC0 stickers.
 `tintable: true` means the SVG paints with `currentColor` only, so the editor's colour choice (CSS `color`, the `tint` prop of `<AssetSvg>`)
 recolours it. A curated sticker keeps its own colours (`tintable: false`, no `currentColor`). Frames are drawn on a 100 x 100 box with a hollow
 middle; the editor stretches them to the photo.
+
+`stretch: true` (optional, only ever `true`; T-171) marks a plain shape that fills its box edge to edge whatever the box's width and height:
+`<AssetSvg>` draws it with `preserveAspectRatio="none"` and the layout editor adds it at 40 % of the page width by 25 % of the page height
+(other assets are added at 25 % of the width with their own ratio). Such an SVG must fill its whole viewBox (no inset) and use fills only;
+a stroke would have to carry `vector-effect="non-scaling-stroke"` so that it keeps its width. The two stretching shapes are `shape.rect`
+(a plain rectangle, no corner radius) and `shape.ellipse`, both authored, tintable and covered by `licences/authored.txt`. Every box can already be resized freely in the editor
+(Shift keeps the ratio); `stretch` only decides how the picture is drawn in a box that is not the SVG's own shape. The server needs nothing
+but the registry (`Stretch` in `internal/assets`); the box limits of the layout validator apply as for any asset (a 900 x 10 banner is legal).
 
 ## Rules for an SVG
 
