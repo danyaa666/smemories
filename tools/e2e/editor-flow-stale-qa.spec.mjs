@@ -1,6 +1,5 @@
-// QA probes for T-170 round 3: (a) Done then Back with NO wait in between and a measurement of the gap between the URL change and React's commit,
-// (b) deep link into a notes page with a book-data cache that predates the approved note (stale-cache hardening), R1 text en+vi and live region, R3 h1 focus.
-// Not in testMatch: run with a config that lists it (see the QA board comment).
+// QA probe of T-170 round 3, committed by T-168: deep link into a notes page with a book-data cache that predates the approved note (stale-cache hardening),
+// R1 text en+vi and the live region, R3 h1 focus after Done. The two "Done then Back" timing probes of the draft only logged numbers and are not kept.
 import { expect, request, test } from "@playwright/test";
 
 const BASE = process.env.E2E_BASE_URL;
@@ -101,85 +100,6 @@ async function approveNote(browser, tabB, bookId) {
   await tabB.getByRole("button", { name: /^Approved/ }).click();
   await expect(tabB.locator(".inbox-card")).toHaveCount(1);
 }
-
-for (const mode of ["back", "measure"])
-  test(`T-170 QA gap ${mode}: Done then ${mode === "back" ? "Back with no wait" : "wait for the manage page and measure the URL-change to commit gap"}`, async ({
-    browser,
-  }, info) => {
-    test.skip(!BASE || !OTP, "needs a running API and web server");
-    test.setTimeout(120_000);
-    const ctx = await browser.newContext({
-      locale: "en-US",
-      baseURL: BASE,
-      viewport: { width: 1280, height: 900 },
-    });
-    const owner = await ctx.newPage();
-    await owner.addInitScript(() => {
-      window.__t = {};
-      const push = history.pushState.bind(history);
-      history.pushState = (...a) => {
-        push(...a);
-        if (
-          /^\/yearbooks\/[^/]+$/.test(location.pathname) &&
-          window.__t.push === undefined
-        )
-          window.__t.push = performance.now();
-      };
-      new MutationObserver(() => {
-        if (
-          window.__t.push !== undefined &&
-          window.__t.gone === undefined &&
-          !document.querySelector('[data-testid="page-position"]')
-        )
-          window.__t.gone = performance.now();
-      }).observe(document, { childList: true, subtree: true });
-    });
-    const o = await setup(owner, "gap");
-    await owner.goto(`/yearbooks/${o.bookId}`);
-    await owner.getByRole("link", { name: "Edit profile page" }).click();
-    const position = owner.getByTestId("page-position");
-    await expect(position).toHaveText(/Page 2 of 3: Profile/);
-    await owner.getByRole("button", { name: "Next page" }).click();
-    await expect(position).toHaveText(/Page 3 of 3: Back cover/);
-    await owner.getByRole("button", { name: "Done" }).click();
-    await expect(owner).toHaveURL(new RegExp(`/yearbooks/${o.bookId}$`)); // the original flow: URL check, then Back, no wait for the screen
-    if (mode === "measure") {
-      await expect(
-        owner
-          .getByRole("link", { name: "Edit notes pages" })
-          .or(owner.getByRole("link", { name: "Edit cover" })),
-      ).toBeVisible();
-      const m = await owner.evaluate(() => window.__t);
-      console.log(
-        "QA-GAP-MEASURE",
-        JSON.stringify({ gapMs: Math.round(m.gone - m.push) }),
-      );
-      return;
-    }
-    await owner.goBack();
-    await expect(owner).toHaveURL(new RegExp(`/yearbooks/${o.bookId}/editor`));
-    await owner.waitForTimeout(1500);
-    const shown = await position.textContent().catch(() => "(no editor)");
-    const t = await owner.evaluate(() => window.__t);
-    const manage = await owner
-      .getByRole("link", { name: "Edit notes pages" })
-      .count();
-    console.log(
-      "QA-GAP",
-      JSON.stringify({
-        shown,
-        gapMs: t.gone && t.push ? Math.round(t.gone - t.push) : null,
-        t,
-        manageLinkVisible: manage,
-        done: await owner
-          .getByRole("button", { name: /Done|Saving/ })
-          .first()
-          .evaluate((b) => ({ text: b.textContent, disabled: b.disabled || b.getAttribute("aria-disabled") }))
-          .catch(() => null),
-      }),
-    );
-    info.annotations.push({ type: "gap", description: String(shown) });
-  });
 
 test("T-170 QA stale cache: deep link to notes with a book-data cache that predates the note; R1 en+vi, R3", async ({
   browser,

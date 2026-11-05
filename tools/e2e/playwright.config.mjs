@@ -21,6 +21,7 @@ export default defineConfig({
     "editor-navy.spec.mjs",
     "editor-flow.spec.mjs",
     "editor-flow-qa.spec.mjs",
+    "editor-flow-stale-qa.spec.mjs",
   ],
   outputDir: `${out}/results`, // traces and screenshots of a failed run; CI uploads the folder
   timeout: 240_000, // the whole journey; the budget in CI is 5 minutes including start-up

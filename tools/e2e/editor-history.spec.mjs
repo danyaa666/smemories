@@ -6,13 +6,19 @@
 // A save stores a snapshot only when the newest one is older than 10 minutes (T-163). The test cannot wait that long, so `backdate()` moves the stored
 // snapshots 11 minutes into the past with the `mysql` command line client against SMEM_DB_DSN (a throwaway database, guard.mjs): the same rows the
 // server wrote, only older. The server clock is not touched. `clearSnapshots()` empties the history of the test's book between tests.
-import { execFileSync } from "node:child_process";
+// Without the `mysql` client the setup test prints MYSQL_MISSING and skips the file (it fails instead when CI is set, so a CI image without the client is not silent).
+// `seedSnapshots(n)` inserts old snapshot rows directly, for the test of the 30-row cap, where 33 real saves would only make the run slow.
+import { execFileSync, spawnSync } from "node:child_process";
+import { randomInt } from "node:crypto";
 import { deflateSync, crc32 } from "node:zlib";
 import { expect, request, test } from "@playwright/test";
 
 const BASE = process.env.E2E_BASE_URL;
 const OTP = process.env.SMEM_DEV_FIXED_OTP; // DEV-SHORTCUT(otp): the API of this run was started with it (scripts/e2e.sh)
 const DSN = process.env.SMEM_DB_DSN;
+const MYSQL_MISSING =
+  "the history e2e needs the mysql client on PATH; see docs/e2e.md";
+const HAS_MYSQL = spawnSync("mysql", ["--version"]).error?.code !== "ENOENT";
 const STEP_MS = 90_000;
 const RUN = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 const OWNER = {
@@ -70,14 +76,18 @@ function sql(statement) {
       "SMEM_DB_DSN must look like user:pass@tcp(host:port)/db to back-date snapshots",
     );
   const [, user, pass, host, port, db] = m;
-  execFileSync(
-    "mysql",
-    ["-h", host, "-P", port, "-u", user, db, "-e", statement],
-    {
-      env: { ...process.env, MYSQL_PWD: pass },
-      stdio: ["ignore", "pipe", "inherit"],
-    },
-  );
+  try {
+    execFileSync(
+      "mysql",
+      ["-h", host, "-P", port, "-u", user, db, "-e", statement],
+      {
+        env: { ...process.env, MYSQL_PWD: pass },
+        stdio: ["ignore", "pipe", "inherit"],
+      },
+    );
+  } catch (e) {
+    throw e?.code === "ENOENT" ? new Error(MYSQL_MISSING) : e;
+  }
 }
 const ofBook = () =>
   `(SELECT id FROM yearbook_tab WHERE public_id = '${bookId.replace(/[^A-Za-z0-9]/g, "")}')`;
@@ -87,6 +97,21 @@ const backdate = () =>
   );
 const clearSnapshots = () =>
   sql(`DELETE FROM book_layout_version_tab WHERE yearbook_id = ${ofBook()}`);
+const ULID_CHARS = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+/** Inserts n old `auto` snapshots (2 hours and more in the past, versions -1..-n so they never meet a real one) in one statement. */
+function seedSnapshots(n) {
+  const doc = JSON.stringify(widthDoc(500));
+  const now = Date.now();
+  const rows = Array.from({ length: n }, (_, i) => {
+    const id =
+      "0" +
+      Array.from({ length: 25 }, () => ULID_CHARS[randomInt(32)]).join("");
+    return `('${id}', ${ofBook()}, ${-(i + 1)}, 'auto', 'memory-book', '${doc}', 0, ${doc.length}, ${now - 7_200_000 - i * 60_000})`;
+  });
+  sql(
+    `INSERT INTO book_layout_version_tab (public_id, yearbook_id, version, kind, template_id, layout_json, item_count, bytes, created_at) VALUES ${rows.join(",")}`,
+  );
+}
 
 /** A real PNG (RGB gradient), made without a library. */
 function png(w, h, seed = 0) {
@@ -232,6 +257,12 @@ const bar = (page) =>
   page.getByRole("status").filter({ hasText: "Previewing a version from" });
 
 test("setup: register and create a Memory Book", async ({ browser }) => {
+  if (!HAS_MYSQL && process.env.CI) throw new Error(MYSQL_MISSING);
+  if (!HAS_MYSQL) console.warn(MYSQL_MISSING);
+  test.skip(
+    !HAS_MYSQL,
+    MYSQL_MISSING + " (every test of this file is skipped)",
+  );
   test.skip(
     !BASE || !OTP || !DSN,
     "run through `make e2e` (scripts/e2e.sh starts the API and the web server)",
@@ -589,4 +620,111 @@ test("keyboard only: open History, walk the rows, preview, restore; Escape gives
     page.getByRole("radiogroup", { name: "Earlier versions" }),
   ).toBeHidden();
   await expect(historyButton(page)).toBeFocused();
+});
+
+test("33 snapshots: the server keeps 30 and the panel lists 30; three restores in a row keep 30 (T-168)", async ({
+  browser,
+}) => {
+  test.skip(!BASE || !OTP || !bookId, "needs the setup test");
+  const page = await ownerPage(browser);
+  const calls = [];
+  page.on(
+    "request",
+    (r) =>
+      /\/api\/book-layout\/version-/.test(r.url()) &&
+      calls.push(new URL(r.url()).pathname),
+  );
+  await calm(page); // the three history routes share the layout save limit; the restores below need the burst
+  await freshHistory(page);
+  await step(
+    "28 snapshots inserted, then 5 real back-dated saves: 33 written, 30 kept",
+    async () => {
+      seedSnapshots(28);
+      for (let i = 1; i <= 5; i++) {
+        await saveLayout(page, widthDoc(100 + i * 10));
+        backdate();
+      }
+      const list = await (
+        await post(page, "/api/book-layout/version-list", {
+          yearbook_id: bookId,
+        })
+      ).json();
+      expect(list.data.items.length).toBe(30);
+    },
+  );
+  calls.length = 0;
+  await openEditor(page);
+  expect(calls, "nothing before History opens").toEqual([]);
+  await step("panel: 30 rows, one list call", async () => {
+    await openHistory(page);
+    await expect(rows(page)).toHaveCount(30);
+    expect(calls).toEqual(["/api/book-layout/version-list"]);
+  });
+  await step(
+    "three restores in a row (the newest, the 5th and the oldest row), the list stays at 30",
+    async () => {
+      for (const n of [0, 4, 29]) {
+        await rows(page).nth(n).click();
+        await expect(bar(page)).toBeVisible();
+        await page
+          .getByRole("button", { name: "Restore this version" })
+          .click();
+        const done = restoreResponse(page);
+        await page
+          .getByRole("dialog")
+          .getByRole("button", { name: "Restore this version" })
+          .click();
+        expect((await done).status(), `restore row ${n}`).toBe(200);
+        await expect(
+          page.getByText("Version restored.", { exact: true }).first(),
+        ).toBeVisible();
+        await expect(bar(page)).toBeHidden();
+        await expect(rows(page)).toHaveCount(30);
+        await expect(page.getByRole("button", { name: "Undo" })).toBeDisabled();
+      }
+    },
+  );
+});
+
+test("a restore with an autosave still pending saves that edit first and lists it as the newest Before restore row (T-168)", async ({
+  browser,
+}) => {
+  test.skip(!BASE || !OTP || !bookId, "needs the setup test");
+  const page = await ownerPage(browser);
+  await calm(page);
+  await freshHistory(page);
+  await saveLayout(page, widthDoc(300));
+  backdate();
+  await saveLayout(page, widthDoc(500));
+  const before = await storedLayout(page);
+  await openEditor(page);
+  await page.getByRole("button", { name: "Cover title" }).click();
+  const w = page.getByRole("spinbutton", { name: "Width", exact: true });
+  await w.fill("77");
+  await w.press("Enter"); // pending: the 1.5 s debounce has not fired
+  await openHistory(page);
+  await rows(page).first().click(); // the 30 % version
+  await expect(bar(page)).toBeVisible();
+  await page.getByRole("button", { name: "Restore this version" }).click();
+  const saveFirst = page.waitForResponse(
+    (r) => r.url().includes("/api/book-layout/save"),
+    { timeout: 10_000 },
+  );
+  const done = restoreResponse(page);
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Restore this version" })
+    .click();
+  expect((await saveFirst).status(), "the pending save").toBe(200);
+  expect((await done).status()).toBe(200);
+  await expect(
+    page.getByText("Version restored.", { exact: true }).first(),
+  ).toBeVisible();
+  expect(await titleWidth(page), "the restored version wins").toBe(300);
+  expect(before.version).toBeLessThan((await storedLayout(page)).version);
+  await expect(rows(page).first()).toHaveAccessibleName(/Before restore/);
+  await rows(page).first().click(); // the replaced document is the pending 77 % edit
+  await expectShare(page, 77);
+  await page.getByRole("button", { name: "Back to current" }).click();
+  await expectShare(page, 30);
 });
