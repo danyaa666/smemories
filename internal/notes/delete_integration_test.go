@@ -99,9 +99,10 @@ func TestDeleteBookLeavesNoRows(t *testing.T) {
 	dbtest.AssertNoOrphans(t, e.db)
 }
 
-// userTables is the account family. A book delete must leave it alone, so it is not in the zero-rows registry above; deleting an
-// account is T-025, which moves these two into the registry. A rename or a new user table fails tabTables until it is listed here.
-var userTables = []string{"user_identity_tab", "user_tab"}
+// userTables is the account family (book_template_tab, T-173: a user's own page templates, keyed by owner_id, not by book). A book delete
+// must leave it alone, so it is not in the zero-rows registry above; deleting an account is T-025, which moves these into the registry.
+// A rename or a new user table fails tabTables until it is listed here.
+var userTables = []string{"book_template_tab", "user_identity_tab", "user_tab"}
 
 // globalTables belong to no book and no user (anonymous counters, T-061), so a book delete must leave them alone too.
 var globalTables = []string{"print_feedback_tab"}
