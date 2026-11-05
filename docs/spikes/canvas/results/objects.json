@@ -1,0 +1,2741 @@
+{
+ "bold-sale-announcement": [
+  {
+   "page": 0,
+   "canvas_scale": 0.926,
+   "bg": "solid",
+   "objects": [
+    {
+     "object": "5df7e9c2-b169-4470-8fbf-c7dd3d7618e7",
+     "type": "path",
+     "name": "Orange shape",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "vector_path"
+     ]
+    },
+    {
+     "object": "be525a4e-d843-456c-bff0-9ada402bfda1",
+     "type": "image",
+     "name": "Photo",
+     "cls": "approx",
+     "out": "override:cover.photo",
+     "notes": [
+      "photo_slot_mapped",
+      "mask_dropped"
+     ]
+    },
+    {
+     "object": "f389dfca-cb4f-4fc2-afdf-a985ea9906b8",
+     "type": "path",
+     "name": "Dark band",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "vector_path"
+     ]
+    },
+    {
+     "object": "54e55156-f229-41be-9e10-7c82ec4feb73",
+     "type": "ellipse",
+     "name": "Logo mark",
+     "cls": "approx",
+     "out": "asset",
+     "notes": [
+      "color_snap",
+      "shape_substituted"
+     ]
+    },
+    {
+     "object": "891cd5d2-e536-4b15-8e00-8b2e96bdf48a",
+     "type": "textbox",
+     "name": "Logo initial",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "ea78475f-0c0f-4c11-be30-5e2b9973d945",
+     "type": "textbox",
+     "name": "Logo name",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "1faeccdb-ff1c-4668-ae20-6dd743e1e25c",
+     "type": "textbox",
+     "name": "Script",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "d0768c25-56c3-4bce-a04e-2f8fe2785788",
+     "type": "textbox",
+     "name": "Headline line 1",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "05ac11a1-49d0-4625-903e-3e3a8ce7609f",
+     "type": "textbox",
+     "name": "Headline line 2",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "b4d7c695-b0ce-472c-a0ae-d08082649086",
+     "type": "textbox",
+     "name": "Headline line 3",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "7fa04119-bdc2-4dd6-b0be-c1d4d8f6876f",
+     "type": "ellipse",
+     "name": "Badge",
+     "cls": "approx",
+     "out": "asset",
+     "notes": [
+      "color_snap",
+      "shape_substituted"
+     ]
+    },
+    {
+     "object": "1e44d08d-95e8-4cda-808d-eed7d640a2b5",
+     "type": "ellipse",
+     "name": "Badge ring",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "outline_only_shape"
+     ]
+    },
+    {
+     "object": "e90e4b11-a3db-4283-909d-df2c2cd2999e",
+     "type": "textbox",
+     "name": "Badge value",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "e0fcb2a5-e49b-4ed2-a0ee-94d1dbac6c2a",
+     "type": "textbox",
+     "name": "Badge label",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "abc52d29-f18e-447b-b0fe-8526313d6313",
+     "type": "path",
+     "name": "Phone icon",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "vector_path"
+     ]
+    },
+    {
+     "object": "4a6abc9d-cab5-437f-80ce-b2292e887e58",
+     "type": "textbox",
+     "name": "Website",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "15333721-d7a8-4928-90de-a37d851a7541",
+     "type": "textbox",
+     "name": "Phone",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "5c8dee74-4735-49e2-a12c-48ded1d5d83f",
+     "type": "rect",
+     "name": "Button",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "non_square_shape"
+     ]
+    },
+    {
+     "object": "275669f8-5428-4f8b-b13c-39322767cf28",
+     "type": "textbox",
+     "name": "Button label",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    }
+   ]
+  }
+ ],
+ "bold-youtube-thumbnail": [
+  {
+   "page": 0,
+   "canvas_scale": 0.781,
+   "bg": "gradient",
+   "objects": [
+    {
+     "object": "07e590a5-946d-47c1-96c8-7e2440d0c2f1",
+     "type": "path",
+     "name": "Streak 1",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "vector_path"
+     ]
+    },
+    {
+     "object": "a6891f19-6d93-45c5-a698-ab283e1add36",
+     "type": "path",
+     "name": "Streak 2",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "vector_path"
+     ]
+    },
+    {
+     "object": "71539a9d-7a87-4b6e-b6a8-9c7c94acd41f",
+     "type": "image",
+     "name": "Photo",
+     "cls": "approx",
+     "out": "override:cover.photo",
+     "notes": [
+      "photo_slot_mapped"
+     ]
+    },
+    {
+     "object": "68410132-bb46-48bd-85f8-52214385a7ab",
+     "type": "rect",
+     "name": "Blend",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "non_square_shape"
+     ]
+    },
+    {
+     "object": "340a7cb6-c83a-4e66-9509-437699179e94",
+     "type": "textbox",
+     "name": "Kicker",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "shadow_dropped",
+      "effect_shadow_dropped",
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "d2ae0b29-a160-4c6a-a6d8-6f799662b9da",
+     "type": "textbox",
+     "name": "Big word",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "shadow_dropped",
+      "effect_shadow_dropped",
+      "color_snap",
+      "font_map",
+      "size_clamped",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "9d7886ad-ae53-4213-b6e8-61cdedf4b0c2",
+     "type": "rect",
+     "name": "Pill",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "non_square_shape"
+     ]
+    },
+    {
+     "object": "e4d23d00-1fe0-43cd-8737-052e39af13c1",
+     "type": "textbox",
+     "name": "Pill label",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    }
+   ]
+  }
+ ],
+ "botanical-celebration-invitation": [
+  {
+   "page": 0,
+   "canvas_scale": 2.083,
+   "bg": "solid",
+   "objects": [
+    {
+     "object": "8b329c30-7723-4d81-aac5-8776b9c8b162",
+     "type": "path",
+     "name": "Stem",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "vector_path"
+     ]
+    },
+    {
+     "object": "56fc17b4-8416-432b-bad5-78ca0f5aa84b",
+     "type": "path",
+     "name": "Leaves",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "vector_path"
+     ]
+    },
+    {
+     "object": "f5a0a628-5d3d-422f-8aa5-a5cd0da4c391",
+     "type": "textbox",
+     "name": "Families",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped"
+     ]
+    },
+    {
+     "object": "c06921ac-6a30-48d8-9ab5-96216336ba7a",
+     "type": "textbox",
+     "name": "First name",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "07c3d8ff-dbbd-4891-ab03-3a82aff11d78",
+     "type": "doryline",
+     "name": "Stroke left",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "non_square_shape"
+     ]
+    },
+    {
+     "object": "d28c5383-e8b0-4e3b-bb14-2bd705831461",
+     "type": "textbox",
+     "name": "And",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "fd8a108d-4554-4c06-872e-e2c67f88813b",
+     "type": "doryline",
+     "name": "Stroke right",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "non_square_shape"
+     ]
+    },
+    {
+     "object": "32c19509-3861-465c-b71e-f17228f68a52",
+     "type": "textbox",
+     "name": "Second name",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "67f71a85-2b6d-40b3-a70e-001ed264936a",
+     "type": "textbox",
+     "name": "Invitation",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "9c2e9f01-1e7a-4b0a-97fe-0fca7cd29c81",
+     "type": "doryline",
+     "name": "Date rule top",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "non_square_shape"
+     ]
+    },
+    {
+     "object": "29affc9e-7920-43ab-866f-a618d7d05ddf",
+     "type": "doryline",
+     "name": "Date rule bottom",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "non_square_shape"
+     ]
+    },
+    {
+     "object": "5ee6811a-6c2d-4d02-b65f-b5c3813e66f6",
+     "type": "doryline",
+     "name": "Date divider left",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "non_square_shape"
+     ]
+    },
+    {
+     "object": "931c0695-5f3a-4858-a74e-c46f2bac6f0d",
+     "type": "doryline",
+     "name": "Date divider right",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "non_square_shape"
+     ]
+    },
+    {
+     "object": "c8538b11-5247-42af-973e-d31bd51a7824",
+     "type": "textbox",
+     "name": "Weekday",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped"
+     ]
+    },
+    {
+     "object": "55d4e8ae-aded-4a50-86af-6a6930173982",
+     "type": "textbox",
+     "name": "Month",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped"
+     ]
+    },
+    {
+     "object": "8a0b6d2a-a0fa-44a7-b69f-7915da85429a",
+     "type": "textbox",
+     "name": "Day",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "9a1fc67f-0aa2-472d-9025-df935469a85b",
+     "type": "textbox",
+     "name": "Year",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped"
+     ]
+    },
+    {
+     "object": "65e84103-1795-4dd7-a035-d0e7aafb9f44",
+     "type": "textbox",
+     "name": "Time",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped"
+     ]
+    },
+    {
+     "object": "048cd077-f0bc-4cdb-b105-fdeaa845ba89",
+     "type": "textbox",
+     "name": "Venue",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "cf554bfb-fdaf-4284-8015-ee3ffed7b172",
+     "type": "textbox",
+     "name": "Address",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped"
+     ]
+    },
+    {
+     "object": "c644b28f-3e6f-4ed3-9066-a3e4adb084fe",
+     "type": "textbox",
+     "name": "Reception",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped"
+     ]
+    }
+   ]
+  }
+ ],
+ "clean-business-card": [
+  {
+   "page": 0,
+   "canvas_scale": 2.976,
+   "bg": "solid",
+   "objects": [
+    {
+     "object": "17090abf-f6de-4b23-9ab2-85f296bd9ea7",
+     "type": "textbox",
+     "name": "Script name",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "size_clamped",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "4c408f3b-e9eb-457a-8aa2-949e402ba7be",
+     "type": "textbox",
+     "name": "Name",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped"
+     ]
+    },
+    {
+     "object": "817714b7-dcf8-4fd1-ba91-a349ea9ab0d5",
+     "type": "textbox",
+     "name": "Role",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped"
+     ]
+    }
+   ]
+  },
+  {
+   "page": 1,
+   "canvas_scale": 2.976,
+   "bg": "solid",
+   "objects": [
+    {
+     "object": "a98ac7ff-0e87-4453-ba08-6119844d92f6",
+     "type": "textbox",
+     "name": "Name",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped"
+     ]
+    },
+    {
+     "object": "482e5573-e7ae-4257-8ad8-8e1c8198ad3b",
+     "type": "textbox",
+     "name": "Role",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped"
+     ]
+    },
+    {
+     "object": "13f8d0f7-f4a1-4800-9ae8-7f70d82aa424",
+     "type": "rect",
+     "name": "Band",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "non_square_shape"
+     ]
+    },
+    {
+     "object": "0ae6388c-3561-454f-a939-3416860377b1",
+     "type": "textbox",
+     "name": "Find us",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped"
+     ]
+    },
+    {
+     "object": "d5afb310-4254-4bf8-b949-256add956e9a",
+     "type": "path",
+     "name": "Social 1",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "vector_path"
+     ]
+    },
+    {
+     "object": "74534283-1b7b-49fc-8a19-526ddadf89df",
+     "type": "path",
+     "name": "Social 2",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "vector_path"
+     ]
+    },
+    {
+     "object": "3f1dbd07-286e-4fa5-9929-43c1307180c8",
+     "type": "path",
+     "name": "Social 3",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "vector_path"
+     ]
+    },
+    {
+     "object": "8677735a-99fb-405f-ab77-e8227c2de3c6",
+     "type": "textbox",
+     "name": "+1 555 0142",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "5140eedf-a6ee-4508-bb87-d976d2bedaaf",
+     "type": "textbox",
+     "name": "hello@yourstudio.example",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "a45c98af-3fa8-4edb-b80a-8a5ae6dcd0ca",
+     "type": "textbox",
+     "name": "yourstudio.example",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "d9931d2b-32b5-4832-a9fa-9906904ad9e1",
+     "type": "image",
+     "name": "QR code",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "qr_code"
+     ]
+    },
+    {
+     "object": "0ecaa2a7-25c2-4288-99ea-a8b13ab8e2f8",
+     "type": "textbox",
+     "name": "Scan",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped"
+     ]
+    }
+   ]
+  }
+ ],
+ "grand-opening-flyer": [
+  {
+   "page": 0,
+   "canvas_scale": 1.225,
+   "bg": "solid",
+   "objects": [
+    {
+     "object": "e99a561a-0a18-42ce-b572-072928dacf2c",
+     "type": "textbox",
+     "name": "Business name",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped"
+     ]
+    },
+    {
+     "object": "883ee58e-e33f-41d2-8542-342c2524ea71",
+     "type": "textbox",
+     "name": "Grand",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "size_clamped",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "53076012-f032-467b-9552-25817cb6e15a",
+     "type": "textbox",
+     "name": "Opening",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped"
+     ]
+    },
+    {
+     "object": "f2abef86-c959-457f-a522-52847900fc9f",
+     "type": "doryline",
+     "name": "Stroke left",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "non_square_shape"
+     ]
+    },
+    {
+     "object": "bd756a0a-d64c-4b29-b532-43d8cf92f388",
+     "type": "textbox",
+     "name": "Join us",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "5c19f97e-af72-492d-8601-70dbcddd0ece",
+     "type": "doryline",
+     "name": "Stroke right",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "non_square_shape"
+     ]
+    },
+    {
+     "object": "27e27402-bc65-4fd6-9611-612f236f05b6",
+     "type": "textbox",
+     "name": "Invitation",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "c6860375-958c-4eda-a6e1-8e3320b920fc",
+     "type": "doryline",
+     "name": "Rule left",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "non_square_shape"
+     ]
+    },
+    {
+     "object": "91507efa-a27f-4483-b6f1-7f87774b17e5",
+     "type": "doryline",
+     "name": "Rule right",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "non_square_shape"
+     ]
+    },
+    {
+     "object": "8f1b9ed9-c1bd-4ba9-a7c9-5f30959de779",
+     "type": "textbox",
+     "name": "Time",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "c4522355-b4ca-4500-98b9-6edc3f0bf091",
+     "type": "textbox",
+     "name": "Weekday",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped"
+     ]
+    },
+    {
+     "object": "f988a8d1-a7d7-4f56-88a9-7d87e979f9a8",
+     "type": "textbox",
+     "name": "Day",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "2ebf2d4d-9ae4-49ad-b899-8c3393e802bf",
+     "type": "textbox",
+     "name": "Month",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped"
+     ]
+    },
+    {
+     "object": "63f6b2c9-8df0-4404-a889-9bdf3d560bd6",
+     "type": "textbox",
+     "name": "Place",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "982c3744-80fd-4e5a-9879-aa8ae7c414ed",
+     "type": "textbox",
+     "name": "Website",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped"
+     ]
+    }
+   ]
+  }
+ ],
+ "modern-pitch-deck": [
+  {
+   "page": 0,
+   "canvas_scale": 0.521,
+   "bg": "solid",
+   "objects": [
+    {
+     "object": "d1b9e1f0-4b80-45ab-82c5-09a201500468",
+     "type": "rect",
+     "name": "Logo mark",
+     "cls": "approx",
+     "out": "asset",
+     "notes": [
+      "color_snap",
+      "shape_substituted"
+     ]
+    },
+    {
+     "object": "9c835c74-5873-4b55-92d5-faf657e2fb51",
+     "type": "textbox",
+     "name": "Company name",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "674cd7f8-6566-40fe-a2e5-eb4aad74f23a",
+     "type": "textbox",
+     "name": "Section",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "3215527c-7259-46a7-b2f5-dc9f0306e923",
+     "type": "textbox",
+     "name": "Title",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "fddecd01-7f4c-4c51-8206-cdf35998e00c",
+     "type": "textbox",
+     "name": "Subtitle",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "c8a84885-8c40-42fa-9216-bf47af2ad7f4",
+     "type": "rect",
+     "name": "Pill 1",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "non_square_shape"
+     ]
+    },
+    {
+     "object": "9371c309-9933-47a3-a126-b09c06bccedd",
+     "type": "textbox",
+     "name": "Pill 1 label",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "ada68e4b-d6f3-41b7-b334-90abf92f5538",
+     "type": "rect",
+     "name": "Pill 2",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "non_square_shape"
+     ]
+    },
+    {
+     "object": "786f09cf-e3e6-4761-8344-81ff4fc14c21",
+     "type": "textbox",
+     "name": "Pill 2 label",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "02c8697a-dca3-4354-ba55-364b62a0b226",
+     "type": "textbox",
+     "name": "Presenter",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "37ffeef6-cfb0-4dab-aa45-45f70c0ebb3d",
+     "type": "rect",
+     "name": "Photo panel",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "non_square_shape"
+     ]
+    },
+    {
+     "object": "985b5f82-f68a-4fa7-9a75-18f40ec3a0f7",
+     "type": "image",
+     "name": "Cover photo",
+     "cls": "approx",
+     "out": "override:cover.photo",
+     "notes": [
+      "photo_slot_mapped",
+      "mask_dropped"
+     ]
+    }
+   ]
+  },
+  {
+   "page": 1,
+   "canvas_scale": 0.521,
+   "bg": "solid",
+   "objects": [
+    {
+     "object": "f775dc9d-9f92-4885-b241-f3e9084d5d40",
+     "type": "rect",
+     "name": "Logo mark",
+     "cls": "approx",
+     "out": "asset",
+     "notes": [
+      "color_snap",
+      "shape_substituted"
+     ]
+    },
+    {
+     "object": "58d14d29-c66c-4981-a172-c6e60a0342fa",
+     "type": "textbox",
+     "name": "Company name",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "8d08d2a5-b978-43d8-9162-d592b4714b11",
+     "type": "textbox",
+     "name": "Section",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "ee644331-e052-45d4-8192-a88eb72630cc",
+     "type": "textbox",
+     "name": "Title",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "239bc8ad-d35f-4f2b-b182-b73a609539e3",
+     "type": "textbox",
+     "name": "Lead",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "84f6393a-fa38-4027-a1b2-8a37634a1e9e",
+     "type": "rect",
+     "name": "Card 1",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "non_square_shape"
+     ]
+    },
+    {
+     "object": "b92dbeb5-ed45-4b7d-91a2-99e30db827b5",
+     "type": "textbox",
+     "name": "Card 1 number",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "1a892f42-141f-4c79-80d3-6de00f6e0c70",
+     "type": "textbox",
+     "name": "Card 1 title",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "4fc0b4be-072b-46d0-b1c3-7b8bb9dc1587",
+     "type": "textbox",
+     "name": "Card 1 text",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "b380a0a0-43b8-410e-8ebd-961f9cff9612",
+     "type": "rect",
+     "name": "Card 2",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "non_square_shape"
+     ]
+    },
+    {
+     "object": "7e491b24-50ab-47b7-9ecd-8774f2918dfb",
+     "type": "textbox",
+     "name": "Card 2 number",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "1dedaa98-29d1-46bb-ae9d-b477efdba840",
+     "type": "textbox",
+     "name": "Card 2 title",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "e8b7251c-36c5-4b64-bead-a5cb456d9f29",
+     "type": "textbox",
+     "name": "Card 2 text",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "dfa58cb0-7784-48b3-8efe-5a70f44672b6",
+     "type": "rect",
+     "name": "Card 3",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "non_square_shape"
+     ]
+    },
+    {
+     "object": "aa6e0734-8478-4e5c-9d0e-4bc54bd8699f",
+     "type": "textbox",
+     "name": "Card 3 number",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "491296a8-5d9e-4d60-aedd-78c8482284e4",
+     "type": "textbox",
+     "name": "Card 3 title",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "14dc112c-6a91-430a-beed-691c9eb47bcd",
+     "type": "textbox",
+     "name": "Card 3 text",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    }
+   ]
+  },
+  {
+   "page": 2,
+   "canvas_scale": 0.521,
+   "bg": "solid",
+   "objects": [
+    {
+     "object": "7a251fb4-49a5-4e9e-8c55-80939650278e",
+     "type": "rect",
+     "name": "Logo mark",
+     "cls": "approx",
+     "out": "asset",
+     "notes": [
+      "color_snap",
+      "shape_substituted"
+     ]
+    },
+    {
+     "object": "19c9ae28-22cc-4da2-9c25-ad97939a42d3",
+     "type": "textbox",
+     "name": "Company name",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "e49329ac-2fbf-434c-ac35-9eebea2c39bc",
+     "type": "textbox",
+     "name": "Section",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "8337b820-08e5-4150-bc05-caeee7765401",
+     "type": "textbox",
+     "name": "Title",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "4e0033a4-15d8-47f9-8c15-bc423d084bea",
+     "type": "ellipse",
+     "name": "TAM circle",
+     "cls": "approx",
+     "out": "asset",
+     "notes": [
+      "color_snap",
+      "shape_substituted"
+     ]
+    },
+    {
+     "object": "eda4c218-eeff-46fd-9ce4-e8453b536630",
+     "type": "ellipse",
+     "name": "SAM circle",
+     "cls": "approx",
+     "out": "asset",
+     "notes": [
+      "color_snap",
+      "shape_substituted"
+     ]
+    },
+    {
+     "object": "b86e3d9c-fbf2-4ca6-acf5-d99a91e45d18",
+     "type": "ellipse",
+     "name": "SOM circle",
+     "cls": "approx",
+     "out": "asset",
+     "notes": [
+      "color_snap",
+      "shape_substituted"
+     ]
+    },
+    {
+     "object": "08a67d51-a44b-4740-bbc7-17e2f14de8ec",
+     "type": "textbox",
+     "name": "TAM label",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "d36ff8d5-b13e-4ce9-8bd7-083647dfdfd5",
+     "type": "textbox",
+     "name": "SAM label",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "a82f9342-3755-44d5-81d2-d33105373f0a",
+     "type": "textbox",
+     "name": "SOM label",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "dd6618be-2a62-4f2c-b1c1-e2dcafa54821",
+     "type": "doryline",
+     "name": "Rule 1",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "non_square_shape"
+     ]
+    },
+    {
+     "object": "129c9d3a-1d6f-4982-a1b1-f08858135139",
+     "type": "textbox",
+     "name": "Value 1",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "47d322b6-107c-43d9-91a1-ff3402815a50",
+     "type": "textbox",
+     "name": "Label 1",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "7c0aa732-0389-4d30-8191-0ee0acf06367",
+     "type": "textbox",
+     "name": "Text 1",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "b1412cae-f696-4886-b181-1d8b565e6c7e",
+     "type": "doryline",
+     "name": "Rule 2",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "non_square_shape"
+     ]
+    },
+    {
+     "object": "e677b12a-e9a2-42dd-a171-2c3700cc7595",
+     "type": "textbox",
+     "name": "Value 2",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "1bae36a6-dcaf-4c34-9260-3be3a93a7eac",
+     "type": "textbox",
+     "name": "Label 2",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "00796b63-9fef-4320-8053-5bd3b6c6f751",
+     "type": "textbox",
+     "name": "Text 2",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "35b0f0df-92fc-4d76-b043-6a7f60340069",
+     "type": "doryline",
+     "name": "Rule 3",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "non_square_shape"
+     ]
+    },
+    {
+     "object": "45c44934-fca4-40fc-8ac9-cffdda18652a",
+     "type": "textbox",
+     "name": "Value 3",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "108dc4b8-0997-45a6-9ad9-c15231aa5c13",
+     "type": "textbox",
+     "name": "Label 3",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "af31532b-e2bd-44aa-aba8-ed552ef47758",
+     "type": "textbox",
+     "name": "Text 3",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "7afaceb0-efb0-4a53-bab8-dea984866e41",
+     "type": "textbox",
+     "name": "Source",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    }
+   ]
+  }
+ ],
+ "modern-resume": [
+  {
+   "page": 0,
+   "canvas_scale": 1.259,
+   "bg": "solid",
+   "objects": [
+    {
+     "object": "89891a9c-f892-41dd-8ea3-e3ba1670af96",
+     "type": "image",
+     "name": "Photo",
+     "cls": "approx",
+     "out": "override:cover.photo",
+     "notes": [
+      "photo_slot_mapped",
+      "mask_dropped"
+     ]
+    },
+    {
+     "object": "eae58b28-1f6b-43d9-bed4-b7b718269451",
+     "type": "textbox",
+     "name": "Name",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "1f1c10a4-1278-4d30-aec4-c662c2949d68",
+     "type": "textbox",
+     "name": "Job title",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped"
+     ]
+    },
+    {
+     "object": "80788130-3951-4e2c-9ef4-995fc5498222",
+     "type": "textbox",
+     "name": "+1 555 0142",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "color_snap",
+      "font_map",
+      "over_item_cap"
+     ]
+    },
+    {
+     "object": "b5af06ac-2c5e-4883-8ee4-a80b6fb78b3a",
+     "type": "path",
+     "name": "+1 555 0142 icon",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "vector_path"
+     ]
+    },
+    {
+     "object": "160a7738-5338-4a7f-bd14-7b08716d70f4",
+     "type": "textbox",
+     "name": "jordan@yourmail.example",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "color_snap",
+      "font_map",
+      "over_item_cap"
+     ]
+    },
+    {
+     "object": "4b41fcb4-4645-44d5-ae04-8ab41bdb790b",
+     "type": "path",
+     "name": "jordan@yourmail.example icon",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "vector_path"
+     ]
+    },
+    {
+     "object": "fc09bdff-9deb-493c-9f32-4c6cbb73ee38",
+     "type": "textbox",
+     "name": "yourportfolio.example",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "color_snap",
+      "font_map",
+      "over_item_cap"
+     ]
+    },
+    {
+     "object": "313f427b-90f8-4393-8f22-5b1764e1f74f",
+     "type": "path",
+     "name": "yourportfolio.example icon",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "vector_path"
+     ]
+    },
+    {
+     "object": "a401d591-a05b-4e3d-a302-a89a8941f9c5",
+     "type": "textbox",
+     "name": "Lakeside, NY",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "color_snap",
+      "font_map",
+      "over_item_cap"
+     ]
+    },
+    {
+     "object": "6fca5015-ae4e-44e6-b312-99efdfd2f0ae",
+     "type": "path",
+     "name": "Lakeside, NY icon",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "vector_path"
+     ]
+    },
+    {
+     "object": "0e6fdf89-8675-42ea-83e1-c6f2dc1d0bf3",
+     "type": "rect",
+     "name": "Header band",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "non_square_shape"
+     ]
+    },
+    {
+     "object": "d9385a0d-9368-4893-93f2-b74633af02dc",
+     "type": "doryline",
+     "name": "Timeline",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "non_square_shape"
+     ]
+    },
+    {
+     "object": "d026c1a2-d528-45e2-a242-6cebe288d568",
+     "type": "textbox",
+     "name": "Education heading",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped"
+     ]
+    },
+    {
+     "object": "9bf03c26-e21b-4b8b-b252-5d40381acc51",
+     "type": "textbox",
+     "name": "Degree 1",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "3a94cb99-bb41-498f-8322-8a433564e797",
+     "type": "textbox",
+     "name": "School 1",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "055d461d-c834-4f39-9332-7b978bf6de7f",
+     "type": "textbox",
+     "name": "Years 1",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "4cb7fd70-38c2-40f2-a480-20f8d7b2417e",
+     "type": "textbox",
+     "name": "Degree 2",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "178078f4-45b5-459b-b491-114c2e433867",
+     "type": "textbox",
+     "name": "School 2",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "066c20a0-dc0d-4215-990b-abceb360d3a5",
+     "type": "textbox",
+     "name": "Years 2",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "3ba3a51c-cf1a-4d6c-89fb-ba795dcedcbc",
+     "type": "textbox",
+     "name": "Skills heading",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped"
+     ]
+    },
+    {
+     "object": "70da2a98-c126-47c2-baea-c925073ce5d3",
+     "type": "doryline",
+     "name": "Skill marker 1",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "non_square_shape"
+     ]
+    },
+    {
+     "object": "a511af13-b433-4119-aada-d8d1b1aaeeeb",
+     "type": "textbox",
+     "name": "Skill group 1",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "color_snap",
+      "font_map",
+      "over_item_cap"
+     ]
+    },
+    {
+     "object": "32910cb0-10d9-4aba-994b-6f1f0ca7ae49",
+     "type": "textbox",
+     "name": "Skills 1",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "67c8912c-03e6-4411-893b-7ecbb616b760",
+     "type": "doryline",
+     "name": "Skill marker 2",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "non_square_shape"
+     ]
+    },
+    {
+     "object": "9cff16a8-f6f3-4e68-b92b-8d766084c077",
+     "type": "textbox",
+     "name": "Skill group 2",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "color_snap",
+      "font_map",
+      "over_item_cap"
+     ]
+    },
+    {
+     "object": "d1369b24-e900-48be-a91b-9c2209f2ca8e",
+     "type": "textbox",
+     "name": "Skills 2",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "5eb7f8c0-44a6-4160-988c-347065ef8aec",
+     "type": "textbox",
+     "name": "Languages heading",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped"
+     ]
+    },
+    {
+     "object": "93ed7d3c-37b3-4bb6-887c-431c0f5d9303",
+     "type": "textbox",
+     "name": "Languages",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "46c76773-68e1-44a2-ae0d-cb461692bf77",
+     "type": "textbox",
+     "name": "Interests heading",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped"
+     ]
+    },
+    {
+     "object": "1190e2f7-75d5-4a4c-be1d-bc9a6c23b660",
+     "type": "textbox",
+     "name": "Interests",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "dc595d7b-82c8-40f5-8e2d-adefc2b5ad49",
+     "type": "textbox",
+     "name": "Profile heading",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped"
+     ]
+    },
+    {
+     "object": "a723d800-8fbb-469e-9e3d-9e431847a432",
+     "type": "ellipse",
+     "name": "Profile dot",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "color_snap",
+      "stroke_dropped",
+      "shape_substituted",
+      "over_item_cap"
+     ]
+    },
+    {
+     "object": "72ec5384-9cae-4b48-ad4d-8f976ed99b1a",
+     "type": "textbox",
+     "name": "Profile text",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "3db5ce08-a9a1-41f1-bd5d-80ecc46b9203",
+     "type": "textbox",
+     "name": "Work experience heading",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped"
+     ]
+    },
+    {
+     "object": "087e498c-b694-479a-8d6e-72401bfd89ec",
+     "type": "ellipse",
+     "name": "Work experience dot",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "color_snap",
+      "stroke_dropped",
+      "shape_substituted",
+      "over_item_cap"
+     ]
+    },
+    {
+     "object": "d348c410-c388-4d44-9d7e-6394718f80d5",
+     "type": "textbox",
+     "name": "Role 1",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped"
+     ]
+    },
+    {
+     "object": "9e113f94-d07b-42ed-ad8e-54e8c72177be",
+     "type": "textbox",
+     "name": "Company 1",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "69daba18-dd6e-4896-bd9e-453d1db36ea7",
+     "type": "textbox",
+     "name": "Summary 1",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "095b1205-43f8-42a5-a01b-ef0306ed7974",
+     "type": "ellipse",
+     "name": "Bullet 1.1",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "color_snap",
+      "shape_substituted",
+      "box_clamped",
+      "over_item_cap"
+     ]
+    },
+    {
+     "object": "3e919781-3605-4cfc-910a-feafb05b828b",
+     "type": "textbox",
+     "name": "Achievement 1.1",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "9fed080d-5ddf-4df8-803b-d1acb2116746",
+     "type": "ellipse",
+     "name": "Bullet 1.2",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "color_snap",
+      "shape_substituted",
+      "box_clamped",
+      "over_item_cap"
+     ]
+    },
+    {
+     "object": "d4248d89-50ec-474f-b02b-e0575c7f705d",
+     "type": "textbox",
+     "name": "Achievement 1.2",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "3580fe15-77c5-494b-a05b-b4545e355517",
+     "type": "ellipse",
+     "name": "Bullet 1.3",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "color_snap",
+      "shape_substituted",
+      "box_clamped",
+      "over_item_cap"
+     ]
+    },
+    {
+     "object": "6ab78391-6ad2-43a1-904b-c30008a35e2e",
+     "type": "textbox",
+     "name": "Achievement 1.3",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "cb12f41d-92ab-449d-807b-96fd0b5842e9",
+     "type": "textbox",
+     "name": "Role 2",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped"
+     ]
+    },
+    {
+     "object": "00497999-84b8-4ef4-b06b-a5a8b5c64c00",
+     "type": "textbox",
+     "name": "Company 2",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "b1113ae4-db5f-435b-a199-6761545ec12d",
+     "type": "textbox",
+     "name": "Summary 2",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "e647bf60-ce6c-4eb1-9289-760cfeccca44",
+     "type": "ellipse",
+     "name": "Bullet 2.1",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "color_snap",
+      "shape_substituted",
+      "box_clamped",
+      "over_item_cap"
+     ]
+    },
+    {
+     "object": "49b55ad8-d0cd-4332-b51c-0f7b681f6545",
+     "type": "textbox",
+     "name": "Achievement 2.1",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "147ed55c-ddc0-49dc-852d-00d0beb15c2e",
+     "type": "ellipse",
+     "name": "Bullet 2.2",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "color_snap",
+      "shape_substituted",
+      "box_clamped",
+      "over_item_cap"
+     ]
+    },
+    {
+     "object": "b32364d0-b6e7-48e0-95fc-2dd3bcfb7774",
+     "type": "textbox",
+     "name": "Achievement 2.2",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "7eecdf54-c3da-4e89-a50c-1e27128d6e5c",
+     "type": "textbox",
+     "name": "Role 3",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped"
+     ]
+    },
+    {
+     "object": "1d906ec8-9c00-4c8d-b6dc-4b2a0fd789a2",
+     "type": "textbox",
+     "name": "Company 3",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "e859e94c-a9f4-4236-85ec-3c7e6569808b",
+     "type": "textbox",
+     "name": "Summary 3",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "87fd78c0-821a-413a-96bc-698263b39bd0",
+     "type": "textbox",
+     "name": "Selected projects heading",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped"
+     ]
+    },
+    {
+     "object": "52c7f344-8f0d-47e4-a6cc-5ad6b94592b9",
+     "type": "ellipse",
+     "name": "Selected projects dot",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "color_snap",
+      "stroke_dropped",
+      "shape_substituted",
+      "over_item_cap"
+     ]
+    },
+    {
+     "object": "a1ff32f9-3866-427d-b49e-981e19ae1d8c",
+     "type": "textbox",
+     "name": "Project 1",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped"
+     ]
+    },
+    {
+     "object": "6cc9ad7d-455a-4726-84ae-897270401475",
+     "type": "textbox",
+     "name": "Project 1 text",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "8aa6835e-2a4f-4e8b-b717-af12418a9fd1",
+     "type": "textbox",
+     "name": "Project 2",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped"
+     ]
+    },
+    {
+     "object": "bfdd08da-1d5c-48e2-a706-bebeebf8a8e8",
+     "type": "textbox",
+     "name": "Project 2 text",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "f4138d56-1069-4338-98f6-cd6a9566b1ff",
+     "type": "textbox",
+     "name": "References heading",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped"
+     ]
+    },
+    {
+     "object": "294a12d1-0376-4d8f-88e6-dc153fd4ba16",
+     "type": "ellipse",
+     "name": "References dot",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "color_snap",
+      "stroke_dropped",
+      "shape_substituted",
+      "over_item_cap"
+     ]
+    },
+    {
+     "object": "5e81974d-f682-47e6-b8d6-ebc1e842c32d",
+     "type": "textbox",
+     "name": "References",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    }
+   ]
+  }
+ ],
+ "night-bloom-concert-poster": [
+  {
+   "page": 0,
+   "canvas_scale": 0.579,
+   "bg": "solid",
+   "objects": [
+    {
+     "object": "2798a641-181a-441c-9310-ec81ad0e6565",
+     "type": "textbox",
+     "name": "Corner top left",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "88f417ce-3ff3-4518-8341-bf7eafc34a1f",
+     "type": "textbox",
+     "name": "Corner top right",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "bd2b9c4a-3200-406f-b331-ce2959315337",
+     "type": "textbox",
+     "name": "Tour left",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "c63c35b5-f140-4320-a4e0-1984aa5881aa",
+     "type": "textbox",
+     "name": "Tour right",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "fb73ba31-e44d-4d77-94d0-282f54c68ac1",
+     "type": "textbox",
+     "name": "Live left",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "5ccf2bbd-0b27-4e73-8300-fb2c567c6f7c",
+     "type": "textbox",
+     "name": "Live right",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "9105b039-fe33-48c9-b3f0-0ad800ea7893",
+     "type": "textbox",
+     "name": "Outlined word above",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "effect_outline_dropped",
+      "font_map",
+      "text_outline_dropped"
+     ]
+    },
+    {
+     "object": "4babf9e6-8da6-4810-a2a2-6577b42f1495",
+     "type": "textbox",
+     "name": "Act",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "gradient_fill_averaged",
+      "font_map",
+      "letter_spacing_dropped",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "80e27e62-80b3-4267-9292-74235e9d1dac",
+     "type": "textbox",
+     "name": "Outlined word below",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "effect_outline_dropped",
+      "font_map",
+      "text_outline_dropped"
+     ]
+    },
+    {
+     "object": "9d2c6afe-94fa-4fd5-afac-88c8882f3fb3",
+     "type": "rect",
+     "name": "Band",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "non_square_shape"
+     ]
+    },
+    {
+     "object": "68f5e582-a1ed-457e-bfbc-791cdfc1369c",
+     "type": "textbox",
+     "name": "City",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "079974f6-7a14-4382-8f8c-a61fdc0c51e1",
+     "type": "textbox",
+     "name": "Venue",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "d263ef7a-8707-492c-9f9c-9774329e48ca",
+     "type": "textbox",
+     "name": "Night",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "71077eed-602d-4830-b06b-c47730e8630f",
+     "type": "textbox",
+     "name": "Date",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "3cd0f972-6d21-4ed9-bf7b-b5cb867a5af8",
+     "type": "textbox",
+     "name": "Guest intro",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "db7488e5-4647-4cdd-904b-e2ce83c4753d",
+     "type": "rect",
+     "name": "Guest band",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "non_square_shape"
+     ]
+    },
+    {
+     "object": "a63d0369-533a-4286-a05b-d323da566c26",
+     "type": "textbox",
+     "name": "Guest",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped",
+      "line_height_dropped"
+     ]
+    }
+   ]
+  }
+ ],
+ "rooftop-event-story": [
+  {
+   "page": 0,
+   "canvas_scale": 0.739,
+   "bg": "solid",
+   "objects": [
+    {
+     "object": "fa08147f-5b0b-4c46-ad0c-ec02cfb5e65c",
+     "type": "image",
+     "name": "Photo",
+     "cls": "approx",
+     "out": "override:cover.photo",
+     "notes": [
+      "photo_slot_mapped"
+     ]
+    },
+    {
+     "object": "99aca3f3-3431-4a4a-bddb-1905cdff01a1",
+     "type": "rect",
+     "name": "Bottom shade",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "non_square_shape"
+     ]
+    },
+    {
+     "object": "64761e77-4125-40f4-8deb-0a592391f88a",
+     "type": "textbox",
+     "name": "Label 1",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped"
+     ]
+    },
+    {
+     "object": "5b64850b-82e4-4d42-9d3c-bfffd26bcb16",
+     "type": "textbox",
+     "name": "Label 2",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped"
+     ]
+    },
+    {
+     "object": "262d008f-8fd8-43ec-ac4c-b05328fcc2ff",
+     "type": "textbox",
+     "name": "Label 3",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped"
+     ]
+    },
+    {
+     "object": "c5d28f03-68fe-41f0-bd1c-dd562547dd44",
+     "type": "textbox",
+     "name": "Title",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "909b0a87-75f1-4799-8d2c-ceaa7cd9d42d",
+     "type": "textbox",
+     "name": "Time",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "8789721b-b6b1-44e8-9c7d-84502bb2a7ba",
+     "type": "textbox",
+     "name": "Text",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped"
+     ]
+    },
+    {
+     "object": "5252eda0-c3a4-4a91-ac8d-75a481449ea3",
+     "type": "textbox",
+     "name": "Day 18",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "74768031-fa1d-44b3-9c54-e5e7e589f727",
+     "type": "textbox",
+     "name": "Day 19",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "a9ad05ad-ed2a-4e0a-8c44-f4938ef7003e",
+     "type": "textbox",
+     "name": "Day 20",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "dee38a29-e037-4961-bc34-033e38660956",
+     "type": "rect",
+     "name": "Picked day",
+     "cls": "cannot",
+     "out": null,
+     "notes": [
+      "non_square_shape"
+     ]
+    },
+    {
+     "object": "131a0fa5-d344-43b7-ac24-12eae2d4126d",
+     "type": "textbox",
+     "name": "Day 21",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "a19b6c41-2eea-4b59-9c95-a9383dd1d3cb",
+     "type": "textbox",
+     "name": "Day 22",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "d5d2f1bd-21f7-45af-8c85-b8e4e73fdce2",
+     "type": "textbox",
+     "name": "Day 23",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    },
+    {
+     "object": "0a087639-1404-4006-bc75-c78f91ade5f9",
+     "type": "textbox",
+     "name": "Day 24",
+     "cls": "exact",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map"
+     ]
+    }
+   ]
+  }
+ ],
+ "serif-quote-card": [
+  {
+   "page": 0,
+   "canvas_scale": 0.926,
+   "bg": "solid",
+   "objects": [
+    {
+     "object": "f1e19694-03ca-4533-a84a-f81eb20f40a9",
+     "type": "textbox",
+     "name": "Quote",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "line_height_dropped",
+      "run_styles_dropped"
+     ]
+    },
+    {
+     "object": "26181b10-f6d7-4f8a-9839-07ca5c7d49c1",
+     "type": "textbox",
+     "name": "Author",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped"
+     ]
+    },
+    {
+     "object": "5b4fa08c-e9e4-49e1-8829-167505eb52d8",
+     "type": "textbox",
+     "name": "Handle",
+     "cls": "approx",
+     "out": "text",
+     "notes": [
+      "color_snap",
+      "font_map",
+      "letter_spacing_dropped"
+     ]
+    }
+   ]
+  }
+ ]
+}

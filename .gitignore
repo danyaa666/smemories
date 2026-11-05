@@ -44,3 +44,8 @@ docs/spikes/print/*.pdf
 
 # Created by `npx playwright trace open` (T-115)
 /tools/e2e/.playwright-cli/
+
+# T-169 (ADR 0005): Doory clone at a pinned commit (never vendored), and the spike's generated files (template-derived layouts and renders)
+docs/spikes/canvas/doory/
+docs/spikes/canvas/out/
+docs/spikes/canvas/studio/dist/

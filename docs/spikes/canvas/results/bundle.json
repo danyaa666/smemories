@@ -1,0 +1,32 @@
+{
+ "fabric_version": "7.4.0",
+ "studio_chunk": {
+  "file": "assets/studio-BkIYnsZF.js",
+  "bytes": 282702,
+  "gzip": 87302
+ },
+ "entries": {
+  "main (editor/book route)": {
+   "static_chunks": [
+    "assets/main-Dghr28jt.js",
+    "assets/book-DV1EKD_K.js"
+   ],
+   "gzip_total": 69540,
+   "bytes_total": 223206,
+   "contains_studio_chunk": false,
+   "mentions_fabric": false,
+   "loads_studio_on_start": "dynamic import only (not fetched until the button)"
+  },
+  "print route": {
+   "static_chunks": [
+    "assets/print-DXT9usHt.js",
+    "assets/book-DV1EKD_K.js"
+   ],
+   "gzip_total": 68035,
+   "bytes_total": 219994,
+   "contains_studio_chunk": false,
+   "mentions_fabric": false,
+   "loads_studio_on_start": "no reference"
+  }
+ }
+}
