@@ -710,7 +710,7 @@ Spec: .team/epics/E09-customisation-editor/28-canvas-foundation-spike.md (read i
 - 2026-11-05 08:52Z · leader · merged 64804e2; QA reproduced coverage 73%/85%, determinism, validator 52 ok/4 refused, parity 0.03-0.20%, 15/15 studio failure cases, licence quotes match pinned SHA a65c43a; ADR 0005 stays Proposed until Q-064 answered
 
 ### T-170 — [E09] Editor flow: page by page, Save and done, Print, back to the book manage page (web)
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M4
@@ -718,15 +718,17 @@ Spec: .team/epics/E09-customisation-editor/28-canvas-foundation-spike.md (read i
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-170-e09-editor-flow-page-by-page-save-and-do
-- **PR:** —
-- **Updated:** 2026-11-05 08:47Z by dev
-- **Comments-seen:** 0
+- **PR:** https://github.com/danyaa666/smemories/pull/166
+- **Updated:** 2026-11-05 09:18Z by dev
+- **Comments-seen:** 2
 
 Spec: .team/epics/E09-customisation-editor/29-editor-page-flow-done-print.md (read it from the main checkout). Previous/next page through the real book order, Done (settle then manage page, leave guard), Print after settle, deep links from the manage page, e2e editor-flow
 
 #### Comments
+- 2026-11-05 09:18Z · dev · PR #166, head 849fc2c (rebased on develop 64804e2+). Prev/Next page + PageUp/PageDown, position text, Done (settle, then guard release, then manage page), Print label+hint, manage page 'Design the pages' links with ?page= deep link; docs/editor-flow.md. Tests: vitest 1113 pass, lint/prettier/tsc/lint:i18n/check:api/build green. e2e on private stack (compose t170stack, ports 13370/16370/19370, S3 endpoint set, scripts/e2e.sh direct): 39 passed, 0 failed, head 849fc2c (incl. new editor-flow.spec.mjs). Notes: flow controls are a 2nd toolbar row (+~56px) so editor-shell step 6 and editor-gestures flush-edge now scrollIntoView the handle; useLeaveGuard gained release() (shared with Customise, its tests pass). Not run: make test-integration (no Go change), print-check (no render change). QA: keyboard-only walk, hidden section, offline Done, two tabs (409), browser Back, print.
+- 2026-11-05 09:19Z · leader · Leader to QA: PR #166 head 849fc2ce0f526854c1cc64a678bc0a0598057bab (web only). Accepted: second toolbar row for the flow controls; editor-shell step 6 and editor-gestures flush-edge now scroll the handle into view (check those two edits are sound and do not weaken the assertions); useLeaveGuard gained release(), also used by the Customise screen (re-test the Customise leave guard: Back, link, tab close). Run vitest, lint, tsc, lint:i18n, check:api, build and the full e2e twice (scripts/e2e.sh on your own stack); report counts and the full SHA. Known flake outside this task: editor-gestures touch test (T-174): report but do not fail T-170 for it unless it fails in isolation on develop too. Verify per spec 29: whole-book walk with a hidden section, Done then browser Back, offline Done, two tabs (409), Print waits for save, deep links incl. unknown value, keyboard-only walk, the notes page label, manage-page refetch after Done.
 
 ### T-171 — [E09] Stretching shapes: rectangle and ellipse that fill their box (registry + web)
 - **Status:** TODO
