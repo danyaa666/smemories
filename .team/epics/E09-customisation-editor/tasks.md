@@ -710,7 +710,7 @@ Spec: .team/epics/E09-customisation-editor/28-canvas-foundation-spike.md (read i
 - 2026-11-05 08:52Z · leader · merged 64804e2; QA reproduced coverage 73%/85%, determinism, validator 52 ok/4 refused, parity 0.03-0.20%, 15/15 studio failure cases, licence quotes match pinned SHA a65c43a; ADR 0005 stays Proposed until Q-064 answered
 
 ### T-170 — [E09] Editor flow: page by page, Save and done, Print, back to the book manage page (web)
-- **Status:** QA_FAIL
+- **Status:** READY_FOR_QA
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M4
@@ -721,8 +721,8 @@ Spec: .team/epics/E09-customisation-editor/28-canvas-foundation-spike.md (read i
 - **Assignee:** —
 - **Branch:** task/t-170-e09-editor-flow-page-by-page-save-and-do
 - **PR:** https://github.com/danyaa666/smemories/pull/166
-- **Updated:** 2026-11-05 09:29Z by qa
-- **Comments-seen:** 4
+- **Updated:** 2026-11-05 09:56Z by dev
+- **Comments-seen:** 6
 
 Spec: .team/epics/E09-customisation-editor/29-editor-page-flow-done-print.md (read it from the main checkout). Previous/next page through the real book order, Done (settle then manage page, leave guard), Print after settle, deep links from the manage page, e2e editor-flow
 
@@ -741,6 +741,8 @@ Spec: .team/epics/E09-customisation-editor/29-editor-page-flow-done-print.md (re
   - Reviewed the two edited e2e steps (editor-shell step 6, gestures flush-edge): only scrollIntoView added before the geometry probe, assertions unchanged, sound. useLeaveGuard.release(): sound, Customise guard re-tested above.
   NON-BLOCKING: after Done my probe saw document.activeElement = a button labelled 'Done' on the manage page right after navigation (focus not moved to a heading/main); consider focusing the page h1. Print hint and 'Design the pages' strings fine.
 - 2026-11-05 09:30Z · leader · Leader rework brief (QA_FAIL accepted). R1 (required): spec 29 requirement 1 — when the edited page is a notes page, show the text 'applies to every notes page' (new i18n key in en.json and vi.json, vi wording natural), visible near the position text and announced in the live region on arrival; add a component/unit test for it. R2: QA committed tools/e2e/editor-flow-qa.spec.mjs on the branch (71fb685); add it to testMatch in tools/e2e/playwright.config.mjs (or fold its cases into editor-flow.spec.mjs), keep it green, prettier/lint. R3 (cheap, from QA): after Done, focus on the manage page should land on the page heading, not on a button labelled Done; add a small test. Rebase on develop if it moved; re-run vitest and the e2e suite and put counts + head SHA in the board comment. Nothing under .team/.
+- 2026-11-05 09:56Z · dev · Rework round 1, PR #166 head 06029547d77e75053f6881fea93ff11669069cf0 (develop merged in, no force-push; the .team files in the merge are develop's own, the PR diff has none). R1: new key editor.notesShared (en: 'This layout applies to every notes page.', vi: 'Bố cục này áp dụng cho mọi trang lời nhắn.') shown next to the position text on a notes page (data-testid notes-shared) and appended to the live-region announcement when stepping onto a notes page (a deep link that opens on notes shows the text but makes no announcement); tests in EditorFlow.test.tsx (step through, deep link, absent elsewhere). R2: editor-flow-qa.spec.mjs in testMatch (+ docs/e2e.md line). One edit to QA's spec: after Done and browser Back from the ?page=notes deep link the editor correctly reopens on 'Page 3 of 4: Notes page 1' (same URL), the spec expected the cover; changed that assertion only. R3: YearbookEdit h1 gets tabIndex -1 and takes focus when the book loads (test in pages/editor.test.tsx). Results: web lint+prettier, lint:i18n, check:api, build OK; vitest 64 files / 1116 passed / 0 failed. e2e (private stack t170stack, ports 13370/16370/19370/18370/14370, SMEM_TEST_S3_ENDPOINT set, scripts/e2e.sh direct): 40 passed, 0 failed (3.3m) on 06029547; QA spec alone 5 of 5 passes. Observation: in one earlier full run (before the assertion edit, 17 s slow start) the QA spec saw 'Page 1 of 4: Cover' after Back instead of the notes page; not reproduced in 6 more runs, so possibly a timing flake in the Back step (Editor mounts with ?page=notes but the first-render page list); watch for it. Not run: Go tests / print-check (no Go or render change).
+- 2026-11-05 09:56Z · leader · Leader to QA (re-test after rework): PR #166 head 06029547d77e75053f6881fea93ff11669069cf0. Check R1 notes-page text (en+vi, live region on arrival; deep link shows text without announcement), R2 editor-flow-qa.spec.mjs now in testMatch (dev changed ONE assertion: after Done and browser Back from the ?page=notes deep link the editor reopens on notes; judge whether that is the right expectation), R3 manage-page h1 focus. Dev saw one run where the QA spec read 'Page 1 of 4: Cover' after Back instead of notes, not reproduced in 6 runs: run the full e2e at least twice plus the QA spec 10 times in isolation and report any repeat (a repeat means a real remount race: QA_FAIL). Counts and full SHA in your comment.
 
 ### T-171 — [E09] Stretching shapes: rectangle and ellipse that fill their box (registry + web)
 - **Status:** TODO
@@ -762,7 +764,7 @@ Spec: .team/epics/E09-customisation-editor/30-stretching-shapes.md (read it from
 #### Comments
 
 ### T-172 — [E09] Page templates: model, shipped storage, validator gate and read route (Go + web preview)
-- **Status:** READY_FOR_QA
+- **Status:** IN_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -770,10 +772,10 @@ Spec: .team/epics/E09-customisation-editor/30-stretching-shapes.md (read it from
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** qa
 - **Branch:** task/t-172-e09-page-templates-model-shipped-storage
 - **PR:** https://github.com/danyaa666/smemories/pull/167
-- **Updated:** 2026-11-05 09:37Z by dev
+- **Updated:** 2026-11-05 09:38Z by qa
 - **Comments-seen:** 2
 
 Spec: .team/epics/E09-customisation-editor/31-page-templates-model-and-shipped.md (read it from the main checkout). Shipped page templates as embedded files, build fails if one fails booklayout.Validate, template-list route, TemplatePreview, authored test templates only (nothing from Doory)
