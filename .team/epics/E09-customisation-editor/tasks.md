@@ -604,7 +604,7 @@ Spec: .team/epics/E09-customisation-editor/24-version-history-panel.md (read it 
 - 2026-11-01 22:30Z · leader · merged 3e5c742; QA: vitest 1078, e2e 3 clean runs 37/0 (4th hit register 429, flushed redis), history probes 33 saves->30 rows, pending autosave saved first. Non-blocking: raw ENOENT when mysql client missing; QA probe spec not committed
 
 ### T-166 — [E09] Navy Classic: page kinds and editable elements for the layout editor (web + manifest)
-- **Status:** IN_QA
+- **Status:** QA_PASS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -612,10 +612,10 @@ Spec: .team/epics/E09-customisation-editor/24-version-history-panel.md (read it 
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** leader
 - **Branch:** task/t-166-e09-navy-classic-page-kinds-and-editable
 - **PR:** https://github.com/danyaa666/smemories/pull/164
-- **Updated:** 2026-11-05 08:04Z by qa
+- **Updated:** 2026-11-05 08:47Z by qa
 - **Comments-seen:** 2
 
 Spec: .team/epics/E09-customisation-editor/25-navy-classic-layout.md (read it from the main checkout). design.layout block in navy-classic.json, Editable wrappers in navy.tsx, background replaces the page tone, parity with no layout, print-check parity fixture, server cases, editor-navy e2e
@@ -623,6 +623,23 @@ Spec: .team/epics/E09-customisation-editor/25-navy-classic-layout.md (read it fr
 #### Comments
 - 2026-11-01 23:01Z · dev · PR #164, head d6cc27c (rebased on develop e0f0f2c, after T-165). Editable ids and omissions with reasons are in the PR description. Results on this head: web lint/tsc/lint:i18n/check:api/build green, vitest 63 files 1093 tests pass; go test templates+booklayout ok; make test-integration equivalent (go test -race -tags integration ./...) 33 packages ok 0 fail (run before the rebase, same code); scripts/e2e.sh direct 38 passed 0 failed incl. editor-navy.spec.mjs; print-check 193 tests 193 pass 0 fail (incl. Navy fixture on A5/A4/Letter and override=natural for 12 ids). Private stack: compose project t166dev, ports 47306/47379/47333, SMEM_TEST_S3_ENDPOINT set. To verify: Navy book heavy layout on 3 papers vs editor; new text on dark cover is light (EditorShell addText/TextControls now use per-kind default colour, a runtime fix beyond the spec); known limits in PR (title blank 26 px vs 84 px without year).
 - 2026-11-01 23:01Z · leader · Leader to QA: PR #164 head d6cc27c (full SHA from gh pr view). Accepted deviations: runtime generalised (portal target no longer .mb-page, per-kind default text colour paper on cover/back), editor.test.tsx and booklayout 'cannot hold a layout' case now use classic as the layout-less template, print-check class-book case expects Navy to draw its layout, note01 fixture uses body font (3 px display-font diff on A5). Run full make test-integration, e2e (scripts/e2e.sh on own stack; run twice), print-check and the web checks on the head; report counts and full SHA. Verify: heavy Navy layout on A5/A4/Letter vs editor, theme and font switch with a layout, template switch to Memory Book and back, Memory Book editor/print unchanged, no-layout Navy print unchanged, Vietnamese text colour legible on navy cover (paper default), cover title with no graduation year (84 px blank) not overlapping.
+- 2026-11-05 08:47Z · qa · QA_PASS on PR #164, head d6cc27cc31a809c14213e6a6cb2800fbd4e91452 (unchanged since the dev run; PR checks go/web/security green, go-integration/e2e/image skipped by D-37). Worktree clean, I pushed nothing.
+  RESULT LINES (own stack: compose project t166qa, ports 47406/47479/47433, SMEM_TEST_S3_ENDPOINT set, scripts/e2e.sh direct; stack removed afterwards):
+  - make-test-integration equivalent (go test -race -count=1 -timeout 30m -tags integration ./...): 33 packages ok, 0 FAIL, exit 0.
+  - e2e (scripts/e2e.sh, 38 tests incl. editor-navy.spec.mjs): 6 full runs. Clean 38 passed 0 failed on runs 3, 4 and 5 (runs 3 and 4 back to back = the required two). Runs 1 and 2: 36 passed + 1 failed, then a rate-limit cascade on run 2 (my fault: 20 registrations/hour, I forgot reset-limits; reset done, then clean).
+  - make print-check: 193 tests, 193 pass, 0 fail, 0 skipped (incl. Navy fixture on A5/A4/Letter and override=natural for 12 ids).
+  - web: eslint, tsc, lint:i18n, check:api, prettier --check, check-assets (51) all ok; vitest 63 files 1093 tests pass on 3 of 4 runs.
+  EVIDENCE BY AC:
+  - AC1: editor-navy.spec.mjs green on every full run (move/rotate cover title, hide motto, sticker, Vietnamese text light on navy cover rgb(247,243,234), bg gold, reload identical, print route boxes within 0.3 % of editor, template switch clears layout) + print-check parity on A5/A4/Letter. Own probe (spec run, not committed): 40 items on the cover (limit), title dragged over the frame (x -15 %), rotated 45 degree heart across the frame, backs thanks rotated 90, bg paper/gold, A5/A4/Letter: every item and moved element drawn (42 boxes), sheet keeps paper ratio, sheet count unchanged, screenshots looked right (items over the frame are clipped by the sheet, nothing outside).
+  - AC2: print-check 193/193 (all pre-existing cases incl. class-book), vitest navy no-layout parity test; Memory Book editor/print specs (shell, gestures, text, palette, history, design) green.
+  - AC3: TestNavyClassicLayout in the integration run (internal/booklayout ok); my probe: theme/fonts switch (burgundy/modern + replaced notes heading) keeps layout byte-equal, placed text takes the theme light token; Navy -> Memory Book -> Navy leaves layout null and the Navy book draws unmoved with motto.
+  - AC4: PR description lists every id and omission with reason; autographs and letter paragraphs have no id.
+  - AC5: all of the above.
+  - Leader's checks: cover title with no graduation year: no layout, title starts below the school line (probe); new Vietnamese text legible on navy cover (asserted in e2e); Memory Book unchanged.
+  NON-BLOCKING OBSERVATIONS:
+  1. Flaky: editor-gestures.spec.mjs:482 (touch at 768 px, Memory Book, step 'swipe pans the stage and does not move the item', 3 px against 0.5 allowed) failed in e2e full runs 1 and 2, passed in runs 3-6 and in 3 isolated runs of that spec. vitest had 1 failure of 1093 in one run (first, while the integration suite loaded the machine; 3 later runs clean; I did not capture the name). Both look load/cold-start related; I did not check develop, so not proven unrelated to T-166 (shared runtime.tsx), but the touch spec has no Navy content. Suggest a flake ticket if it recurs.
+  2. docs/e2e.md: direct scripts/e2e.sh runs need make reset-limits (or SMEM_E2E_RATE_REGISTER_PER_HOUR) after ~2 runs; already documented.
+  3. Known limits from the PR stand (title blank 26 px vs 84 px; gold bg under light text is the student's choice).
 
 ### T-167 — [E09] Class book carries each member's layout (server cap, privacy, web wiring)
 - **Status:** TODO
@@ -675,7 +692,7 @@ Spec: .team/epics/E09-customisation-editor/27-history-e2e-hardening.md (read it 
 - **Branch:** task/t-169-e09-spike-doory-template-import-and-a-fa
 - **PR:** https://github.com/danyaa666/smemories/pull/165
 - **Updated:** 2026-11-05 08:23Z by dev
-- **Comments-seen:** 0
+- **Comments-seen:** 1
 
 Spec: .team/epics/E09-customisation-editor/28-canvas-foundation-spike.md (read it from the main checkout). Owner decision D-45 (2026-11-04): hybrid, DOM editor stays, Fabric.js only as an isolated image studio, Doory templates usable. Spike: convert the 10 Doory starter templates into our layout documents (coverage, determinism, validator, print parity), storage and apply model for shipped / own / per-section templates, studio failure modes, licence of templates and assets, then ADR 0005 with a task plan. No product code.
 
