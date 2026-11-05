@@ -12,7 +12,7 @@
 |---|---:|---|
 | BACKLOG | 8 | T-023, T-024, T-025, T-031, T-050, T-175, T-176, T-179 |
 | TODO | 2 | T-177, T-178 |
-| IN_PROGRESS | 1 | T-168 |
+| READY_FOR_QA | 1 | T-168 |
 | IN_QA | 1 | T-174 |
 | CHANGES_REQUESTED | 1 | T-173 |
 | MERGED | 22 | T-150, T-151, T-152, T-153, T-154, T-155, T-156, T-157, T-158, T-159, T-160, T-161, T-162, T-163, T-164, T-165, T-166, T-167, T-169, T-170, T-171, T-172 |
@@ -25,7 +25,7 @@
 
 **Open questions for you:** Q-064 (Doory templates: licence route, studio, and template colours (ADR 0005, T-169))
 
-_Board last written 2026-11-05 19:41Z_
+_Board last written 2026-11-05 19:49Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation

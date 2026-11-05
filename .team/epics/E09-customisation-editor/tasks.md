@@ -682,7 +682,7 @@ Spec: .team/epics/E09-customisation-editor/26-class-book-layouts.md (read it fro
 - 2026-11-05 19:24Z · leader · Leader: merged PR #170 (squash) at head 42a9cbf8f634c6db24b309bd4606c37c1dc79bea after QA_PASS (product head a3fa250 + QA test-only commits): make test-integration 33 pkg ok, go test -race 32 ok, e2e 39/0 twice, print-check 199/0, 60-place class: body 8002395 <= 8388608, truncated_layouts = last 22; Postman baseline identical to develop (28).
 
 ### T-168 — [E09] History e2e hardening: friendly mysql-missing message, QA probe cases (tests only)
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P3
 - **Type:** test
 - **Milestone:** M4
@@ -690,16 +690,18 @@ Spec: .team/epics/E09-customisation-editor/26-class-book-layouts.md (read it fro
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-168-e09-history-e2e-hardening-friendly-mysql
-- **PR:** —
-- **Updated:** 2026-11-05 19:27Z by dev
-- **Comments-seen:** 1
+- **PR:** https://github.com/danyaa666/smemories/pull/172
+- **Updated:** 2026-11-05 19:49Z by dev
+- **Comments-seen:** 3
 
 Spec: .team/epics/E09-customisation-editor/27-history-e2e-hardening.md (read it from the main checkout). Friendly message when the mysql client is missing, QA's three probe cases committed (30-row cap, restores in a row, pending autosave), spec time under about 60 s
 
 #### Comments
 - 2026-11-05 15:17Z · leader · Leader: spec 27 extended (2026-11-05): add QA's editor-flow-stale-qa.spec.mjs (from T-170) to testMatch and docs/e2e.md; optional tiny reset of 'finishing' after a cancelled Done navigation. See the end of the spec.
+- 2026-11-05 19:49Z · dev · PR #172 head 183a211. Tests/docs only. History spec: mysql-missing message (skip locally, fail with CI=1), 30-row cap (28 inserted + 5 real saves) with 3 restores, pending-autosave restore; stale-cache probe in testMatch (gap timing probes dropped, no assertions). Full scripts/e2e.sh twice on private stack t168dev: 44 passed each; history spec ~54 s. Optional finishing reset NOT done (BrowserRouter navigate returns no promise), documented in docs/e2e.md. QA: run e2e twice, once with mysql hidden from PATH.
+- 2026-11-05 19:49Z · leader · Leader to QA (queued after T-174): PR #172 head 183a211 (verify the full SHA with gh pr view; tests and docs only). Accepted: skipping the history spec without the mysql client (fails under CI), the removal of QA's two timing-only 'Done then Back' probes (no assertions), the 'finishing' reset left as a documented known gap. Verify: e2e twice on your own stack (reset rate limits between full runs: registration is capped at 20/hour), once with mysql hidden from PATH (clear message, skip; with CI=1 a failure), the two new history cases (30-row cap: 28 inserted + 5 back-dated saves, panel shows 30, three restores keep 30; pending autosave saved first and listed as newest 'Before restore'), editor-flow-stale-qa.spec.mjs in testMatch and green, history spec time under 60 s, mutation check of the 30-row case (raise the retention constant locally, confirm the test fails, revert). Counts + full SHA in your comment.
 
 ### T-169 — [E09] Spike: Doory-template import and a Fabric.js image studio beside the DOM editor (ADR 0005)
 - **Status:** MERGED
