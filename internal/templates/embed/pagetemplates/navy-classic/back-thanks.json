@@ -1,0 +1,26 @@
+{
+ "id": "back-thanks",
+ "label_en": "Thank you back",
+ "label_vi": "Bìa sau cảm ơn",
+ "kind": "back",
+ "source": "authored",
+ "licence": "LICENCE.txt",
+ "page": {
+  "bg": {
+   "color": "ink"
+  },
+  "items": [
+   {
+    "id": "n1g2h3",
+    "t": "asset",
+    "x": 440,
+    "w": 120,
+    "h": 90,
+    "cy": 330,
+    "r": 0,
+    "asset": "shape.heart",
+    "tint": "gold"
+   }
+  ]
+ }
+}

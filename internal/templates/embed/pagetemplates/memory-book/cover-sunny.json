@@ -1,0 +1,41 @@
+{
+ "id": "cover-sunny",
+ "label_en": "Sunny cover",
+ "label_vi": "Bìa nắng",
+ "kind": "cover",
+ "source": "authored",
+ "licence": "LICENCE.txt",
+ "page": {
+  "bg": {
+   "color": "soft"
+  },
+  "items": [
+   {
+    "id": "s1a2b3",
+    "t": "asset",
+    "x": 800,
+    "w": 150,
+    "h": 110,
+    "cy": 70,
+    "r": 12,
+    "asset": "shape.star",
+    "tint": "accent"
+   },
+   {
+    "id": "t1a2b3",
+    "t": "text",
+    "x": 100,
+    "w": 800,
+    "h": 80,
+    "cy": 800,
+    "r": 0,
+    "text": "Năm học đáng nhớ",
+    "font": "display",
+    "size": 26,
+    "color": "white",
+    "align": "center",
+    "bold": true
+   }
+  ]
+ }
+}

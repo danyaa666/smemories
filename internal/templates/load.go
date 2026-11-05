@@ -33,6 +33,10 @@ func mustSub(f fs.FS, dir string) fs.FS {
 
 const maxSpecBytes = 256 << 10
 
+// PageTemplateFS is embed/pagetemplates/ as a file system: <book template id>/<page template id>.json plus the licence file next to them
+// (E09 T-172; the rules are in internal/booklayout/pagetemplate.go).
+func PageTemplateFS() fs.FS { return mustSub(embedded, "embed/pagetemplates") }
+
 // Parse decodes and validates one template against the embedded assets. Unknown JSON fields are errors,
 // so typos are caught.
 func Parse(data []byte) (*Template, error) { return ParseFS(data, assetRoot) }

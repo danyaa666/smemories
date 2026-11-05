@@ -805,3 +805,143 @@ func TestVersionNeverGoesBack(t *testing.T) {
 	}
 	dbtest.AssertNoOrphans(t, e.db)
 }
+
+func tplList(book, kind string) string {
+	if kind == "" {
+		return fmt.Sprintf(`{"yearbook_id":%q}`, book)
+	}
+	return fmt.Sprintf(`{"yearbook_id":%q,"kind":%q}`, book, kind)
+}
+
+// T-172 AC2: template-list returns the shipped templates of the book's own template, sorted by label, to the owner only.
+func TestTemplateList(t *testing.T) {
+	e := newEnv(t, nil, 0)
+	alice, bob := e.register("alice@example.com"), e.register("bob@example.com")
+	mem, navy := e.book(alice, "memory-book"), e.book(alice, "navy-classic")
+	unknown := "01K7QB1B2C3D4E5F6G7H8J9K0M"
+
+	type tpl struct {
+		ID        string          `json:"id"`
+		LabelEN   string          `json:"label_en"`
+		LabelVI   string          `json:"label_vi"`
+		Kind      string          `json:"kind"`
+		ItemCount int             `json:"item_count"`
+		Page      json.RawMessage `json:"page"`
+	}
+	list := func(who user, book, kind string) (int, []tpl) {
+		rec := e.call("POST", "/api/book-layout/template-list", who, tplList(book, kind))
+		if rec.Code != 200 {
+			return rec.Code, nil
+		}
+		var b struct {
+			Status string
+			Data   struct {
+				Items  []tpl
+				NextID string `json:"next_id"`
+			}
+		}
+		if err := json.Unmarshal(rec.Body.Bytes(), &b); err != nil || b.Status != "OK" || b.Data.NextID != "" || b.Data.Items == nil {
+			t.Fatalf("envelope: %v %.300s", err, rec.Body)
+		}
+		if rec.Body.Len() > 64<<10 { // a handful of pages of at most 40 items stays small
+			t.Errorf("response is %d bytes", rec.Body.Len())
+		}
+		return 200, b.Data.Items
+	}
+
+	_, all := list(alice, mem, "")
+	kinds := map[string]bool{}
+	for i, p := range all {
+		kinds[p.Kind] = true
+		if p.ID == "" || p.LabelEN == "" || p.LabelVI == "" || p.ItemCount != len(mustItems(t, p.Page)) || p.ItemCount > booklayout.MaxItemsPerPage {
+			t.Errorf("template %+v", p)
+		}
+		if i > 0 && all[i-1].LabelEN > p.LabelEN {
+			t.Errorf("not sorted by label: %q before %q", all[i-1].LabelEN, p.LabelEN)
+		}
+		if strings.Contains(string(p.Page), "gold") { // the navy palette never reaches a memory-book
+			t.Errorf("%s holds a navy token", p.ID)
+		}
+	}
+	if len(kinds) != 4 {
+		t.Errorf("memory-book kinds %v", kinds)
+	}
+	_, onlyCover := list(alice, mem, "cover")
+	if len(onlyCover) == 0 || len(onlyCover) >= len(all) {
+		t.Errorf("kind filter: %d of %d", len(onlyCover), len(all))
+	}
+	for _, p := range onlyCover {
+		if p.Kind != "cover" {
+			t.Errorf("filter let %s through", p.Kind)
+		}
+	}
+	_, navyAll := list(alice, navy, "")
+	if len(navyAll) == 0 || navyAll[0].ID == all[0].ID {
+		t.Errorf("navy list %v", navyAll)
+	}
+	for _, p := range navyAll {
+		for _, m := range all {
+			if m.ID == p.ID && m.Kind == p.Kind && string(m.Page) == string(p.Page) {
+				t.Errorf("navy list holds memory-book's %s", p.ID)
+			}
+		}
+	}
+
+	e.call("POST", "/api/book-layout/template-list", alice, tplList(mem, "poster")).status(400, "ERROR_PARAM")
+	e.call("POST", "/api/book-layout/template-list", alice, tplList("nope", "")).status(400, "ERROR_PARAM")
+	for name, c := range map[string]struct {
+		who    user
+		book   string
+		code   int
+		status string
+	}{
+		"other user":   {bob, mem, 404, "ERROR_NOT_FOUND"},
+		"anonymous":    {user{}, mem, 401, "ERROR_UNAUTHORIZED"},
+		"unknown book": {alice, unknown, 404, "ERROR_NOT_FOUND"},
+	} {
+		rec := e.call("POST", "/api/book-layout/template-list", c.who, tplList(c.book, ""))
+		rec.status(c.code, c.status)
+		if strings.Contains(rec.Body.String(), `"items":[{`) {
+			t.Errorf("%s leaks templates", name)
+		}
+	}
+	// a book whose template has no layout block lists nothing; it is not an error
+	classic := e.book(alice, "classic")
+	if code, l := list(alice, classic, ""); code != 200 || len(l) != 0 {
+		t.Errorf("classic: %d %v", code, l)
+	}
+	// a foreign origin cannot make the call with the cookie
+	r := httptest.NewRequest("POST", "/api/book-layout/template-list", strings.NewReader(tplList(mem, "")))
+	r.Header.Set("Content-Type", "application/json")
+	r.Header.Set("Origin", "https://evil.example")
+	r.AddCookie(&http.Cookie{Name: auth.CookieName, Value: alice.cookie})
+	rec := httptest.NewRecorder()
+	e.h.ServeHTTP(rec, r)
+	if rec.Code != 403 {
+		t.Errorf("foreign origin: %d", rec.Code)
+	}
+}
+
+func mustItems(t *testing.T, page json.RawMessage) []json.RawMessage {
+	t.Helper()
+	var p struct{ Items []json.RawMessage }
+	if err := json.Unmarshal(page, &p); err != nil {
+		t.Fatal(err)
+	}
+	return p.Items
+}
+
+// The read spends the layout's per-user limit like the other reads.
+func TestTemplateListRateLimit(t *testing.T) {
+	now := func() time.Time { return t0 }
+	e := newEnv(t, ratelimit.NewMemoryFactory(now), 25)
+	alice := e.register("alice@example.com")
+	id := e.book(alice, "memory-book")
+	for range booklayout.Burst {
+		e.call("POST", "/api/book-layout/template-list", alice, tplList(id, "")).status(200, "OK")
+	}
+	r := e.call("POST", "/api/book-layout/template-list", alice, tplList(id, "")).status(429, "ERROR_RATE_LIMITED")
+	if r.Header().Get("Retry-After") == "" {
+		t.Error("no Retry-After")
+	}
+}

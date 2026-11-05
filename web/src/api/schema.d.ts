@@ -798,6 +798,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/book-layout/template-list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * List the shipped page templates of a book's template
+         * @description Called by the signed-in owner's template gallery (T-172). Returns the page templates shipped with the server for the book's **current** template, optionally only those of one page `kind`, sorted by English label then id. A page template is the value of `pages.<kind>` of a layout document (`page`, see `BookLayoutPage`) with a name in both languages; it holds only `text` and `asset` items (never an `image` item or a picture background), at most 40 items, and every shipped one passes the layout validator (a build test). Applying one to a book is a later task (T-173); this route only reads. A book whose template cannot hold a layout gets an empty list. `kind` must be a page kind of the book's template (else `ERROR_PARAM`). A missing book and someone else's both answer `ERROR_NOT_FOUND`; a class admin has no access. Takes from the same per-user limits as `save`. A request with the session cookie must come from an allowed Origin.
+         */
+        post: operations["listBookLayoutTemplates"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/book-layout/version-get": {
         parameters: {
             query?: never;
@@ -2124,37 +2144,39 @@ export interface components {
             v: 1;
             /** @description Page kind id (`cover`, `profile`, `notes`, `back` for Memory Book) to its content; a kind that is not listed has none. */
             pages: {
+                [key: string]: components["schemas"]["BookLayoutPage"];
+            };
+        };
+        /** @description The content of one page kind of a layout document (`pages.<kind>`), and the `page` of a page template (T-172): an optional background, moved template elements and added items. */
+        BookLayoutPage: {
+            /** @description Optional page background, exactly one of `asset` (an id of the asset registry), `media` (one of the owner's design images) or `color` (a colour token). */
+            bg?: {
+                /** @description An id of the asset registry. */
+                asset?: string;
+                /** @description The id of one of the owner design images of this book. */
+                media?: string;
+                /** @description A colour token of design.layout.colors. */
+                color?: string;
+            };
+            /** @description Template elements moved, resized, rotated or hidden, by element id (only the ids the kind lists as editable). Every key is optional. */
+            overrides?: {
                 [key: string]: {
-                    /** @description Optional page background, exactly one of `asset` (an id of the asset registry), `media` (one of the owner's design images) or `color` (a colour token). */
-                    bg?: {
-                        /** @description An id of the asset registry. */
-                        asset?: string;
-                        /** @description The id of one of the owner design images of this book. */
-                        media?: string;
-                        /** @description A colour token of design.layout.colors. */
-                        color?: string;
-                    };
-                    /** @description Template elements moved, resized, rotated or hidden, by element id (only the ids the kind lists as editable). Every key is optional. */
-                    overrides?: {
-                        [key: string]: {
-                            /** @description Left edge, thousandths of the page width; at most half the box may leave the page. */
-                            x?: number;
-                            /** @description Width, thousandths of the page width, 10 to 2000. */
-                            w?: number;
-                            /** @description Height, thousandths of the page width, 10 to 2000. */
-                            h?: number;
-                            /** @description Vertical centre, thousandths of the page height. */
-                            cy?: number;
-                            /** @description Rotation in degrees about the centre, -180 to 180. */
-                            r?: number;
-                            /** @description True to leave the template element out. */
-                            hidden?: boolean;
-                        };
-                    };
-                    /** @description Added items, at most 40 per page kind and 150 in the document. */
-                    items?: components["schemas"]["BookLayoutItem"][];
+                    /** @description Left edge, thousandths of the page width; at most half the box may leave the page. */
+                    x?: number;
+                    /** @description Width, thousandths of the page width, 10 to 2000. */
+                    w?: number;
+                    /** @description Height, thousandths of the page width, 10 to 2000. */
+                    h?: number;
+                    /** @description Vertical centre, thousandths of the page height. */
+                    cy?: number;
+                    /** @description Rotation in degrees about the centre, -180 to 180. */
+                    r?: number;
+                    /** @description True to leave the template element out. */
+                    hidden?: boolean;
                 };
             };
+            /** @description Added items, at most 40 per page kind and 150 in the document. */
+            items?: components["schemas"]["BookLayoutItem"][];
         };
         /** @description An added item. `t` selects the kind: `text` (`text` at most 500 code points, plain text; optional `font`, `size` pt, `color`, `align`, `bold`), `asset` (`asset` an id of the asset registry; optional `tint` colour token, only for a tintable asset) or `image` (`media` the id of one of the owner's design images of this book; optional `fit` and `radius` 0..500). `id` is 6 to 26 characters of `[A-Za-z0-9]`, unique in the document. `x`, `w`, `h`, `cy` are required, `r` defaults to 0. */
         BookLayoutItem: {
@@ -2312,6 +2334,38 @@ export interface components {
                     item_count: number;
                     /** @description Size of the stored document in bytes. */
                     bytes: number;
+                }[];
+            };
+        };
+        BookLayoutTemplateListRequest: {
+            /** @description Required. ULID of the yearbook. */
+            yearbook_id: string;
+            /** @description Optional. A page kind of the book's template (`cover`, `profile`, `notes`, `back`); omitted: all kinds. */
+            kind?: string;
+        };
+        BookLayoutTemplateListResponse: {
+            /**
+             * @description Always `OK` on success.
+             * @constant
+             */
+            status: "OK";
+            /** @description The shipped page templates. */
+            data: {
+                /** @description Always the empty string: the list is short and has no next page (the shape of docs/api-contract.md section 5). */
+                next_id: string;
+                /** @description The templates, sorted by English label then id. */
+                items: {
+                    /** @description Template id (lower-case letters, digits, hyphens), unique within the book template and kind. */
+                    id: string;
+                    /** @description English name */
+                    label_en: string;
+                    /** @description Vietnamese name */
+                    label_vi: string;
+                    /** @description The page kind it is made for. */
+                    kind: string;
+                    /** @description Number of items in `page`. */
+                    item_count: number;
+                    page: components["schemas"]["BookLayoutPage"];
                 }[];
             };
         };
@@ -4588,6 +4642,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BookLayoutVersionListResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    listBookLayoutTemplates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookLayoutTemplateListRequest"];
+            };
+        };
+        responses: {
+            /** @description The shipped page templates. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookLayoutTemplateListResponse"];
                 };
             };
             400: components["responses"]["ApiBadRequest"];

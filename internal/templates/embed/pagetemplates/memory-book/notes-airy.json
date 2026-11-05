@@ -1,0 +1,40 @@
+{
+ "id": "notes-airy",
+ "label_en": "Airy notes",
+ "label_vi": "Lời nhắn thoáng",
+ "kind": "notes",
+ "source": "authored",
+ "licence": "LICENCE.txt",
+ "page": {
+  "bg": {
+   "color": "white"
+  },
+  "items": [
+   {
+    "id": "s1e2f3",
+    "t": "asset",
+    "x": 440,
+    "w": 120,
+    "h": 90,
+    "cy": 760,
+    "r": 0,
+    "asset": "shape.heart",
+    "tint": "accent"
+   },
+   {
+    "id": "t1e2f3",
+    "t": "text",
+    "x": 100,
+    "w": 800,
+    "h": 70,
+    "cy": 860,
+    "r": 0,
+    "text": "Cảm ơn bạn đã ở lại trong trang này",
+    "font": "body",
+    "size": 20,
+    "color": "ink",
+    "align": "center"
+   }
+  ]
+ }
+}
