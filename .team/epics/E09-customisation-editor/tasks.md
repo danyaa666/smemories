@@ -682,7 +682,7 @@ Spec: .team/epics/E09-customisation-editor/26-class-book-layouts.md (read it fro
 - 2026-11-05 19:24Z · leader · Leader: merged PR #170 (squash) at head 42a9cbf8f634c6db24b309bd4606c37c1dc79bea after QA_PASS (product head a3fa250 + QA test-only commits): make test-integration 33 pkg ok, go test -race 32 ok, e2e 39/0 twice, print-check 199/0, 60-place class: body 8002395 <= 8388608, truncated_layouts = last 22; Postman baseline identical to develop (28).
 
 ### T-168 — [E09] History e2e hardening: friendly mysql-missing message, QA probe cases (tests only)
-- **Status:** IN_QA
+- **Status:** MERGED
 - **Priority:** P3
 - **Type:** test
 - **Milestone:** M4
@@ -690,11 +690,11 @@ Spec: .team/epics/E09-customisation-editor/26-class-book-layouts.md (read it fro
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** —
 - **Branch:** task/t-168-e09-history-e2e-hardening-friendly-mysql
 - **PR:** https://github.com/danyaa666/smemories/pull/172
-- **Updated:** 2026-11-05 19:59Z by qa
-- **Comments-seen:** 3
+- **Updated:** 2026-11-05 20:21Z by leader
+- **Comments-seen:** 5
 
 Spec: .team/epics/E09-customisation-editor/27-history-e2e-hardening.md (read it from the main checkout). Friendly message when the mysql client is missing, QA's three probe cases committed (30-row cap, restores in a row, pending autosave), spec time under about 60 s
 
@@ -702,6 +702,19 @@ Spec: .team/epics/E09-customisation-editor/27-history-e2e-hardening.md (read it 
 - 2026-11-05 15:17Z · leader · Leader: spec 27 extended (2026-11-05): add QA's editor-flow-stale-qa.spec.mjs (from T-170) to testMatch and docs/e2e.md; optional tiny reset of 'finishing' after a cancelled Done navigation. See the end of the spec.
 - 2026-11-05 19:49Z · dev · PR #172 head 183a211. Tests/docs only. History spec: mysql-missing message (skip locally, fail with CI=1), 30-row cap (28 inserted + 5 real saves) with 3 restores, pending-autosave restore; stale-cache probe in testMatch (gap timing probes dropped, no assertions). Full scripts/e2e.sh twice on private stack t168dev: 44 passed each; history spec ~54 s. Optional finishing reset NOT done (BrowserRouter navigate returns no promise), documented in docs/e2e.md. QA: run e2e twice, once with mysql hidden from PATH.
 - 2026-11-05 19:49Z · leader · Leader to QA (queued after T-174): PR #172 head 183a211 (verify the full SHA with gh pr view; tests and docs only). Accepted: skipping the history spec without the mysql client (fails under CI), the removal of QA's two timing-only 'Done then Back' probes (no assertions), the 'finishing' reset left as a documented known gap. Verify: e2e twice on your own stack (reset rate limits between full runs: registration is capped at 20/hour), once with mysql hidden from PATH (clear message, skip; with CI=1 a failure), the two new history cases (30-row cap: 28 inserted + 5 back-dated saves, panel shows 30, three restores keep 30; pending autosave saved first and listed as newest 'Before restore'), editor-flow-stale-qa.spec.mjs in testMatch and green, history spec time under 60 s, mutation check of the 30-row case (raise the retention constant locally, confirm the test fails, revert). Counts + full SHA in your comment.
+- 2026-11-05 20:20Z · qa · QA_PASS T-168, PR #172 head 183a2112e6df3c75e5749d3d31214754d115b27c (verified with gh pr view and git rev-parse; no test commits pushed by QA, nothing pushed). CI on head: go, web, security pass (e2e, go-integration, image paused per D-37/D-38). Merge with current develop (95a5fa2): git merge-tree clean, GitHub MERGEABLE/CLEAN. Note: the branch does not yet contain T-174 (ff4c6f6).
+  Own stack: compose project t168qa, mysql 13968, redis 16968, s3 19968 (SMEM_TEST_S3_ENDPOINT set), scripts/e2e.sh direct with API 18168/web 14168, rate limits reset (redis smem:test:rl:*) before every run; stack removed afterwards (own project only).
+  RESULT LINES (head 183a2112e6df3c75e5749d3d31214754d115b27c):
+  - e2e run 1: 44 passed, 0 failed (3.9 m). e2e run 2 (limits reset between): 44 passed, 0 failed (3.9 m).
+  - History spec, 7 tests: run 1 0.37+12.7+1.6+10.6+9.3+9.8+9.5 = 53.9 s; run 2 12.6+1.3+10.4+9.2+9.9+9.6+0.39 = 53.4 s. Under 60 s (AC2).
+  - mysql hidden from PATH (symlink dir without mysql*, local): history setup prints 'the history e2e needs the mysql client on PATH; see docs/e2e.md', all 7 history tests skipped, no ENOENT, 37 passed 7 skipped 0 failed, exit 0 (AC1).
+  - Same with CI=1: setup test fails with the same message ('Error: the history e2e needs the mysql client on PATH; see docs/e2e.md'), 37 passed 1 failed, exit 1.
+  - editor-flow-stale-qa.spec.mjs is in testMatch and ran green in all runs (12.6 s).
+  - New cases green in both runs: 33 snapshots (28 inserted + 5 saves) panel and server 30, three restores keep 30; pending autosave saved first (200), restored version wins, newest row 'Before restore' with the 77 % edit, Back to current shows 30 %.
+  - Mutation: MaxSnapshots 30 -> 40 in internal/booklayout/service.go (local only, reverted with git checkout, worktree clean, not pushed): 'editor-history 33 snapshots ...' FAILS at 'Expected: 30, Received: 32' (40 passed, 2 failed). The other failure in that run was editor-gestures 'touch at 768 px ... swipe pans the stage' (item moved 3 px vs <= 0.5): that is the flaky measurement T-174 fixed (ff4c6f6), not in this branch; it passed in the other 3 full runs; unrelated to T-168, expect it gone after merging develop.
+  - prettier --check on the 3 changed e2e files: clean (tools/e2e as a whole has pre-existing warnings in untouched files and out/ artefacts, not from this PR).
+  Non-blocking: (1) the 'finishing' reset left as documented known gap, accepted by leader. (2) docs/e2e.md rate-limit sentence still says five specs register 7 accounts; stale but harmless (unchanged by this PR).
+- 2026-11-05 20:21Z · leader · Leader: merged PR #172 (squash) at head 183a2112e6df3c75e5749d3d31214754d115b27c after QA_PASS (e2e 44/0 x2, history spec 53.9 s, mysql-missing skip and CI fail verified, MaxSnapshots mutation fails the new case); go/web/security green.
 
 ### T-169 — [E09] Spike: Doory-template import and a Fabric.js image studio beside the DOM editor (ADR 0005)
 - **Status:** MERGED
@@ -965,7 +978,7 @@ Spec: .team/epics/E09-customisation-editor/35-save-page-as-template-ui.md (read 
 #### Comments
 
 ### T-177 — [E09] Shipped page templates for Memory Book: four or more looks per page kind, authored by us
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -973,10 +986,10 @@ Spec: .team/epics/E09-customisation-editor/35-save-page-as-template-ui.md (read 
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-177-e09-shipped-page-templates-for-memory-bo
 - **PR:** —
-- **Updated:** 2026-11-05 by leader
+- **Updated:** 2026-11-05 20:09Z by dev
 - **Comments-seen:** 0
 
 Spec: .team/epics/E09-customisation-editor/36-shipped-templates-memory-book.md (read it from the main checkout). Content files only (our own authoring, no Doory material; route B), contrast and distinctness gates in Go tests, print-check case per template on A5/A4/Letter, contact sheet, docs
