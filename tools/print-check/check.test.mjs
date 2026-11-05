@@ -1303,6 +1303,71 @@ describe("layout layer: the printed page is the page on screen (T-154)", () => {
     });
   }
 
+  // T-171 (QA): stretching shapes at extreme ratios and rotations print where the screen draws them. The back page has no template content, so every ink pixel is a shape.
+  for (const size of ["A5", "A4", "Letter"]) {
+    test(`${size}: stretching shapes at extreme ratios (w 900 x h 10, rotated bar, tall ellipse) print as drawn on the back page (T-171 QA)`, async () => {
+      const book = makeBook({ size, notes: 2, template: "memory-book" });
+      const sh = (id, asset, x, w, h, cy, r, tint = "ink") => ({ id, t: "asset", asset, tint, x, w, h, cy, r });
+      book.layout = { v: 1, pages: { back: { items: [
+        sh("thin01", "shape.rect", 50, 900, 10, 150, 0),
+        sh("thin02", "shape.rect", 50, 900, 10, 350, 7),
+        sh("ellw01", "shape.ellipse", 150, 700, 40, 550, -10),
+        sh("bar001", "shape.rect", 60, 12, 250, 800, 0),
+        sh("ellt01", "shape.ellipse", 500, 200, 450, 800, 20),
+      ] } } };
+      const r = await printAndShow(book, size, `stretch-qa-${size}`);
+      const pic = raster(r.file, 5, DPI);
+      const scr = await sheetPicture(r.page, "back", 0);
+      assert.ok(Math.abs(pic.w - scr.w) <= 2 && Math.abs(pic.h - scr.h) <= 2, `back: ${pic.w}x${pic.h} against ${scr.w}x${scr.h}`);
+      const diff = difference(pic, scr);
+      console.log(`# T171-QA ${size} back: difference ${(diff * 100).toFixed(3)} %`);
+      const fits = await r.page.evaluate(() => [...document.querySelectorAll('.bk-sheet[data-page="back"] [data-layout-item] svg')].map((e) => [e.parentElement.dataset.layoutItem, e.getAttribute("preserveAspectRatio")]));
+      assert.equal(fits.length, 5, "all five shapes are drawn");
+      for (const [id, par] of fits) assert.equal(par, "none", `${id} is drawn edge to edge`);
+      let checked = 0;
+      for (const b of await itemBoxes(r.page, "back", 0, scr)) {
+        const box = { x0: b.x0 - 6, y0: b.y0 - 6, x1: b.x1 + 6, y1: b.y1 + 6 };
+        const a = inkBox(scr, box), p = inkBox(pic, box);
+        assert.ok(a.n > 300, `${size} ${b.id}: ${a.n} ink pixels on screen`);
+        checked++;
+        for (const k of ["x0", "y0", "x1", "y1"]) assert.ok(Math.abs(a[k] - p[k]) <= 2, `${size} item ${b.id}: ${k} ${a[k]} on screen against ${p[k]} in print (192 dpi)`);
+        console.log(`# T171-QA ${size} ${b.id}: ink ${a.n} px on screen, ${p.n} in print; edge error x0 ${Math.abs(a.x0 - p.x0)} y0 ${Math.abs(a.y0 - p.y0)} x1 ${Math.abs(a.x1 - p.x1)} y1 ${Math.abs(a.y1 - p.y1)}`);
+      }
+      assert.equal(checked, 5);
+      await r.page.close();
+      // 1 %, not the 0.5 % of the fixture page: five long edges (two 900-wide bars, a 700-wide and a 450-tall ellipse, all rotated or thin) are 100 % anti-aliasing, measured 0.6 % on A5, 0.1 % on A4, 0.05 % on Letter
+      assert.ok(diff < 0.01, `${size} back: ${(diff * 100).toFixed(3)} % of the pixels differ`);
+    });
+
+    // The fixture banner was moved to the top edge because under the Memory Book cover title it drifted 7 px. With the template title hidden, the same banner is swept down the whole
+    // cover: if the shape alone drifted, the rows would show it.
+    test(`${size}: the fixture banner alone (title hidden) does not drift at any height of the cover (T-171 QA)`, async () => {
+      const book = makeBook({ size, notes: 2, template: "memory-book" });
+      const items = [100, 200, 300, 400, 500, 600, 700, 800, 900].map((cy) => ({ id: `sw${cy}x`, t: "asset", asset: "shape.rect", tint: "ink", x: 60, w: 560, h: 36, cy, r: -3 }));
+      book.layout = { v: 1, pages: { cover: { overrides: { "cover.title": { hidden: true } }, items } } };
+      const ctl = makeBook({ size, notes: 2, template: "memory-book" });
+      ctl.layout = { v: 1, pages: { cover: { overrides: { "cover.title": { hidden: true } }, items: [] } } };
+      const c = await printAndShow(ctl, size, `stretch-sweep-ctl-${size}`);
+      const cscr = await sheetPicture(c.page, "cover", 0);
+      await c.page.close();
+      const r = await printAndShow(book, size, `stretch-sweep-${size}`);
+      const pic = raster(r.file, 1, DPI);
+      const scr = await sheetPicture(r.page, "cover", 0);
+      let worst = 0;
+      const ctlInk0 = (b, box) => inkBox(cscr, box).n; // boxes that hold template ink without the banner (photo, sticker) are logged, not asserted: that ink is what drifts
+      for (const b of await itemBoxes(r.page, "cover", 0, scr)) {
+        const box = { x0: b.x0 - 6, y0: b.y0 - 6, x1: b.x1 + 6, y1: b.y1 + 6 };
+        const a = inkBox(scr, box), p = inkBox(pic, box);
+        const d = ["x0", "y0", "x1", "y1"].map((k) => Math.abs(a[k] - p[k]));
+        if (ctlInk0(b, box) === 0) { worst = Math.max(worst, ...d); for (const e of d) assert.ok(e <= 2, `${size} ${b.id}: the banner alone is ${d.join(" ")} px off between screen and print (192 dpi)`); }
+        const ctlInk = inkBox(cscr, box).n; // dark template pixels (photo, sticker) already inside the same box without the banner
+        console.log(`# T171-QA sweep ${size} ${b.id}: ink ${a.n}/${p.n} edge error ${d.join(" ")}; template ink in the box without the banner ${ctlInk}`);
+      }
+      console.log(`# T171-QA sweep ${size}: worst edge error ${worst} px at 192 dpi`);
+      await r.page.close();
+    });
+  }
+
   // T-159 AC3: the editor's stage draws the same page as the book screen. Both are on-screen renderings at paper size (zoom 100 %, scale 1), so unlike the print
   // comparison above there is no PDF noise: the layout-bearing page must differ by far less than the 0.5 % budget.
   for (const size of ["A5", "A4", "Letter"]) {
