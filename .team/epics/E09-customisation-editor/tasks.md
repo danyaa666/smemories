@@ -710,19 +710,19 @@ Spec: .team/epics/E09-customisation-editor/28-canvas-foundation-spike.md (read i
 - 2026-11-05 08:52Z · leader · merged 64804e2; QA reproduced coverage 73%/85%, determinism, validator 52 ok/4 refused, parity 0.03-0.20%, 15/15 studio failure cases, licence quotes match pinned SHA a65c43a; ADR 0005 stays Proposed until Q-064 answered
 
 ### T-170 — [E09] Editor flow: page by page, Save and done, Print, back to the book manage page (web)
-- **Status:** READY_FOR_QA
+- **Status:** IN_PROGRESS
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M4
 - **Depends-on:** none
 - **Risk:** low
-- **Rework:** 1
+- **Rework:** 2
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** dev
 - **Branch:** task/t-170-e09-editor-flow-page-by-page-save-and-do
 - **PR:** https://github.com/danyaa666/smemories/pull/166
-- **Updated:** 2026-11-05 09:56Z by dev
-- **Comments-seen:** 6
+- **Updated:** 2026-11-05 13:50Z by dev
+- **Comments-seen:** 8
 
 Spec: .team/epics/E09-customisation-editor/29-editor-page-flow-done-print.md (read it from the main checkout). Previous/next page through the real book order, Done (settle then manage page, leave guard), Print after settle, deep links from the manage page, e2e editor-flow
 
@@ -743,6 +743,14 @@ Spec: .team/epics/E09-customisation-editor/29-editor-page-flow-done-print.md (re
 - 2026-11-05 09:30Z · leader · Leader rework brief (QA_FAIL accepted). R1 (required): spec 29 requirement 1 — when the edited page is a notes page, show the text 'applies to every notes page' (new i18n key in en.json and vi.json, vi wording natural), visible near the position text and announced in the live region on arrival; add a component/unit test for it. R2: QA committed tools/e2e/editor-flow-qa.spec.mjs on the branch (71fb685); add it to testMatch in tools/e2e/playwright.config.mjs (or fold its cases into editor-flow.spec.mjs), keep it green, prettier/lint. R3 (cheap, from QA): after Done, focus on the manage page should land on the page heading, not on a button labelled Done; add a small test. Rebase on develop if it moved; re-run vitest and the e2e suite and put counts + head SHA in the board comment. Nothing under .team/.
 - 2026-11-05 09:56Z · dev · Rework round 1, PR #166 head 06029547d77e75053f6881fea93ff11669069cf0 (develop merged in, no force-push; the .team files in the merge are develop's own, the PR diff has none). R1: new key editor.notesShared (en: 'This layout applies to every notes page.', vi: 'Bố cục này áp dụng cho mọi trang lời nhắn.') shown next to the position text on a notes page (data-testid notes-shared) and appended to the live-region announcement when stepping onto a notes page (a deep link that opens on notes shows the text but makes no announcement); tests in EditorFlow.test.tsx (step through, deep link, absent elsewhere). R2: editor-flow-qa.spec.mjs in testMatch (+ docs/e2e.md line). One edit to QA's spec: after Done and browser Back from the ?page=notes deep link the editor correctly reopens on 'Page 3 of 4: Notes page 1' (same URL), the spec expected the cover; changed that assertion only. R3: YearbookEdit h1 gets tabIndex -1 and takes focus when the book loads (test in pages/editor.test.tsx). Results: web lint+prettier, lint:i18n, check:api, build OK; vitest 64 files / 1116 passed / 0 failed. e2e (private stack t170stack, ports 13370/16370/19370/18370/14370, SMEM_TEST_S3_ENDPOINT set, scripts/e2e.sh direct): 40 passed, 0 failed (3.3m) on 06029547; QA spec alone 5 of 5 passes. Observation: in one earlier full run (before the assertion edit, 17 s slow start) the QA spec saw 'Page 1 of 4: Cover' after Back instead of the notes page; not reproduced in 6 more runs, so possibly a timing flake in the Back step (Editor mounts with ?page=notes but the first-render page list); watch for it. Not run: Go tests / print-check (no Go or render change).
 - 2026-11-05 09:56Z · leader · Leader to QA (re-test after rework): PR #166 head 06029547d77e75053f6881fea93ff11669069cf0. Check R1 notes-page text (en+vi, live region on arrival; deep link shows text without announcement), R2 editor-flow-qa.spec.mjs now in testMatch (dev changed ONE assertion: after Done and browser Back from the ?page=notes deep link the editor reopens on notes; judge whether that is the right expectation), R3 manage-page h1 focus. Dev saw one run where the QA spec read 'Page 1 of 4: Cover' after Back instead of notes, not reproduced in 6 runs: run the full e2e at least twice plus the QA spec 10 times in isolation and report any repeat (a repeat means a real remount race: QA_FAIL). Counts and full SHA in your comment.
+- 2026-11-05 13:49Z · qa · QA re-test PR #166 head 06029547d77e75053f6881fea93ff11669069cf0 (no new commit from me). One blocker, the remount race dev suspected is real and frequent.
+  ISSUES
+  1. [blocker] Editor opens on the wrong page after browser Back (and, by the same cause, probably after a deep link when book-data is cached). Repro (own stack t170qa, ports 13471/16471/19471/18471/14471, SMEM_TEST_S3_ENDPOINT set, scripts/e2e.sh logic with 'editor-flow-qa.spec.mjs --repeat-each=10'): 6 of 10 runs FAIL at editor-flow-qa.spec.mjs:129 'Expected Page 3 of 4: Notes page 1, Received Page 1 of 4: Cover'; 4 of 10 pass. Steps in the spec: approved note, open manage page, click 'Edit notes pages' (/editor?page=notes), walk pages, Done -> manage page, browser Back -> URL is /editor?page=notes but the page shown is Cover in 60% of runs. At 849fc2c (old assertion 'cover') it passed twice by luck, so the result is nondeterministic, not a changed behaviour: dev's assertion change does NOT fix it, it only moves which outcome flakes.
+   Suspected cause: web/src/book/editor/EditorShell.tsx:77 computes pageIdx once in a useState initialiser from listPages(data) at first render. web/src/pages/Editor.tsx serves react-query cache for ['book-data', id] first (then refetches, structuralSharing false), so on Back (remount) the first render can use cached/stale data whose notes list is empty or older (no notes page), findIndex gives -1, Math.max -> 0 = cover, and it is never recomputed when fresh data arrives. Same hazard for any deep link (manage page 'Edit notes pages') when cached book-data predates an approved note.
+   Expected: the page named in ?page= is opened whenever that page exists in the fresh data (spec 29 req. 4 'The editor's first page is taken from the link'); and the same result every run. Fix idea: do not mount EditorShell on cached data (render only when the query has fetched after mount, e.g. isFetchedAfterMount / !isFetching, or gcTime 0 / refetchOnMount 'always' + wait), or re-apply the ?page= start page once when the first fresh data arrives and the user has not moved yet. Add a vitest for EditorShell/Editor with a cache whose notes list is empty and a fresh answer with one note.
+   Expectation judgement: after Done + Back from ?page=notes the editor should reopen on notes (same URL entry); dev's changed assertion is the right expectation, keep it, but it must pass 10 of 10.
+  2. [minor, not blocking] Not yet verified because of 1: R1/R3 on the real stack (spec step 1 passed 10 of 10 up to line 129: notes-shared text visible on ?page=notes, so R1 text shows; R3 focus line prints in QA-FOCUS-AFTER-DONE). Full e2e twice not run (stopped after the isolated repeat failed, per the rule 'any repeat = QA_FAIL'). Counts: isolated QA spec 4 passed / 6 failed of 10, head 06029547d77e75053f6881fea93ff11669069cf0. CI go/web/security pass, e2e/go-integration/image skipped by design. After the fix I will run the QA spec 10x isolated and the full suite twice.
+- 2026-11-05 13:50Z · leader · Leader rework brief (QA_FAIL round 2, accepted). QA proved a real remount race: after Done and browser Back the URL is /editor?page=notes but the page shown is Cover in 6 of 10 isolated runs of editor-flow-qa.spec.mjs (head 06029547, line 129). Cause (QA, confirmed by reading): EditorShell.tsx ~77 computes the start page ONCE in a useState initialiser from listPages(data) of the first render; Editor.tsx serves cached ['book-data', id] first, so a cache without the notes page gives findIndex -1 -> cover and it is never recomputed when fresh data arrives. Same hazard for any deep link when cached data predates an approved note. R1 (required, root cause, not a retry/sleep): hold the REQUESTED page (the id/section from ?page=, or the user's last choice) as state and resolve it to an index against the CURRENT page list on every render, falling back to the cover only when the requested page is absent from the list; once the user has moved (Prev/Next/strip/keyboard) their choice wins and is never overwritten by data arriving later. Do not delay mounting on a spinner unless you can show it is needed; do not add timeouts. Keep the AC4 behaviour: unknown or hidden ?page= -> cover; a notes page that does not exist yet falls back to cover and switches to notes only if it appears AND the user has not moved. R2: vitest for EditorShell/Editor with a cache whose notes list is empty and a fresh answer with one approved note (start page becomes notes; after the user moved to profile, fresh data does not move them); keep dev's changed assertion (Done+Back from ?page=notes reopens on notes). R3: run editor-flow-qa.spec.mjs with --repeat-each=20 in isolation on your stack and report N passed / N failed (must be 20/0), then the full e2e suite twice; counts + full head SHA in the board comment. Rebase on develop if it moved. Nothing under .team/.
 
 ### T-171 — [E09] Stretching shapes: rectangle and ellipse that fill their box (registry + web)
 - **Status:** READY_FOR_QA
@@ -756,14 +764,16 @@ Spec: .team/epics/E09-customisation-editor/29-editor-page-flow-done-print.md (re
 - **Assignee:** —
 - **Branch:** task/t-171-e09-stretching-shapes-rectangle-and-elli
 - **PR:** 168
-- **Updated:** 2026-11-05 10:37Z by dev
-- **Comments-seen:** 2
+- **Updated:** 2026-11-05 13:50Z by leader
+- **Comments-seen:** 4
 
 Spec: .team/epics/E09-customisation-editor/30-stretching-shapes.md (read it from the main checkout). shape.rect and shape.ellipse (CC0, licence files, stretch flag), AssetSvg edge to edge, free resize in the editor, print-check cell
 
 #### Comments
 - 2026-11-05 10:37Z · dev · PR #168, head 3169629 (develop merged in, T-172 included, no conflict). shape.rect and shape.ellipse (stretch flag, AssetSvg preserveAspectRatio none, palette default 40% x 25% of page, print-check cells stretch1/stretch2 on the cover, docs). Resize was already free of aspect lock (Shift keeps ratio), so no gesture change, only a test. My results on the pre-merge head d949ad9 (private compose smem-t171, scripts/e2e.sh direct): e2e 39 passed 0 failed incl. new palette case; print-check 193 pass 0 fail (A5/A4/Letter); go test assets/booklayout/templates ok, integration assets+booklayout ok; web lint, tsc, lint:i18n, check:api, vitest 1125/1125, build green after merge. Verify: thin rotated rectangle, tint per theme, extreme ratios, print on 3 papers. Note: print-check fixture banner sits at top edge because under the cover title the template text shifts 7 px screen vs print on A4 (not the shape).
 - 2026-11-05 10:37Z · leader · Leader to QA: PR #168 head 3169629 (full SHA from gh pr view). Dev ran e2e 39/39 and print-check 193/193 on the pre-merge head d949ad9 and only unit/web checks after merging develop (T-172). Accepted: no gesture code change (resize already free of aspect lock; Shift keeps ratio). You must run on the merged head: full e2e (own stack, twice), make print-check, web checks, go test ./internal/assets/... ./internal/booklayout/... ./internal/templates/..., and make test-integration for touched packages; report counts + full SHA. Verify per spec 30: thin rotated rect, extreme aspect (w 900 h 10) saves, tint per theme, both shapes in Shapes tab, print on A5/A4/Letter, other assets keep their aspect, fixture banner moved to the top edge (not hiding a real shape/print drift).
+- 2026-11-05 13:49Z · qa · QA: claimed by mistake just before the usage gate turned SLEEP (cache 364s old); nothing tested yet. Leader: please re-dispatch QA for T-171 after the next gate refresh (head 3169629bc4d5f17f6338227690388bf1646b4f5d), the claim is idle.
+- 2026-11-05 13:50Z · leader · Leader: QA claim was a mistake (gate turned SLEEP before it started); reset to READY_FOR_QA, nothing tested. Head 3169629bc4d5f17f6338227690388bf1646b4f5d.
 
 ### T-172 — [E09] Page templates: model, shipped storage, validator gate and read route (Go + web preview)
 - **Status:** MERGED
@@ -808,7 +818,7 @@ Spec: .team/epics/E09-customisation-editor/31-page-templates-model-and-shipped.m
 - 2026-11-05 10:03Z · leader · merged 44f339a; QA: integration 33 pkgs ok (-race, matrix incl template-list), postman 186/420/0 x2, e2e 38/0, print-check 193/193, vitest 1120; gate negative controls fail go test; non-blocking: comment in web/src/api/bookLayout.ts says save rate limit but layout read limit is used; prod skip path verified by code read only
 
 ### T-173 — [E09] Own page templates and the apply API (Go): save my page, apply a template per section
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -816,10 +826,10 @@ Spec: .team/epics/E09-customisation-editor/31-page-templates-model-and-shipped.m
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-173-e09-own-page-templates-and-the-apply-api
 - **PR:** —
-- **Updated:** 2026-11-05 10:03Z by leader
+- **Updated:** 2026-11-05 13:44Z by dev
 - **Comments-seen:** 1
 
 Spec: .team/epics/E09-customisation-editor/32-own-templates-and-apply-api.md (read it from the main checkout). book_template_tab migration, template-create/delete/list, apply-template in one write with one apply snapshot, limits 20 and 64 KiB, concurrency tests. Risk high: owner approval before merge
