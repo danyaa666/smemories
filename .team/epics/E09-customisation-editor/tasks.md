@@ -710,23 +710,37 @@ Spec: .team/epics/E09-customisation-editor/28-canvas-foundation-spike.md (read i
 - 2026-11-05 08:52Z · leader · merged 64804e2; QA reproduced coverage 73%/85%, determinism, validator 52 ok/4 refused, parity 0.03-0.20%, 15/15 studio failure cases, licence quotes match pinned SHA a65c43a; ADR 0005 stays Proposed until Q-064 answered
 
 ### T-170 — [E09] Editor flow: page by page, Save and done, Print, back to the book manage page (web)
-- **Status:** IN_PROGRESS
+- **Status:** QA_FAIL
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M4
 - **Depends-on:** none
 - **Risk:** low
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-170-e09-editor-flow-page-by-page-save-and-do
-- **PR:** —
-- **Updated:** 2026-11-05 08:47Z by dev
-- **Comments-seen:** 0
+- **PR:** https://github.com/danyaa666/smemories/pull/166
+- **Updated:** 2026-11-05 09:29Z by qa
+- **Comments-seen:** 4
 
 Spec: .team/epics/E09-customisation-editor/29-editor-page-flow-done-print.md (read it from the main checkout). Previous/next page through the real book order, Done (settle then manage page, leave guard), Print after settle, deep links from the manage page, e2e editor-flow
 
 #### Comments
+- 2026-11-05 09:18Z · dev · PR #166, head 849fc2c (rebased on develop 64804e2+). Prev/Next page + PageUp/PageDown, position text, Done (settle, then guard release, then manage page), Print label+hint, manage page 'Design the pages' links with ?page= deep link; docs/editor-flow.md. Tests: vitest 1113 pass, lint/prettier/tsc/lint:i18n/check:api/build green. e2e on private stack (compose t170stack, ports 13370/16370/19370, S3 endpoint set, scripts/e2e.sh direct): 39 passed, 0 failed, head 849fc2c (incl. new editor-flow.spec.mjs). Notes: flow controls are a 2nd toolbar row (+~56px) so editor-shell step 6 and editor-gestures flush-edge now scrollIntoView the handle; useLeaveGuard gained release() (shared with Customise, its tests pass). Not run: make test-integration (no Go change), print-check (no render change). QA: keyboard-only walk, hidden section, offline Done, two tabs (409), browser Back, print.
+- 2026-11-05 09:19Z · leader · Leader to QA: PR #166 head 849fc2ce0f526854c1cc64a678bc0a0598057bab (web only). Accepted: second toolbar row for the flow controls; editor-shell step 6 and editor-gestures flush-edge now scroll the handle into view (check those two edits are sound and do not weaken the assertions); useLeaveGuard gained release(), also used by the Customise screen (re-test the Customise leave guard: Back, link, tab close). Run vitest, lint, tsc, lint:i18n, check:api, build and the full e2e twice (scripts/e2e.sh on your own stack); report counts and the full SHA. Known flake outside this task: editor-gestures touch test (T-174): report but do not fail T-170 for it unless it fails in isolation on develop too. Verify per spec 29: whole-book walk with a hidden section, Done then browser Back, offline Done, two tabs (409), Print waits for save, deep links incl. unknown value, keyboard-only walk, the notes page label, manage-page refetch after Done.
+- 2026-11-05 09:29Z · qa · QA on PR #166 head 849fc2ce0f526854c1cc64a678bc0a0598057bab (QA test commit 71fb685 on top, test file only). One issue, everything else verified.
+  ISSUES
+  1. [major, small] Spec 29 req. 1 SHALL not met: the notes page does not say it 'applies to every notes page' (ADR 0004 shared layout). Repro: book with an approved note, open /yearbooks/:id/editor?page=notes; position text is 'Page 3 of 4: Notes page 1', no text anywhere says the layout is shared (no such string in en.json/vi.json; only docs/editor-flow.md mentions it). Expected: a visible, accessible hint (and vi) while the notes page is current. Fix: add the string to both locales and render it near the position text (or in the property panel) when page.section==='notes'. My spec tools/e2e/editor-flow-qa.spec.mjs asserts /applies to every notes page/ at that point; please add it to testMatch in tools/e2e/playwright.config.mjs (I cannot touch the config) once it is green.
+  RESULTS (own stack: compose project t170qa, ports 13471/16471/19471, SMEM_TEST_S3_ENDPOINT set, scripts/e2e.sh direct)
+  - web: eslint+prettier OK, tsc OK, lint:i18n OK, check:api OK, build OK, vitest 64 files / 1113 passed / 0 failed. head 849fc2ce0f526854c1cc64a678bc0a0598057bab
+  - e2e run 1: 39 passed, 0 failed (3.2m). e2e run 2: 39 passed, 0 failed (3.2m). head 849fc2ce0f526854c1cc64a678bc0a0598057bab. No touch flake seen (T-174 not hit).
+  - No Go change, so make test-integration / print-check not run (no render change); PR CI go/web pending at check time, security pass, e2e/go-integration/image skipped by design.
+  - QA probe spec (real stack, passed apart from item 1 which I added after): book with profile+approved note = 4 pages; deep link ?page=notes lands on 'Page 3 of 4: Notes page 1'; keyboard only: Enter on link, Next page via Enter, Previous via Space, PageUp/PageDown, no-op at both ends, PageDown inside the Width number field does not change page; focus stays on Next after pressing it; Done offline (setOffline) stays on /editor, alert shown, typed value kept (43), back online Done saves 430 and lands on manage page; Done then browser Back returns to the editor (no loop), Forward to manage; real second tab saves 60, stale tab A Done gets conflict, stays, B's 600 stays stored; Customise leave guard: link, Back both ask, Stay keeps URL, after Save a link leaves without a question and one Back returns to customise (sentinel gone).
+  - AC map: AC1 ok (dev spec step 2 + my walk, hidden section skipped, manage page links omit hidden); AC2 ok (409, offline, guard); AC3 ok (dev step 5: print opens after slow save settled, editor intact); AC4 ok (step 3 deep links, unknown/hidden -> cover); AC5 ok.
+  - Reviewed the two edited e2e steps (editor-shell step 6, gestures flush-edge): only scrollIntoView added before the geometry probe, assertions unchanged, sound. useLeaveGuard.release(): sound, Customise guard re-tested above.
+  NON-BLOCKING: after Done my probe saw document.activeElement = a button labelled 'Done' on the manage page right after navigation (focus not moved to a heading/main); consider focusing the page h1. Print hint and 'Design the pages' strings fine.
+- 2026-11-05 09:30Z · leader · Leader rework brief (QA_FAIL accepted). R1 (required): spec 29 requirement 1 — when the edited page is a notes page, show the text 'applies to every notes page' (new i18n key in en.json and vi.json, vi wording natural), visible near the position text and announced in the live region on arrival; add a component/unit test for it. R2: QA committed tools/e2e/editor-flow-qa.spec.mjs on the branch (71fb685); add it to testMatch in tools/e2e/playwright.config.mjs (or fold its cases into editor-flow.spec.mjs), keep it green, prettier/lint. R3 (cheap, from QA): after Done, focus on the manage page should land on the page heading, not on a button labelled Done; add a small test. Rebase on develop if it moved; re-run vitest and the e2e suite and put counts + head SHA in the board comment. Nothing under .team/.
 
 ### T-171 — [E09] Stretching shapes: rectangle and ellipse that fill their box (registry + web)
 - **Status:** TODO
@@ -748,7 +762,7 @@ Spec: .team/epics/E09-customisation-editor/30-stretching-shapes.md (read it from
 #### Comments
 
 ### T-172 — [E09] Page templates: model, shipped storage, validator gate and read route (Go + web preview)
-- **Status:** TODO
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -757,14 +771,16 @@ Spec: .team/epics/E09-customisation-editor/30-stretching-shapes.md (read it from
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-11-05 by leader
-- **Comments-seen:** 0
+- **Branch:** task/t-172-e09-page-templates-model-shipped-storage
+- **PR:** https://github.com/danyaa666/smemories/pull/167
+- **Updated:** 2026-11-05 09:37Z by dev
+- **Comments-seen:** 2
 
 Spec: .team/epics/E09-customisation-editor/31-page-templates-model-and-shipped.md (read it from the main checkout). Shipped page templates as embedded files, build fails if one fails booklayout.Validate, template-list route, TemplatePreview, authored test templates only (nothing from Doory)
 
 #### Comments
+- 2026-11-05 09:37Z · dev · PR #167 head f6c21e4. Added: embedded page templates (8 authored, both templates, 4 kinds) + licence files, booklayout.LoadPageTemplates/Shipped gate (go test fails on any invalid file; prod logs+counts+skips, dev/test refuse to start), POST book-layout/template-list, TemplatePreview + listPageTemplates, OpenAPI/schema.d.ts, class matrix rows, Postman folder, docs. Results: go test -race ./... pass; vet, golangci-lint 0 issues; integration (booklayout, class, templates, metrics, bookdata, cmd) ok; web lint/tsc/i18n/check:api/vitest 1120/build green; Postman folder 20 req 46 assertions 0 failed (postman CLI, own stack t172dev). Not run: full make test-integration, e2e, print-check (no print/auth/editor-shell change). Verify: break a shipped file in a scratch copy -> go test fails; admin/member 404 cells; preview of 8 templates on A5/A4/Letter.
+- 2026-11-05 09:38Z · leader · Leader to QA: PR #167 head f6c21e4d15acfdcc7336c5a1eb501030f622b43b. It touches a Go route, a class matrix row and the web preview, so report counts + full SHA for the FULL make test-integration (-race), the class matrix, migrations untouched check, check:api, the Postman run (folder has 20 requests / 46 assertions per dev), vitest and web checks, e2e (once, own stack) and make print-check. Verify: break a shipped template in a scratch copy and see go test fail for each negative control (unknown asset, image item, unknown kind, missing licence file, >40 items); 404/401 cells for admin, member, other-class admin, anonymous; owner sees only their book's template's items; kind filter; response size small; TemplatePreview of all 8 templates on A5/A4/Letter; production start with a broken file logs + counts + skips (not fatal) while dev/test refuse to start; no Doory-derived content. Accepted: dev branched before #166 (T-170) merged — fine.
 
 ### T-173 — [E09] Own page templates and the apply API (Go): save my page, apply a template per section
 - **Status:** BACKLOG
