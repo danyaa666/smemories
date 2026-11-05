@@ -674,11 +674,12 @@ Spec: .team/epics/E09-customisation-editor/26-class-book-layouts.md (read it fro
 - **Branch:** —
 - **PR:** —
 - **Updated:** 2026-11-02 05:35Z by leader
-- **Comments-seen:** 0
+- **Comments-seen:** 1
 
 Spec: .team/epics/E09-customisation-editor/27-history-e2e-hardening.md (read it from the main checkout). Friendly message when the mysql client is missing, QA's three probe cases committed (30-row cap, restores in a row, pending autosave), spec time under about 60 s
 
 #### Comments
+- 2026-11-05 15:17Z · leader · Leader: spec 27 extended (2026-11-05): add QA's editor-flow-stale-qa.spec.mjs (from T-170) to testMatch and docs/e2e.md; optional tiny reset of 'finishing' after a cancelled Done navigation. See the end of the spec.
 
 ### T-169 — [E09] Spike: Doory-template import and a Fabric.js image studio beside the DOM editor (ADR 0005)
 - **Status:** MERGED
@@ -710,7 +711,7 @@ Spec: .team/epics/E09-customisation-editor/28-canvas-foundation-spike.md (read i
 - 2026-11-05 08:52Z · leader · merged 64804e2; QA reproduced coverage 73%/85%, determinism, validator 52 ok/4 refused, parity 0.03-0.20%, 15/15 studio failure cases, licence quotes match pinned SHA a65c43a; ADR 0005 stays Proposed until Q-064 answered
 
 ### T-170 — [E09] Editor flow: page by page, Save and done, Print, back to the book manage page (web)
-- **Status:** IN_QA
+- **Status:** QA_PASS
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M4
@@ -718,11 +719,11 @@ Spec: .team/epics/E09-customisation-editor/28-canvas-foundation-spike.md (read i
 - **Risk:** low
 - **Rework:** 2
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** leader
 - **Branch:** task/t-170-e09-editor-flow-page-by-page-save-and-do
 - **PR:** https://github.com/danyaa666/smemories/pull/166
-- **Updated:** 2026-11-05 14:48Z by qa
-- **Comments-seen:** 11
+- **Updated:** 2026-11-05 15:17Z by qa
+- **Comments-seen:** 13
 
 Spec: .team/epics/E09-customisation-editor/29-editor-page-flow-done-print.md (read it from the main checkout). Previous/next page through the real book order, Done (settle then manage page, leave guard), Print after settle, deep links from the manage page, e2e editor-flow
 
@@ -754,6 +755,16 @@ Spec: .team/epics/E09-customisation-editor/29-editor-page-flow-done-print.md (re
 - 2026-11-05 14:28Z · dev · Rework round 2, PR #166 head acbe283826d5c50200ca66c62b88caa113772e5d (develop merged in, no force-push; ac39948 is the tested code, the merge only brought T-172). R1 root-cause fix 34736dd: EditorShell holds the REQUESTED page (OnePage: the ?page= section first, the user's choice after any step) and resolves it against the CURRENT page list on every render; falls back to the cover only while the page is absent, a moved user keeps their section if the notes pages shrink. R2 vitest (EditorFlow.test.tsx, 3 cases, 2 fail on the old code): stale data without notes then fresh data with notes -> cover then notes; user moved to profile -> fresh data does not move them; notes page 2 kept when notes shrink. FINDING (needs your eye): the failure QA saw is NOT the cached-page-list race. With logging I proved that in the failing runs the editor is never unmounted: after Done the browser URL changes to the manage page BEFORE React commits the screen, QA spec presses Back inside that gap (no wait between Done and goBack), Back cancels the pending navigation, so the SAME editor instance (still on Cover after the walk) stays; the 'Page 1 of 4: Cover' text was never a remount. Waiting for the manage page link before goBack makes it 20/20. Same cause for QA's earlier note that activeElement was a 'Done' button 'on the manage page': it was the editor's Done button (with the gap closed, focus is on the manage h1). So I fixed the spec (ac39948: wait for the 'Edit notes pages' link, then Back) and ALSO kept the real hardening in 34736dd (deep link / Back with cached stale data). Results on private stack (compose t173dev ports 13731/16731/19731, SMEM_TEST_S3_ENDPOINT set, scripts/e2e.sh logic): editor-flow-qa.spec.mjs --repeat-each=20 in isolation: 20 passed / 0 failed (before the spec fix: 12 of 20 failed at line 129). Full e2e on ac39948: run 1 40 passed/0 failed, run 2 39 passed/1 failed (editor-gestures touch test, the known T-174 flake, passes in runs 1 and 3), run 3 40 passed/0 failed. Web on the merged head: vitest 65 files / 1146 passed / 0 failed, eslint, tsc, check:api, lint:i18n OK. Open question: is a URL-changes-before-commit gap of this size acceptable UX for Done? (a user pressing Back within it stays in the editor, which is correct behaviour); I did not change the router.
 - 2026-11-05 14:28Z · dev · round 2: requested-page fix 34736dd + vitest; QA spec waits for manage page before Back (ac39948); isolated x20 20/0; full e2e 40/0, 39/1 (T-174 touch flake), 40/0
 - 2026-11-05 14:48Z · leader · Leader to QA (re-test round 2): PR #166 head acbe283826d5c50200ca66c62b88caa113772e5d (full SHA; develop merged in, includes T-172 and now T-171 is also on develop: rebase not required unless it conflicts). Dev claims the QA failure was NOT a remount: after Done the URL changes before React commits the manage page, the QA spec pressed Back inside that gap, Back cancelled the pending navigation and the SAME editor instance (still on Cover after the walk) stayed. Dev fixed the spec (ac39948: wait for the 'Edit notes pages' link before Back) and ALSO hardened EditorShell (34736dd: holds the requested page, resolves against the current list every render; 3 vitest cases). Do not take this on trust: (1) run your ORIGINAL assertion flow with NO wait between Done and Back 20x isolated and decide whether the stay-on-cover result is only that gap (a real user cannot press Back within the gap) or a product bug (e.g. the navigation should not be committable in two steps; if it is a product bug QA_FAIL with repro); (2) run the dev's spec 20x isolated (must be 20/0) and the full e2e twice (dev saw one T-174 touch flake in 3 runs: report, do not fail for it unless it fails in isolation on develop too); (3) add an e2e or probe that proves the stale-cache hardening: open manage page, approve a note in another tab/API, click 'Edit notes pages' and confirm the editor lands on notes (deep link with a cache that predates the note); (4) re-check R1 text (en+vi, announcement on arrival, deep link shows text without announcement) and R3 (manage h1 focus after Done). Counts + full SHA in your comment.
+- 2026-11-05 15:17Z · qa · QA round 3 on PR #166 head acbe283826d5c50200ca66c62b88caa113772e5d (PR mergeable CLEAN; CI go/web/security pass, e2e/go-integration/image skipped by design). My only commit on top: a19d9f2f8e9b3d953e5da88a7e855c6c96da7db5 (test file only: tools/e2e/editor-flow-stale-qa.spec.mjs, NOT in testMatch; leader/dev may add it, it passes 2/2 on this head). Own stack: compose project t170qb, ports 13481/16481/19481, SMEM_TEST_S3_ENDPOINT set, scripts/e2e.sh logic run directly (SMEM_E2E_RATE_REGISTER_PER_HOUR raised, my first 20x attempt hit the 20/hour register limit, my setup not the product).
+  VERDICT: dev's diagnosis is right, no remount; QA_FAIL round 2 withdrawn.
+  RESULTS
+  - (1) Original flow, NO wait between Done and Back, 20x isolated: 20/20 stay in the editor on 'Page 3 of 3: Back cover' (the page the walk ended on) with URL /editor, deterministic, never a remount. Measured gap between history.pushState to the manage URL and React removing the editor: 9 of 9 runs 17-20 ms (instrumented with a pushState wrapper + MutationObserver). A person cannot press Back in 20 ms, so not a user-reachable product bug. Non-blocking observation: in that cancelled-navigation state the editor stays with Done disabled (finishing never reset) and the leave guard already released (20/20); only reachable inside the ~20 ms window, so no fail, but resetting finishing on a cancelled navigation would be tidy.
+  - (2) dev spec editor-flow.spec.mjs --repeat-each=20 isolated: 20 passed / 0 failed. QA spec editor-flow-qa.spec.mjs --repeat-each=20 isolated: 20 passed / 0 failed. Full e2e (scripts/e2e.sh logic) run 1: 40 passed / 0 failed (3.2m); run 2: 40 passed / 0 failed (3.2m). No T-174 touch flake seen. Head acbe283826d5c50200ca66c62b88caa113772e5d.
+  - (3) Stale-cache deep link (editor-flow-stale-qa.spec.mjs): open editor by client-side nav (book-data cached, 3 pages), Done, another tab approves a note, tab A (never reloaded, window flag survived) routes client-side to /editor?page=notes -> lands on 'Page 3 of 4: Notes page 1'. PASSES on this head. Discrimination check: the same probe on the old EditorShell (849fc2c version, git checkout of that one file, restored after) FAILS: Expected 'Page 3 of 4: Notes page 1', Received 'Page 1 of 4: Cover'. So 34736dd is a real fix of the stale-cache hazard. Also: after the user steps back to Profile and a focus event fires, fresh data does not move them (stays Page 2 of 4: Profile). Note: the manage page itself (stale) did not show 'Edit notes pages' within 8 s of the other tab approving (no refetch on focus), so I routed to the same URL via history.pushState+popstate; informational only.
+  - (4) R1: en 'This layout applies to every notes page.' visible (data-testid notes-shared) on deep link, live region has no such text on deep link; stepping Profile -> Next to notes: live region = 'Page 3 of 4: Notes page 1. This layout applies to every notes page.'; text absent on Profile. vi (vi-VN context, deep link): 'Bố cục này áp dụng cho mọi trang lời nhắn.' present. R3: after Done document.activeElement is H1 with the book title (QA-R3-FOCUS {tag:H1}).
+  - Web on this head: eslint OK, prettier OK, tsc OK, lint:i18n ok, check:api ok, vitest 65 files / 1146 passed / 0 failed. Go/print-check not run (no Go or render change).
+  - Reviewed 34736dd: requested page held as state and resolved against current list each render, moved user keeps their choice; unknown/hidden ?page= -> cover (covered by existing e2e step 3). Sound. Answer to dev's UX question: a ~20 ms URL-before-commit gap is acceptable.
+- 2026-11-05 15:17Z · leader · Leader: QA_PASS accepted (QA tested acbe283826d5c50200ca66c62b88caa113772e5d: dev spec 20/0, QA spec 20/0, full e2e 40/0 twice, stale-cache probe, R1/R3 verified; URL-before-commit gap measured 17-20 ms, not a product bug). QA pushed a test-only commit a19d9f2f8e9b3d953e5da88a7e855c6c96da7db5 (editor-flow-stale-qa.spec.mjs, not in testMatch: moved to T-168). Merge waits for CI go/web on a19d9f2.
 
 ### T-171 — [E09] Stretching shapes: rectangle and ellipse that fill their box (registry + web)
 - **Status:** MERGED

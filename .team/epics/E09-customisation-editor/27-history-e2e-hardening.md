@@ -15,3 +15,6 @@
 
 #### Test plan
 QA runs the e2e suite twice on a private stack and once with the `mysql` client hidden from PATH.
+
+#### Added 2026-11-05 (leader, from the T-170 QA)
+QA pushed `tools/e2e/editor-flow-stale-qa.spec.mjs` on PR #166 (T-170): a probe that opens the manage page, approves a note through the API, clicks 'Edit notes pages' and expects the editor on the notes page with a book-data cache that predates the note (fails on the old EditorShell, passes after the T-170 fix). It is not in `testMatch` (QA cannot edit the config). Add it to `testMatch` in `tools/e2e/playwright.config.mjs` (or fold its case into `editor-flow.spec.mjs`), keep it green twice, and add a line to `docs/e2e.md`. Optional, product, tiny: in `EditorShell`, when the Done navigation is cancelled by a Back pressed inside the ~20 ms between the URL change and React's commit, the editor stays with Done disabled and the leave guard released; reset `finishing` on a cancelled navigation if that is a few lines (otherwise leave it and say so).
