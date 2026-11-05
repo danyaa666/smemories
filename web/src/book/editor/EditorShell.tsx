@@ -1,6 +1,6 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import type { BookData } from "../../api/book";
 import { restoreLayoutVersion, type LayoutVersion } from "../../api/bookLayout";
 import { deleteMedia, uploadMedia, type Media } from "../../api/yearbooks";
@@ -13,8 +13,9 @@ import { Skeleton } from "../../components/ui/Skeleton";
 import { useMediaQuery } from "../../components/useMediaQuery";
 import { resolveDesign } from "../design";
 import { useFitReport } from "../fit";
-import { listPages } from "../BookPages";
+import { listPages, type OnePage } from "../BookPages";
 import { pageBox } from "../layout/geometry";
+import { SIZES } from "../sizes";
 import { defaultColorOf, MissingImage } from "../layout/runtime";
 import { getTemplate } from "../templates";
 import {
@@ -52,10 +53,13 @@ export function EditorShell({
   bookId,
   data,
   safeMm,
+  onDone,
 }: {
   bookId: string;
   data: BookData;
   safeMm: number;
+  /** Called after Done saved everything, just before the screen goes back to the book manage page (the route refreshes what it cached). */
+  onDone?: () => void;
 }) {
   const { t, i18n } = useTranslation();
   const ed = useLayoutEditor(bookId);
@@ -68,8 +72,21 @@ export function EditorShell({
     [i18n, data.yearbook.language],
   ); // the book's own language, not the app's
   const pages = useMemo(() => listPages(data), [data]);
-  const [pageIdx, setPageIdx] = useState(0);
-  const index = Math.min(pageIdx, pages.length - 1);
+  const navigate = useNavigate();
+  const [params] = useSearchParams();
+  // T-170: the page the user asked for is held as a REQUEST, not as an index, and resolved against the current page list on every render. The
+  // first request is the link's (`?page=cover|profile|notes|back`); once the user steps, their choice wins and is never overwritten. So a page
+  // list that changes after the first render (cached book-data answered first, a fresh answer with a notes page follows) cannot leave the
+  // editor on the wrong page. An unknown or hidden section, or one that does not exist (yet), opens the cover.
+  const [requested, setRequested] = useState<OnePage | null>(null);
+  const wanted: OnePage = requested ?? { section: params.get("page") as OnePage["section"] };
+  let index = pages.findIndex(
+    (p) => p.section === wanted.section && (p.index ?? 0) === (wanted.index ?? 0),
+  );
+  if (index < 0 && requested) index = pages.findIndex((p) => p.section === requested.section); // the notes pages got fewer
+  index = Math.max(0, index);
+  const [finishing, setFinishing] = useState(false);
+  const [doneFailed, setDoneFailed] = useState(false);
   const page = pages[index]!;
   const kind = page.section;
   // history (T-165): the panel replaces the property panel; a previewed version is drawn read-only instead of the edited document
@@ -268,11 +285,37 @@ export function EditorShell({
   };
   const pick = (i: number) => {
     if (i === index) return;
-    setPageIdx(i);
+    setRequested(pages[i]!);
     setEditing(null);
     setNotice("");
     select([]);
-    say(t("editor.pageOf", { n: i + 1, total: pages.length, name: pageName(t, pages[i]!) }));
+    const to = pages[i]!;
+    const arrived = t("editor.pageOf", { n: i + 1, total: pages.length, name: pageName(t, to) });
+    say(to.section === "notes" ? `${arrived}. ${t("editor.notesShared")}` : arrived);
+  };
+  const step = (by: -1 | 1) => {
+    const to = index + by;
+    if (to >= 0 && to < pages.length) pick(to);
+  };
+  const stepRef = useRef(step);
+  useEffect(() => {
+    stepRef.current = step;
+  });
+  /** Done (T-170): everything is saved first; a failed save keeps the editor open with the save status, nothing is lost. */
+  const done = async () => {
+    if (finishing) return;
+    setFinishing(true);
+    setDoneFailed(false);
+    const saved = await ed.settle();
+    if (!saved) {
+      setFinishing(false);
+      setDoneFailed(true);
+      say(t("editor.doneFailed"));
+      return;
+    }
+    await ed.leaveGuard.release(); // the guard's history entry goes first, or its pending Back would undo the navigation
+    onDone?.();
+    void navigate(`/yearbooks/${bookId}`);
   };
   const choose = useCallback(
     (ids: readonly string[]) => {
@@ -361,6 +404,21 @@ export function EditorShell({
         return setHelp((h) => !h);
       }
       if (e.key === "Escape" && help) return setHelp(false);
+      if (
+        (e.key === "PageDown" || e.key === "PageUp") &&
+        !e.altKey &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !e.shiftKey &&
+        el?.tagName !== "INPUT" &&
+        el?.tagName !== "SELECT" &&
+        !asking &&
+        !confirmRestore &&
+        !deleting
+      ) {
+        e.preventDefault();
+        return stepRef.current(e.key === "PageDown" ? 1 : -1);
+      }
       const k = e.key.toLowerCase();
       const mod = e.ctrlKey || e.metaKey;
       if (e.key === "Escape" && historyOpen && !asking && !confirmRestore && !deleting) {
@@ -472,8 +530,25 @@ export function EditorShell({
         <button type="button" aria-expanded={help} onClick={() => setHelp((h) => !h)}>
           {t("editor.helpButton")}
         </button>
+      </div>
+      <div className="ed-toolbar ed-flow" role="group" aria-label={t("editor.flow")}>
+        <button type="button" aria-disabled={index === 0} onClick={() => step(-1)}>
+          {t("editor.prevPage")}
+        </button>
+        <span className="ed-pos" data-testid="page-position">
+          {t("editor.pageOf", { n: index + 1, total: pages.length, name: pageName(t, page) })}
+        </span>
+        {kind === "notes" && (
+          <span className="ed-hint" data-testid="notes-shared">
+            {t("editor.notesShared")}
+          </span>
+        )}
+        <button type="button" aria-disabled={index === pages.length - 1} onClick={() => step(1)}>
+          {t("editor.nextPage")}
+        </button>
         <a
           href={`/yearbooks/${bookId}/book`}
+          aria-describedby="ed-print-hint"
           target="_blank"
           rel="noopener"
           onClick={(e) => {
@@ -494,13 +569,26 @@ export function EditorShell({
             });
           }}
         >
-          {t("editor.preview")}
+          {t("editor.print")}
         </a>
+        <span id="ed-print-hint" className="ed-hint">
+          {t("editor.printHint", {
+            size: `${size} (${SIZES[size].w} × ${SIZES[size].h} mm)`,
+          })}
+        </span>
+        <Button variant="primary" busy={finishing} onClick={() => void done()}>
+          {t("editor.done")}
+        </Button>
       </div>
       {help && <HelpSheet onClose={() => setHelp(false)} />}
       {notice && (
         <p role="alert" className="error">
           {notice}
+        </p>
+      )}
+      {doneFailed && (
+        <p role="alert" className="error">
+          {t("editor.doneFailed")}
         </p>
       )}
       {previewFailed && (

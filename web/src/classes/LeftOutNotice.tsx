@@ -8,6 +8,16 @@ export const leftOut = (book: ClassBook) => {
   return book.members.filter((m) => ids.has(m.member_id));
 };
 
+/** Students whose free layout was left out for the same reason (`truncated_layouts`, T-167): their notes and profile are still printed. */
+export const layoutLeftOut = (book: ClassBook) => {
+  const ids = new Set(book.truncated_layouts ?? []);
+  return book.members.filter((m) => ids.has(m.member_id));
+};
+
+/** The ids of both lists, one key: the admin's yes is asked again when either changes. */
+export const leftOutKey = (book: ClassBook) =>
+  [...leftOut(book), ...layoutLeftOut(book)].map((m) => m.member_id).join(",");
+
 /** The warning, by name. With `onAck` it also asks the admin to confirm before the book is printed. */
 export function LeftOutNotice({
   book,
@@ -20,21 +30,36 @@ export function LeftOutNotice({
 }) {
   const { t } = useTranslation();
   const students = leftOut(book);
-  if (students.length === 0) return null;
+  const layouts = layoutLeftOut(book);
+  if (students.length === 0 && layouts.length === 0) return null;
+  const names = (ms: typeof students) =>
+    ms.map((m) => m.name.trim() || t("classBook.unnamed")).join(", ");
+  const ack =
+    students.length > 0 && layouts.length > 0
+      ? "classBook.leftOutAckBoth"
+      : students.length > 0
+        ? "classBook.leftOutAck"
+        : "classBook.layoutLeftOutAck";
   return (
-    <Banner variant="warning">
-      <span>
-        {t("classBook.leftOut", {
-          count: students.length,
-          names: students.map((m) => m.name.trim() || t("classBook.unnamed")).join(", "),
-        })}
-      </span>
+    <>
+      {students.length > 0 && (
+        <Banner variant="warning">
+          <span>{t("classBook.leftOut", { count: students.length, names: names(students) })}</span>
+        </Banner>
+      )}
+      {layouts.length > 0 && (
+        <Banner variant="warning">
+          <span>
+            {t("classBook.layoutLeftOut", { count: layouts.length, names: names(layouts) })}
+          </span>
+        </Banner>
+      )}
       {onAck && (
         <label className="legal-consent">
           <input type="checkbox" checked={acked} onChange={(e) => onAck(e.target.checked)} />{" "}
-          {t("classBook.leftOutAck")}
+          {t(ack)}
         </label>
       )}
-    </Banner>
+    </>
   );
 }

@@ -643,7 +643,7 @@ Spec: .team/epics/E09-customisation-editor/25-navy-classic-layout.md (read it fr
 - 2026-11-05 08:48Z · leader · merged 7f6cc24; QA: integration 33 pkgs ok, e2e 38/0 (3 of 6 runs; gestures touch flake 3px in 2 runs), print-check 193/193, vitest 1093
 
 ### T-167 — [E09] Class book carries each member's layout (server cap, privacy, web wiring)
-- **Status:** TODO
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -652,17 +652,37 @@ Spec: .team/epics/E09-customisation-editor/25-navy-classic-layout.md (read it fr
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-11-02 05:20Z by leader
-- **Comments-seen:** 0
+- **Branch:** task/t-167-e09-class-book-carries-each-member-s-lay
+- **PR:** 170
+- **Updated:** 2026-11-05 19:24Z by leader
+- **Comments-seen:** 4
 
 Spec: .team/epics/E09-customisation-editor/26-class-book-layouts.md (read it from the main checkout). BookMember.layout read as the owner, layout before notes under the 8 MiB cap with truncated_layouts, privacy docs and matrix, web class book wiring, print-check and class e2e
 
 #### Comments
+- 2026-11-05 15:38Z · dev · PR #170, head a3fa250. Risk treated as medium. class-book/get carries member.layout (booklayout.Service.Resolved as the owner, no version) + top-level truncated_layouts; cap: layout paid before notes, dropped (with later layouts) when it would break the later members' 16 KiB reserve, notes retried without it; log line + smem_class_book_layouts_dropped_total. Web: real field, LeftOutNotice names left-out layouts (vi/en), one ack covers both. Results on private stack t167dev: make test-integration equivalent (go test -race -tags integration ./... full, S3 endpoint set) 33 pkgs ok, 1662 pass / 0 fail / 6 skip; class matrix script ok; web lint/tsc/prettier/i18n/check:api ok, vitest 1128 pass; scripts/e2e.sh 39 passed (class step 7c new); print-check 199 pass (two layouts + one dropped fixture); golangci-lint 0 issues. Postman class collection: Class book flow green incl. new steps; pre-existing unrelated failures remain (25 'without a session' steps due to newman cookie jar, 1 request hard-coded to localhost:8080). QA: run full integration, e2e, print-check, newman; build a 60-member class with 128 KiB layouts via DB inserts and check size/truncated_layouts (unit tests prove the rule); check leave/unlink, removed image, other-class admin 404, print on A5/A4/Letter. Docs updated (privacy review, permissions, book-export, templates, api-contract, observability, e2e, openapi).
+- 2026-11-05 15:39Z · leader · Leader to QA: PR #170 head a3fa250dbd8ab5a943095442e39989163f0875c5 (full SHA). Treat as MEDIUM risk (permissions and response cap): run the FULL make test-integration (default DSN) and go test -race, the class matrix script, the full e2e (own stack, twice), make print-check, web checks, and the Postman class collection. Dev's results on this head: go test -race -tags integration ./... 33 packages ok, 1662 pass, 0 fail, 6 skip; e2e 39/0 incl. new class step 7c; print-check 199/0; vitest 1128; golangci-lint 0. Dev says the class Postman collection still shows 28 assertion failures it did not fix (25 are 'without a session' steps where newman's cookie jar keeps the last session, 1 hard-coded to localhost:8080): confirm on develop that the same 28 fail there (baseline) and that the new T-167 steps pass; fixes of the old ones are not required. Dev stale-assert fixes in the collection (answers.message, keys): check they are right, not loosened. Verify per spec 26: build a 60-member class with 128 KiB layouts and long notes by direct DB insert (dev's integration test only covers 12 members): body <= MaxBookBytes, truncated_layouts lists the dropped members, earlier members keep layout, notes of all members are present when the reserve allows; a normal class loses nothing; member who unlinks or leaves loses theirs; image removed from the layout is no longer readable by the admin via media/get-content; admin of another class 404; non-member 404; anonymous 401; layout of member A never draws on member B pages; class book print on A5, A4, Letter with the 'layout left out' note; log line has counts only. Counts + full SHA in your comment.
+- 2026-11-05 19:24Z · qa · QA_PASS T-167 (treated as MEDIUM). PR #170. Product head tested: a3fa250dbd8ab5a943095442e39989163f0875c5 (full SHA); branch now at 42a9cbf8f634c6db24b309bd4606c37c1dc79bea = a3fa250 + 3 QA commits that add TEST FILES ONLY (internal/class/book_layout_qa_integration_test.go, tools/print-check/check.test.mjs); no product file touched. Merges cleanly into develop 54daeec (T-170/T-171 in): git merge-tree no conflicts, GitHub MERGEABLE. CI on 42a9cbf: go pass, web pass, security pass (e2e/go-integration/image skipped by D-37/D-38). Own stack: compose project t167qa, ports 13467/13468/13469, SMEM_TEST_S3_ENDPOINT set; no other project touched.
+  
+  RESULT LINES
+  - make test-integration (go test -race -count=1 -timeout 30m -tags integration ./..., default grants, own stack): 33 packages ok, 0 FAIL, exit 0.
+  - go build/vet ./... ok; go test -race -count=1 ./... : 32 packages ok, 0 FAIL; golangci-lint run ./... 0 issues (also with -tags integration for internal/class).
+  - class matrix: scripts/check-class-matrix.sh ok (28 operations all in docs/class-privacy-review.md); TestClassBookMatrix, TestPermissionMatrix, TestAdminRoutesAreAllInTheMatrix, TestInviteMatrix PASS.
+  - e2e (scripts/e2e.sh, own ports 18467/14467, DB smem_test_e2e, limits reset): run 1 = 39 passed / 0 failed; run 2 = 39 passed / 0 failed (class journey incl. step 7c green both times).
+  - make print-check: 199 tests, 199 pass, 0 fail (incl. T-167 fixture: two layouts + one dropped). I added 2 tests (class book with layouts on A4 and Letter, dropped layout still printed): 2 pass.
+  - web: eslint+prettier, tsc, lint:i18n, check:api ok; vitest 64 files / 1128 tests pass; vite build ok.
+  - Postman class collection (newman 5.3.2, --working-dir postman, API on own stack, limits reset between runs): PR collection on PR API = 543 assertions, 28 failed, run twice back to back identical (28 / 28, same 15 steps). Same collection on develop API 33 failed = those 28 + the 3 new/changed class-book steps that need T-167 (they fail on develop, pass on the PR). develop's own collection on develop API = 53 failed (28 + 25 stale asserts dev fixed). Set of failing steps on the PR is a subset of develop's baseline: nothing new. The 28 are the 'without a session' steps (newman cookie jar re-sends the session, got 200/404/403 instead of 401), 'Invalid IP address: undefined' (hard-coded localhost:8080 request) and the 11th-class step (B's email state). Dev's stale-assert fixes are correct, not loosened: answers.error_message -> answers.message (the real note key), key lists are still exact eql() and now include truncated, truncated_layouts, design, layout (matches the real 11-key member).
+  - 60-place class by direct DB insert (my test, TestQA167*): note the admin takes one of the 60 places, so 59 students. 127,086-byte valid layouts (81 text items of 500 chars) + 40 approved notes of 700 chars each: body 8,002,395 bytes (cap 8,388,608); 37 members complete (layout + 40 notes), layout dropped for the last 22 (truncated_layouts = exactly members 37..58, in book order, ids match), notes of those 22 cut too (cap is real), earlier members keep layout and notes, approved_total correct, profile kept. 59 x layout + 10 notes: 8.32 MB, 4 layouts dropped, ALL notes kept (layout dropped before notes when the reserve needs it). 30 layouts + 5 notes each (4.1 MB): nothing lost. Log line {members:60, layouts_included:37, layouts_dropped:22, notes_truncated_members:22}: counts only (no ids, no text, no class id); counter callback got 22.
+  - Privacy/HTTP on real API+web: anonymous 401, student 403, class admin of another class 404, nonexistent class 404 with the same body as non-member (only request_id differs), no LAYOUT text in the other-class answer. Unlink (set-book null) and leave: the layout and the member's page are gone from the admin's next class book. Removed image unreadable by admin (TestClassBookLayoutImageFollowsTheLayout, in the full integration run, PASS). A's layout never on B's sheet (browser: exactly one sheet holds B's layout text, none A's).
+  - Web notice/print (real app, answer rewritten to add a dropped layout, then dropped layout + cut notes): A5, A4, Letter: banner names the member, Print disabled until the ack, combined ack text for both lists, PDF made (4 pages), B's layout on B's sheet only.
+  
+  Evidence per AC: AC1 e2e 7c + browser + integration (layouts on own page only; screen and PDF; no-layout members unchanged). AC2 TestQA167* (59 x 127 KiB + 40 long notes <= cap, truncated_layouts listed, normal class loses nothing) + dev unit boundary tests. AC3 matrix + privacy tests + docs rows read (docs match the behaviour, including 'notes cut first, layout dropped only when the reserve fails'). AC4 all of the above.
+  
+  Non-blocking observations: (1) per the documented rule the first member that does not fit keeps a 127 KiB layout and loses 40 notes (88 KB) although dropping the layout would have kept the notes; the spec chose layout-before-notes, so by design. (2) The 16 KiB-per-member worst-case reserve leaves about 380 KB of the 8 MiB unused in the full-class case (22 stripped members really take about 5 KB each); the reserve proof is unchanged from before T-167. (3) Dev's integration test covers 12 members; the new QA tests in book_layout_qa_integration_test.go (about 35 s) cover the 59-student case; leader may keep or drop them. (4) Newman 28 failures are pre-existing and unrelated; fixing them (per-request cookie-jar clear, hard-coded URL) is a separate chore.
+- 2026-11-05 19:24Z · leader · Leader: merged PR #170 (squash) at head 42a9cbf8f634c6db24b309bd4606c37c1dc79bea after QA_PASS (product head a3fa250 + QA test-only commits): make test-integration 33 pkg ok, go test -race 32 ok, e2e 39/0 twice, print-check 199/0, 60-place class: body 8002395 <= 8388608, truncated_layouts = last 22; Postman baseline identical to develop (28).
 
 ### T-168 — [E09] History e2e hardening: friendly mysql-missing message, QA probe cases (tests only)
-- **Status:** TODO
+- **Status:** READY_FOR_QA
 - **Priority:** P3
 - **Type:** test
 - **Milestone:** M4
@@ -671,14 +691,17 @@ Spec: .team/epics/E09-customisation-editor/26-class-book-layouts.md (read it fro
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-11-02 05:35Z by leader
-- **Comments-seen:** 0
+- **Branch:** task/t-168-e09-history-e2e-hardening-friendly-mysql
+- **PR:** https://github.com/danyaa666/smemories/pull/172
+- **Updated:** 2026-11-05 19:49Z by dev
+- **Comments-seen:** 3
 
 Spec: .team/epics/E09-customisation-editor/27-history-e2e-hardening.md (read it from the main checkout). Friendly message when the mysql client is missing, QA's three probe cases committed (30-row cap, restores in a row, pending autosave), spec time under about 60 s
 
 #### Comments
+- 2026-11-05 15:17Z · leader · Leader: spec 27 extended (2026-11-05): add QA's editor-flow-stale-qa.spec.mjs (from T-170) to testMatch and docs/e2e.md; optional tiny reset of 'finishing' after a cancelled Done navigation. See the end of the spec.
+- 2026-11-05 19:49Z · dev · PR #172 head 183a211. Tests/docs only. History spec: mysql-missing message (skip locally, fail with CI=1), 30-row cap (28 inserted + 5 real saves) with 3 restores, pending-autosave restore; stale-cache probe in testMatch (gap timing probes dropped, no assertions). Full scripts/e2e.sh twice on private stack t168dev: 44 passed each; history spec ~54 s. Optional finishing reset NOT done (BrowserRouter navigate returns no promise), documented in docs/e2e.md. QA: run e2e twice, once with mysql hidden from PATH.
+- 2026-11-05 19:49Z · leader · Leader to QA (queued after T-174): PR #172 head 183a211 (verify the full SHA with gh pr view; tests and docs only). Accepted: skipping the history spec without the mysql client (fails under CI), the removal of QA's two timing-only 'Done then Back' probes (no assertions), the 'finishing' reset left as a documented known gap. Verify: e2e twice on your own stack (reset rate limits between full runs: registration is capped at 20/hour), once with mysql hidden from PATH (clear message, skip; with CI=1 a failure), the two new history cases (30-row cap: 28 inserted + 5 back-dated saves, panel shows 30, three restores keep 30; pending autosave saved first and listed as newest 'Before restore'), editor-flow-stale-qa.spec.mjs in testMatch and green, history spec time under 60 s, mutation check of the 30-row case (raise the retention constant locally, confirm the test fails, revert). Counts + full SHA in your comment.
 
 ### T-169 — [E09] Spike: Doory-template import and a Fabric.js image studio beside the DOM editor (ADR 0005)
 - **Status:** MERGED
@@ -710,7 +733,7 @@ Spec: .team/epics/E09-customisation-editor/28-canvas-foundation-spike.md (read i
 - 2026-11-05 08:52Z · leader · merged 64804e2; QA reproduced coverage 73%/85%, determinism, validator 52 ok/4 refused, parity 0.03-0.20%, 15/15 studio failure cases, licence quotes match pinned SHA a65c43a; ADR 0005 stays Proposed until Q-064 answered
 
 ### T-170 — [E09] Editor flow: page by page, Save and done, Print, back to the book manage page (web)
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M4
@@ -721,8 +744,8 @@ Spec: .team/epics/E09-customisation-editor/28-canvas-foundation-spike.md (read i
 - **Assignee:** —
 - **Branch:** task/t-170-e09-editor-flow-page-by-page-save-and-do
 - **PR:** https://github.com/danyaa666/smemories/pull/166
-- **Updated:** 2026-11-05 14:28Z by dev
-- **Comments-seen:** 11
+- **Updated:** 2026-11-05 15:39Z by leader
+- **Comments-seen:** 14
 
 Spec: .team/epics/E09-customisation-editor/29-editor-page-flow-done-print.md (read it from the main checkout). Previous/next page through the real book order, Done (settle then manage page, leave guard), Print after settle, deep links from the manage page, e2e editor-flow
 
@@ -754,6 +777,17 @@ Spec: .team/epics/E09-customisation-editor/29-editor-page-flow-done-print.md (re
 - 2026-11-05 14:28Z · dev · Rework round 2, PR #166 head acbe283826d5c50200ca66c62b88caa113772e5d (develop merged in, no force-push; ac39948 is the tested code, the merge only brought T-172). R1 root-cause fix 34736dd: EditorShell holds the REQUESTED page (OnePage: the ?page= section first, the user's choice after any step) and resolves it against the CURRENT page list on every render; falls back to the cover only while the page is absent, a moved user keeps their section if the notes pages shrink. R2 vitest (EditorFlow.test.tsx, 3 cases, 2 fail on the old code): stale data without notes then fresh data with notes -> cover then notes; user moved to profile -> fresh data does not move them; notes page 2 kept when notes shrink. FINDING (needs your eye): the failure QA saw is NOT the cached-page-list race. With logging I proved that in the failing runs the editor is never unmounted: after Done the browser URL changes to the manage page BEFORE React commits the screen, QA spec presses Back inside that gap (no wait between Done and goBack), Back cancels the pending navigation, so the SAME editor instance (still on Cover after the walk) stays; the 'Page 1 of 4: Cover' text was never a remount. Waiting for the manage page link before goBack makes it 20/20. Same cause for QA's earlier note that activeElement was a 'Done' button 'on the manage page': it was the editor's Done button (with the gap closed, focus is on the manage h1). So I fixed the spec (ac39948: wait for the 'Edit notes pages' link, then Back) and ALSO kept the real hardening in 34736dd (deep link / Back with cached stale data). Results on private stack (compose t173dev ports 13731/16731/19731, SMEM_TEST_S3_ENDPOINT set, scripts/e2e.sh logic): editor-flow-qa.spec.mjs --repeat-each=20 in isolation: 20 passed / 0 failed (before the spec fix: 12 of 20 failed at line 129). Full e2e on ac39948: run 1 40 passed/0 failed, run 2 39 passed/1 failed (editor-gestures touch test, the known T-174 flake, passes in runs 1 and 3), run 3 40 passed/0 failed. Web on the merged head: vitest 65 files / 1146 passed / 0 failed, eslint, tsc, check:api, lint:i18n OK. Open question: is a URL-changes-before-commit gap of this size acceptable UX for Done? (a user pressing Back within it stays in the editor, which is correct behaviour); I did not change the router.
 - 2026-11-05 14:28Z · dev · round 2: requested-page fix 34736dd + vitest; QA spec waits for manage page before Back (ac39948); isolated x20 20/0; full e2e 40/0, 39/1 (T-174 touch flake), 40/0
 - 2026-11-05 14:48Z · leader · Leader to QA (re-test round 2): PR #166 head acbe283826d5c50200ca66c62b88caa113772e5d (full SHA; develop merged in, includes T-172 and now T-171 is also on develop: rebase not required unless it conflicts). Dev claims the QA failure was NOT a remount: after Done the URL changes before React commits the manage page, the QA spec pressed Back inside that gap, Back cancelled the pending navigation and the SAME editor instance (still on Cover after the walk) stayed. Dev fixed the spec (ac39948: wait for the 'Edit notes pages' link before Back) and ALSO hardened EditorShell (34736dd: holds the requested page, resolves against the current list every render; 3 vitest cases). Do not take this on trust: (1) run your ORIGINAL assertion flow with NO wait between Done and Back 20x isolated and decide whether the stay-on-cover result is only that gap (a real user cannot press Back within the gap) or a product bug (e.g. the navigation should not be committable in two steps; if it is a product bug QA_FAIL with repro); (2) run the dev's spec 20x isolated (must be 20/0) and the full e2e twice (dev saw one T-174 touch flake in 3 runs: report, do not fail for it unless it fails in isolation on develop too); (3) add an e2e or probe that proves the stale-cache hardening: open manage page, approve a note in another tab/API, click 'Edit notes pages' and confirm the editor lands on notes (deep link with a cache that predates the note); (4) re-check R1 text (en+vi, announcement on arrival, deep link shows text without announcement) and R3 (manage h1 focus after Done). Counts + full SHA in your comment.
+- 2026-11-05 15:17Z · qa · QA round 3 on PR #166 head acbe283826d5c50200ca66c62b88caa113772e5d (PR mergeable CLEAN; CI go/web/security pass, e2e/go-integration/image skipped by design). My only commit on top: a19d9f2f8e9b3d953e5da88a7e855c6c96da7db5 (test file only: tools/e2e/editor-flow-stale-qa.spec.mjs, NOT in testMatch; leader/dev may add it, it passes 2/2 on this head). Own stack: compose project t170qb, ports 13481/16481/19481, SMEM_TEST_S3_ENDPOINT set, scripts/e2e.sh logic run directly (SMEM_E2E_RATE_REGISTER_PER_HOUR raised, my first 20x attempt hit the 20/hour register limit, my setup not the product).
+  VERDICT: dev's diagnosis is right, no remount; QA_FAIL round 2 withdrawn.
+  RESULTS
+  - (1) Original flow, NO wait between Done and Back, 20x isolated: 20/20 stay in the editor on 'Page 3 of 3: Back cover' (the page the walk ended on) with URL /editor, deterministic, never a remount. Measured gap between history.pushState to the manage URL and React removing the editor: 9 of 9 runs 17-20 ms (instrumented with a pushState wrapper + MutationObserver). A person cannot press Back in 20 ms, so not a user-reachable product bug. Non-blocking observation: in that cancelled-navigation state the editor stays with Done disabled (finishing never reset) and the leave guard already released (20/20); only reachable inside the ~20 ms window, so no fail, but resetting finishing on a cancelled navigation would be tidy.
+  - (2) dev spec editor-flow.spec.mjs --repeat-each=20 isolated: 20 passed / 0 failed. QA spec editor-flow-qa.spec.mjs --repeat-each=20 isolated: 20 passed / 0 failed. Full e2e (scripts/e2e.sh logic) run 1: 40 passed / 0 failed (3.2m); run 2: 40 passed / 0 failed (3.2m). No T-174 touch flake seen. Head acbe283826d5c50200ca66c62b88caa113772e5d.
+  - (3) Stale-cache deep link (editor-flow-stale-qa.spec.mjs): open editor by client-side nav (book-data cached, 3 pages), Done, another tab approves a note, tab A (never reloaded, window flag survived) routes client-side to /editor?page=notes -> lands on 'Page 3 of 4: Notes page 1'. PASSES on this head. Discrimination check: the same probe on the old EditorShell (849fc2c version, git checkout of that one file, restored after) FAILS: Expected 'Page 3 of 4: Notes page 1', Received 'Page 1 of 4: Cover'. So 34736dd is a real fix of the stale-cache hazard. Also: after the user steps back to Profile and a focus event fires, fresh data does not move them (stays Page 2 of 4: Profile). Note: the manage page itself (stale) did not show 'Edit notes pages' within 8 s of the other tab approving (no refetch on focus), so I routed to the same URL via history.pushState+popstate; informational only.
+  - (4) R1: en 'This layout applies to every notes page.' visible (data-testid notes-shared) on deep link, live region has no such text on deep link; stepping Profile -> Next to notes: live region = 'Page 3 of 4: Notes page 1. This layout applies to every notes page.'; text absent on Profile. vi (vi-VN context, deep link): 'Bố cục này áp dụng cho mọi trang lời nhắn.' present. R3: after Done document.activeElement is H1 with the book title (QA-R3-FOCUS {tag:H1}).
+  - Web on this head: eslint OK, prettier OK, tsc OK, lint:i18n ok, check:api ok, vitest 65 files / 1146 passed / 0 failed. Go/print-check not run (no Go or render change).
+  - Reviewed 34736dd: requested page held as state and resolved against current list each render, moved user keeps their choice; unknown/hidden ?page= -> cover (covered by existing e2e step 3). Sound. Answer to dev's UX question: a ~20 ms URL-before-commit gap is acceptable.
+- 2026-11-05 15:17Z · leader · Leader: QA_PASS accepted (QA tested acbe283826d5c50200ca66c62b88caa113772e5d: dev spec 20/0, QA spec 20/0, full e2e 40/0 twice, stale-cache probe, R1/R3 verified; URL-before-commit gap measured 17-20 ms, not a product bug). QA pushed a test-only commit a19d9f2f8e9b3d953e5da88a7e855c6c96da7db5 (editor-flow-stale-qa.spec.mjs, not in testMatch: moved to T-168). Merge waits for CI go/web on a19d9f2.
+- 2026-11-05 15:39Z · leader · Leader: merged PR #166 (squash) at head a19d9f2f8e9b3d953e5da88a7e855c6c96da7db5 after QA_PASS (tested acbe283: e2e 40/0 twice, specs 20/0; test-only commit on top); go/web/security green.
 
 ### T-171 — [E09] Stretching shapes: rectangle and ellipse that fill their box (registry + web)
 - **Status:** MERGED
@@ -835,29 +869,95 @@ Spec: .team/epics/E09-customisation-editor/31-page-templates-model-and-shipped.m
 - 2026-11-05 10:03Z · leader · merged 44f339a; QA: integration 33 pkgs ok (-race, matrix incl template-list), postman 186/420/0 x2, e2e 38/0, print-check 193/193, vitest 1120; gate negative controls fail go test; non-blocking: comment in web/src/api/bookLayout.ts says save rate limit but layout read limit is used; prod skip path verified by code read only
 
 ### T-173 — [E09] Own page templates and the apply API (Go): save my page, apply a template per section
-- **Status:** IN_PROGRESS
+- **Status:** CHANGES_REQUESTED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
 - **Depends-on:** T-172
 - **Risk:** high
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-173-e09-own-page-templates-and-the-apply-api
-- **PR:** —
-- **Updated:** 2026-11-05 13:44Z by dev
-- **Comments-seen:** 1
+- **PR:** https://github.com/danyaa666/smemories/pull/169
+- **Updated:** 2026-11-05 19:41Z by leader
+- **Comments-seen:** 8
 
 Spec: .team/epics/E09-customisation-editor/32-own-templates-and-apply-api.md (read it from the main checkout). book_template_tab migration, template-create/delete/list, apply-template in one write with one apply snapshot, limits 20 and 64 KiB, concurrency tests. Risk high: owner approval before merge
 
 #### Comments
 - 2026-11-05 10:03Z · leader · T-172 merged (44f339a); Risk high: owner approve needed before merge
+- 2026-11-05 14:53Z · dev · PR #169 head 4af81307e440910719d750f48036d4c1cbae09be (develop merged in, no force-push). Implemented per spec 32: migration 20261105120000_book_template_tab (up+down, expand-only), template-create/delete, template-list with source shipped|own, apply-template via Store.save (one transaction under the yearbook row lock, new snapshot kind apply, ValidateRestore, stale version checked before validation, ERROR_TEMPLATE_MISMATCH/LIMIT), metrics + one slog line per apply, docs, OpenAPI + schema.d.ts, Postman folder. Results on private stack t173dev (ports 13731/16731/19731, SMEM_TEST_S3_ENDPOINT set): golangci-lint 0 issues, go vet (+integration) ok, go test -race ./... all ok (unit), full go test -race -tags integration ./...: every package ok on the run; 3 internal/db migration tests and 2 internal/notes tests that enumerate tables/migrations needed updating for the new table, fixed in the last commit and re-run green (db TestMigrate*, notes TestDeleteBookLeavesNoRows/TestQAUnregisteredTableIsCaught), api + booklayout + class re-run green on the final head. Concurrency: TestConcurrentAppliesExactlyOneWins (20 rounds each) -race -count=20: ok on the final head; TestTemplateLimitTwenty (8 parallel creates, one place) -count=20 ok. Migration: TestMigrateBookTemplateTab plus smemories-migrate up, down --allow-down, up on a scratch DB. check:api green; web vitest 64 files / 1125 passed, eslint/prettier/tsc ok. Postman (newman 6, API in SMEM_ENV=dev as the collection needs the smem_session cookie name): folder T-173 88 assertions / 0 failed, T-172 46/0, T-163 79/0 (T-172's step 4 and 8 assertions edited: they now ignore own templates and know the source member). The older T-152 and T-153 folders fail in my local run for image-upload reasons unrelated to this PR (not touched). Not done by design: account-deletion and export code do not exist, documented + note on T-025 (dbtest orphan pair added). Verify as QA: fill 20 templates and try the 21st, apply shipped and own to every kind, two tabs racing an apply, delete a template/asset used by a book, 404 cells for admin/member/other admin/anonymous, migration down/up, full make test-integration + Postman. Risk high: no merge request, owner approve after QA.
+- 2026-11-05 14:53Z · dev · PR #169 head 4af8130: own templates + apply API, all green locally (see comment); high risk, owner approve after QA
+- 2026-11-05 14:56Z · leader · Leader to QA (queued; QA picks it after T-170): PR #169 head 4af81307e440910719d750f48036d4c1cbae09be (full SHA). HIGH RISK: run the FULL integration suite (make test-integration, default DSN), migration down then up on a private DB, go test -race ./..., the class matrix, the Postman T-173 folder with newman (dev: 88/0; T-172 steps 4 and 8 were edited to ignore own templates: check that edit does not weaken them), and result lines (counts + full SHA) in your comment. Verify per spec 32: create strips image items and bg.media and reports the count; the 21st is refused (ERROR_TEMPLATE_LIMIT, data.limit 20); 64 KiB limit; another user, a class admin, a member, another class admin and anonymous get 404/401 on every new route; apply replaces only the chosen kind, one new version, one snapshot of kind apply, retention still 30; stale base_version conflicts with the stored document and changes nothing; template of another book template is ERROR_TEMPLATE_MISMATCH; a dropped asset is counted; invalid page leaves layout and history byte-identical; no layout yet -> created; two parallel applies (-race -count=20 in the package, and a real two-client probe against the stack); delete does not change books that used the template; account deletion note on T-025. Check logs and metrics carry no layout content. The leader merges only after the owner's approve.
+- 2026-11-05 15:54Z · qa · QA_PASS T-173, PR #169, head 4af81307e440910719d750f48036d4c1cbae09be (unchanged, MERGEABLE, develop merges cleanly: git merge-tree exit 0 against origin/develop 2cc6751 after T-171). No test commits pushed by QA. Stack: private compose project t173qa, ports 13831/16831/19831, SMEM_TEST_S3_ENDPOINT set; torn down without -v. RESULT LINES: (1) make -e test-integration (go test -race -count=1 -timeout 30m -tags integration ./..., default smemories DSN grants, my ports via env): 33 packages ok, 0 FAIL, exit 0 (booklayout 179s, class 269s, db 233s, notes 298s, media 151s all ok). (2) go test -race -count=1 ./... (unit): 32 ok, 0 FAIL. go vet and go vet -tags integration clean, golangci-lint 0 issues, gofmt clean, web npm run check:api 'api schema ok'. (3) Concurrency: go test -race -count=20 -tags integration -run 'TestConcurrentAppliesExactlyOneWins|TestTemplateLimitTwenty' ./internal/booklayout/ ok (41s). (4) Migration on private DB: up (20261105120000_book_template_tab applied), SHOW CREATE TABLE matches spec (owner_id+public_id unique, (owner_id,created_at DESC) index, no FK), down --allow-down removed the table and goose version fell to 20261102120000, up again recreated it. (5) newman 6.2.3 against API in SMEM_ENV=dev on my stack: folder T-173 run twice back to back: 90 assertions / 0 failed each (88 + 2 setup); T-172 48/0; T-163 81/0; book-design 132/0; T-152 61/0 and T-153 106/0 when run with --working-dir postman (without it they fail on fixture file load errors: 'Form param file, file load error fixtures/media/...' = relative fixture path, not a product bug and not from this PR; I did not need a develop comparison since they are green with the right cwd). T-172 edit check: I diffed old vs new script of steps 4, 5, 7 (dev said 4 and 8): the only changes are a filter source==='shipped' on the items and 'source' added to the exact key list, so the assertions are not weaker (stricter on keys); own-template behaviour is asserted in the T-173 folder. (6) e2e (make -e e2e, private ports 18781/14781): run 1 37 passed, 1 failed (editor-gestures touch at 768 px swipe: item moved 3 px vs 0.5 px budget; pure web gesture timing, no API or layout change in this PR), 1 did not run; run 2 on the same head: 39 passed, 0 failed (flaky, not this PR). print-check (make -e print-check): 199 tests, 199 pass, 0 fail. EVIDENCE per AC (my own real two-client HTTP probe, python script against the running API, plus newman): AC1 create on a cover with 2 text items + image item + bg.media: 200, stripped=2, item_count=2, own template page has no media/image; 60-char name 200, 61 chars and empty 400; no saved page of the kind 400; fill to exactly 20, the 21st: 409 ERROR_TEMPLATE_LIMIT data {limit:20}; 6 parallel creates on the last free place: exactly one 200, five 409, total 20; a page over 64 KiB (40 text items x 500 four-byte runes) saved fine then template-create 413 ERROR_TOO_LARGE and no row stored; anonymous 401 and other user B 404 on create, delete, apply and list; B cannot see, delete or apply A's template and vice versa (B's list has no A data); delete twice 404. AC2 apply shipped to each of back, cover, notes, profile: 200, version +1, the other kinds byte-equal to before; apply own to cover: version +1, items equal to the template's; version-list newest snapshot kind 'apply'; stale base_version: 409 ERROR_VERSION_CONFLICT with data.version and layout and nothing changed; restore of an apply snapshot returned that snapshot's document (200). AC3 failed applies (unknown shipped 404, bad kind 400, unknown own id 404, future base_version 409, base_version -1 400, own cover template onto profile 400): layout (get) and version-list byte-identical before/after; own template made on memory-book after the book switched to navy-classic: 409 ERROR_TEMPLATE_MISMATCH and the navy template-list has 0 own; two parallel applies with the same base_version from two clients (threads, barrier), 5 rounds: every round exactly one 200 and one 409, version +1 only, snapshot count +1 only; retention: 35 further applies leave exactly 30 snapshots (smem_layout_snapshots_pruned_total moved). No layout yet: apply with base_version 0 creates v1 (no snapshot, nothing existed before). Delete of the template leaves the book document equal. AC4: class matrix: TestAdminStillHasNoRightsOverAStudentsBook and TestAdminRoutesAreAllInTheMatrix in internal/class pass in the full integration run (cells admin, member, other class admin all 404 for template-create, template-delete, apply-template with the SECRET strings and DB snapshots unchanged); docs rows present in class-permissions.md, class-privacy-review.md (3 route rows plus the T-025 account-deletion note). Logs and metrics: the API log has 55 'page template applied' lines holding only yearbook_id, kind, source, from/new version, dropped; grep of the whole log for the layout strings I used (COVER-ONE, PROFILE-KEEP, NOTES-KEEP, B-SECRET, Cover <b>, Lớp 12A1) = 0 hits; /metrics shows only counters smem_page_template_applies_total{source,result}, created/deleted/stripped totals and snapshots{kind=apply}, no ids or content. NOT probed live by me: dropped-asset count on apply (covered by TestApplyOwnAndDropped, green in the integration run), rate limiting of the three routes (TestOwnTemplateRoutesAreRateLimited green; my probe hit the 20 per 10 s burst once and got 429 ERROR_RATE_LIMITED as designed, with a throttled probe all other calls were 200). Non-blocking: (a) template names are stored as plain text exactly as typed ('Cover <b>one</b>' is kept, the UI must render it as text; same as other labels); (b) postman folder has no class admin/member steps (they are in the Go matrix); (c) dev's comment says T-172 steps 4 and 8 were edited, in the file they are steps 4, 5 and 7; (d) editor-gestures touch test is flaky locally (1 of 2 runs). Risk high: needs the owner's approve before merge.
+- 2026-11-05 15:55Z · leader · Leader review (QA_PASS accepted, head 4af81307e440910719d750f48036d4c1cbae09be, MERGEABLE, go/web/security green, no .team files). Read: migration book_template_tab (expand-only, no FKs, owner-scoped unique key, down drops the table), create (take rate limit, Clean(name,1,60), book read as owner, page kind validated against the book's block, strip of image items and picture bg then Validate with NO media, 64 KiB cap, limit under the user row lock), apply (params validated first, rate limit, store.get as owner, mismatch and conflict mapped to metric labels, log line without layout content). QA: integration 33 pkg ok, race x20 ok, migration up/down/up ok, newman T-173 folder 90/0 twice, live probe (strip, limit 6 parallel creates, 64 KiB, 401/404, 5 rounds of parallel applies = one 200 and one 409, atomic failures, snapshot kind apply, retention 30, no layout in logs/metrics), print-check 199/199, e2e 39/39 on run 2 (run 1: T-174 touch flake). Open items, none blocking: dropped-asset count and rate limits covered only by Go integration tests. NEEDS OWNER: risk high, merge only after 'team approve T-173'.
+- 2026-11-05 19:41Z · leader · Leader: PR #169 now CONFLICTS with develop (T-167 merged: class book, metrics, openapi/schema, docs). Not a QA failure. Dev: merge origin/develop into the branch (no force-push), resolve (keep both sides: T-167's class-book/layouts additions and T-173's routes, metrics, openapi paths and regenerated schema.d.ts, docs rows, migration timestamp stays 20261105120000 unless develop has a later one), regenerate web/src/api/schema.d.ts, then re-run: make test-integration (full), go test -race ./..., migration up/down/up, newman T-173 folder (with --working-dir postman), check:api, web checks; put counts + full head SHA in the board comment and set READY_FOR_QA. QA will re-run the mandatory high-risk lines on the merged head; the owner's approve is still pending and will be asked for after that re-test.
+- 2026-11-05 19:41Z · leader · Leader rework brief (conflict only, no behaviour change expected): resolve the merge with develop as described in the status note; do not change any T-173 behaviour; if a conflict touches the class book test (internal/class/page_integration_test.go) or metrics.go, keep both sides and re-run those packages. R1 re-run list: full make test-integration, go test -race ./..., migration up/down/up, newman T-173 folder, check:api, vitest/lint/tsc/build. Nothing under .team/.
 
 ### T-174 — [E09] Stabilise the editor-gestures touch test (flake: 2 to 3 px against 0.5 allowed)
-- **Status:** TODO
+- **Status:** IN_QA
 - **Priority:** P3
 - **Type:** test
+- **Milestone:** M4
+- **Depends-on:** none
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** qa
+- **Branch:** task/t-174-e09-stabilise-the-editor-gestures-touch-
+- **PR:** https://github.com/danyaa666/smemories/pull/171
+- **Updated:** 2026-11-05 19:27Z by qa
+- **Comments-seen:** 2
+
+Spec: .team/epics/E09-customisation-editor/33-gestures-touch-test-flake.md (read it from the main checkout). The touch pan assertion failed in 3 runs (T-165 dev, T-166 QA twice); find the cause (test timing or a product pan moving an item), fix at the source, 30 isolated and 10 full-suite runs clean
+
+#### Comments
+- 2026-11-05 19:26Z · dev · PR #171 head d3b7781554da0eed500c8a1b8faa556067f9f55e. Cause = test timing, proven: per-frame sampling after touchEnd shows the stage still gliding (scrollLeft 347 -> 368 over ~190 ms) while the item's stored style is identical in every frame and the atomic item-minus-sheet delta is 0; the old test polled scroll>20 (mid-fling) then read sheet and item in two evaluations (2-3 px apart). No product change. Fix: settledRects helper (scroll unchanged 3 frames, one evaluate returns item, sheet, style, scroll), 0.5 px kept, adds style-unchanged and vertical checks; one paragraph in docs/e2e.md. Private stack t174dev (13741/16741/19741, SMEM_TEST_S3_ENDPOINT set). Before: reproduced at once, old spec 2 fails in 10 isolated runs. After: 30/30 isolated, 30/30 isolated under full CPU load (11 busy loops; note QA's concurrent stack loads the machine, flake is load/timing sensitive), 10/10 full-suite runs 41 passed 0 failed. QA: run the touch test 20x isolated (-g 'setup:|touch at 768' --repeat-each) and full suite 3x, compare to old spec if wanted. Stack stopped, not removed.
+- 2026-11-05 19:27Z · leader · Leader to QA: PR #171 head d3b7781554da0eed500c8a1b8faa556067f9f55e (verify full SHA with gh pr view). Test-only change (tools/e2e/editor-gestures.spec.mjs + docs/e2e.md); dev's diagnosis: the stage keeps gliding after the swipe (scrollLeft 347 -> 368 over ~190 ms), the old test read sheet and item in two evaluations 2-3 px apart; the new settledRects helper waits for 3 stable frames and reads everything in one evaluate; tolerance unchanged 0.5 px. Verify: (1) read the diff: tolerance not loosened, new assertions (stage panned, item style unchanged, vertical axis) meaningful, no waitForTimeout sleep as the fix; (2) run -g 'setup:|touch at 768' --repeat-each=20 in isolation, then again under load (a few busy loops) and the full e2e suite 3 times, report counts + full SHA; (3) mutation check: temporarily make the product pan move an item by ~3 px (or shrink the settle wait to 0) and confirm the test FAILS, then revert (do not push the mutation). Any touch failure = QA_FAIL.
+
+### T-175 — [E09] Template gallery and apply, per section (web): shipped and own templates, preview, apply, delete own
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M4
+- **Depends-on:** T-170, T-173
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-11-05 by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E09-customisation-editor/34-template-gallery-apply-ui.md (read it from the main checkout). Templates panel bound to the page kind (cover, profile, notes, back), cards with thumbnails drawn by the page renderer, read-only preview, apply with one confirmation (settle, apply-template, adopt, history cleared, History row 'Before template'), delete own, errors in vi/en, e2e editor-templates
+
+#### Comments
+
+### T-176 — [E09] Save my page as a template (web): name it, see what is kept, use it again
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M4
+- **Depends-on:** T-175, T-173
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-11-05 by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E09-customisation-editor/35-save-page-as-template-ui.md (read it from the main checkout). Button in the Templates panel, dialog with name (60 code points) and a hint of how many images are not saved, template-create after settle, limit 20 message, own list refreshed, e2e editor-save-template
+
+#### Comments
+
+### T-177 — [E09] Shipped page templates for Memory Book: four or more looks per page kind, authored by us
+- **Status:** TODO
+- **Priority:** P2
+- **Type:** feature
 - **Milestone:** M4
 - **Depends-on:** none
 - **Risk:** low
@@ -869,7 +969,45 @@ Spec: .team/epics/E09-customisation-editor/32-own-templates-and-apply-api.md (re
 - **Updated:** 2026-11-05 by leader
 - **Comments-seen:** 0
 
-Spec: .team/epics/E09-customisation-editor/33-gestures-touch-test-flake.md (read it from the main checkout). The touch pan assertion failed in 3 runs (T-165 dev, T-166 QA twice); find the cause (test timing or a product pan moving an item), fix at the source, 30 isolated and 10 full-suite runs clean
+Spec: .team/epics/E09-customisation-editor/36-shipped-templates-memory-book.md (read it from the main checkout). Content files only (our own authoring, no Doory material; route B), contrast and distinctness gates in Go tests, print-check case per template on A5/A4/Letter, contact sheet, docs
+
+#### Comments
+
+### T-178 — [E09] Shipped page templates for Navy Classic: four or more looks per page kind, authored by us
+- **Status:** TODO
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M4
+- **Depends-on:** none
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-11-05 by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E09-customisation-editor/37-shipped-templates-navy-classic.md (read it from the main checkout). Same as T-177 for the formal template: keep the frame and tone, stay inside the frame's inner rule
+
+#### Comments
+
+### T-179 — [E09] Stage 2 hardening: fuzz the layout parsers, storage budget per user, abuse limits, no content in logs
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** test
+- **Milestone:** M4
+- **Depends-on:** T-173
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-11-05 by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E09-customisation-editor/38-stage2-hardening-fuzz-storage-abuse.md (read it from the main checkout). Go fuzz targets with seeds in CI, depth/size limits before decode, docs/layout-storage-budget.md with measured numbers, rate-limit and body-cap test per layout route, sentinel test for logs and metrics, text safety, threat model note
 
 #### Comments
 

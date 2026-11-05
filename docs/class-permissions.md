@@ -37,7 +37,7 @@ A class always has at least one admin. Roles are per class: the same person can 
 | Create, list, revoke invites (`class-invite/create`, `get-list`, `revoke`; T-125) | 200 | **403** | 404 | 404 | 401 |
 | Preview an invite link (`class-invite/lookup`, public; T-125) | 200 for a live token, else 404 | same | same | same | same (no session needed) |
 | Join with an invite (`class-invite/accept`, verified email; T-125) | 200, keeps `admin` | 200, keeps `student` | 200, becomes student | 200, becomes student | 401 |
-| Read class book data: profiles, approved notes, each student's design, class pages (`class-book/get`; T-027, T-146) | 200, approved content only | **403** | 404 | 404 | 401 |
+| Read class book data: profiles, approved notes, each student's design and free layout, class pages (`class-book/get`; T-027, T-146, T-167) | 200, approved content only | **403** | 404 | 404 | 401 |
 | Open a photo of a member's linked book (`media/get-content`; T-027) | 200 for the profile photo, the photos of **approved** notes and the **design images the member's layout references** (T-152, T-153) only, else 404 | 404 | 404 | 404 | 401 |
 | Read or restore the saved earlier versions of a member's layout (`book-layout/version-list`, `version-get`, `restore`; T-163, table `book_layout_version_tab`) | 404 | 404 | 404 | 404 | 401 |
 | List the shipped page templates for a student's book (`book-layout/template-list`; T-172, embedded files, no table; the owner gets 200 for their own book only) | 404 | 404 (200 for their own book) | 404 | 404 | 401 |
@@ -145,6 +145,12 @@ yearbooks (`internal/class/book.go`); nothing is copied, so moderation is applie
    sections, replaced texts, picture choices; defaults filled in; `null` when the template has none), read as the book's owner through `bookdesign.Service.Resolved`. It holds nothing
    personal beyond the titles and texts the student typed into the template's slots; it goes through the same admin check and counts against the 8 MiB cap (a member whose
    notes are cut keeps it). The print applies it to that student's pages only; the class cover and class pages keep the class look.
+   **Layout (T-167).** Each linked member also carries `layout`, the stored free layout of their linked yearbook exactly as `book-data/get` prints it (re-validated against the
+   member's current template and the asset registry; `null` when there is none, when it was made for another template, when the page is not linked or is empty, and when the size cap
+   left it out), read **as the book's owner** through `booklayout.Service.Resolved` (no SQL path of its own). Only the document is sent: no version, no history, no snapshot ids. It holds
+   the text the student typed and the public ids of their own design images. **Audience:** `class-book/get` is admin only, so the layout reaches exactly the admins of the member's class
+   (a student, a classmate, a stranger and another class's admin get 403/404 and never a layout: `TestClassBookCarriesEachMembersLayout`, `TestClassBookMatrix`); no other route carries it. The
+   images stay behind `media/get-content`, readable by the admin only while the layout references them (`TestClassBookLayoutImageFollowsTheLayout`). An unlinked or departed member exposes none.
 2. **Order.** Members: `class_member_tab.sort_order`, then joining order (member row id). A member's notes: that student's own order, exactly as in
    their `book-data/get` (`note_tab.sort_order`, then creation). The admin cannot reorder a student's notes; the member order and the class pages are T-127 (below).
 3. **Cap.** At most 60 members (the class cap) and **40 approved notes per member** (`notes.MaxClassBookNotes`), which keeps the book near the 120-page budget.
@@ -152,9 +158,13 @@ yearbooks (`internal/class/book.go`); nothing is copied, so moderation is applie
    whatever the notes (test `TestClassBookQueryCountIsPerMember`).
    **Size and rate (T-133).** The body is never more than **8 MiB** (`class.MaxBookBytes`): when the notes of a member would pass it, that member and every later one are
    returned without notes and listed in the top-level `truncated` (member ids), the earlier members stay complete (rule and numbers: [book-export.md](book-export.md), "Class book").
+   **Layouts and the cap (T-167).** A layout (up to 128 KiB) is included **before** the member's notes: it stays while the member with the layout and no notes still leaves every later member the
+   `strippedMemberMax` (16 KiB) reserve; the notes are cut first. If even that does not fit, the layout of that member and of every later one is dropped (`layout: null`), the member's notes get another
+   try without it, and the member ids are in the top-level `truncated_layouts` (`[]` for a normal class). The log line `class book read` carries the counts (`layouts_included`, `layouts_dropped`) and
+   `smem_class_book_layouts_dropped_total` counts the dropped ones; neither holds an id or content.
    The read limiter is 30 per user and class per hour, fail closed (429 with `Retry-After`; 503 when the limiter store is down).
 4. **Who is listed with no content.** A member with no page, or whose page is empty (no profile text, no photo, no approved note), has `linked: false`,
-   `yearbook: null`, `profile: null`, `notes: []`. The name is the display name the roster shows. A profile photo id that points at nothing
+   `yearbook: null`, `profile: null`, `design: null`, `layout: null`, `notes: []`. The name is the display name the roster shows. A profile photo id that points at nothing
    (`profile_complete` only checks the column) comes back as `photo_media_id: null` and never errors (`TestClassBookToleratesADanglingPhotoID`).
 5. **The one read path into a member's photos** (`media.Store.readable`, one SQL statement, read only): the caller is an admin of a class in which the media's
    yearbook is a member's linked page **and the member owns it**, and the media is that yearbook's owner profile photo, a photo attached to one of its

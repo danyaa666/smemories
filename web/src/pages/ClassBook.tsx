@@ -7,7 +7,7 @@ import { getClassBook, type ClassBook as ClassBookData } from "../api/classBook"
 import { retryOnce } from "../api/notes";
 import { errorText } from "../auth/errors";
 import { AdminOnly } from "../classes/AdminOnly";
-import { LeftOutNotice, leftOut } from "../classes/LeftOutNotice";
+import { LeftOutNotice, leftOutKey } from "../classes/LeftOutNotice";
 import { ClassBookPages } from "../book/ClassBookPages";
 import {
   PAGE_BUDGET,
@@ -102,10 +102,8 @@ function ClassBookScreen({ book, classId }: { book: ClassBookData; classId: stri
   const [eager, setEager] = useState(false);
   const [loading, setLoading] = useState(0); // photos on the pages that have not settled yet
   const track = useCallback((delta: number) => setLoading((n) => n + delta), []);
-  // Notes left out of the answer (8 MiB cap): printing needs the admin's yes, asked again if the list changes.
-  const cutKey = leftOut(book)
-    .map((m) => m.member_id)
-    .join(",");
+  // Notes and layouts left out of the answer (8 MiB cap): printing needs the admin's yes, asked again if the lists change.
+  const cutKey = leftOutKey(book);
   const [acked, setAcked] = useState("");
   const ackOk = cutKey === "" || acked === cutKey;
   const ready = fonts && photos.settled && loading === 0;

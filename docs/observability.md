@@ -27,6 +27,7 @@ Every label comes from a small fixed set: `route` is the mux pattern (`GET /api/
 | `smem_layout_saves_total` | counter | result | `book-layout/save` calls by `result` (`ok`, `conflict`, `invalid`, `too_large`, `rate_limited`; T-153); the label set is closed, no id or document content is ever recorded. A rise of `conflict` means two tabs edit one book; of `rate_limited` that autosave is too eager |
 | `smem_layout_snapshots_total` | counter | kind | layout history snapshots written (`auto`, `reset`, `restore`, `apply`; T-163, T-173); no id or document content |
 | `smem_layout_snapshots_pruned_total` | counter | | history snapshots deleted because a book held more than 30 (T-163) |
+| `smem_class_book_layouts_dropped_total` | counter | | member layouts left out of `class-book/get` because the 8 MiB cap would have been passed (T-167); the log line `class book read` has the counts per request, no ids |
 | `smem_layout_restores_total` | counter | result | `book-layout/restore` calls by `result` (`ok`, `conflict`, `invalid`, `template_changed`; T-163) |
 | `smem_page_templates_created_total` / `smem_page_templates_deleted_total` | counter | | own page templates created / deleted (`book-layout/template-create`, `template-delete`; T-173); no ids or content |
 | `smem_page_template_items_stripped_total` | counter | | image items and picture backgrounds left out of new own templates (T-173) |

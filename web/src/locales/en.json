@@ -416,6 +416,15 @@
     "revokeTitle": "Revoke this link?",
     "revokeBody": "Friends can no longer use it. Notes already sent stay in your inbox."
   },
+  "designPages": {
+    "heading": "Design the pages",
+    "intro": "Move, add and change what is on each page.",
+    "all": "Edit page by page",
+    "cover": "Edit cover",
+    "profile": "Edit profile page",
+    "notes": "Edit notes pages",
+    "back": "Edit back page"
+  },
   "customise": {
     "title": "Customise the design",
     "link": "Customise the design",
@@ -712,7 +721,10 @@
     "cutNotes": "Notes too long for their space and cut off: {{count}}.",
     "cutProfile": "Profile texts too long for their space and cut off: {{count}}.",
     "leftOut": "These students' notes are left out of the class book because it would be too large ({{count}}): {{names}}. Their profile pages are still printed, but none of their notes.",
-    "leftOutAck": "I understand that these students' notes will be missing from the printout"
+    "leftOutAck": "I understand that these students' notes will be missing from the printout",
+    "layoutLeftOut": "These students' layouts are left out of the class book because it would be too large ({{count}}): {{names}}. Their profile and notes are still printed, but on the template's standard pages.",
+    "layoutLeftOutAck": "I understand that these students' layouts will be missing from the printout",
+    "leftOutAckBoth": "I understand that the notes and layouts listed above will be missing from the printout"
   },
   "legal": {
     "terms": "Terms of Use",
@@ -982,7 +994,13 @@
     "undo": "Undo",
     "redo": "Redo",
     "resetAll": "Reset all layout",
-    "preview": "Preview as PDF",
+    "flow": "Pages, print and finish",
+    "prevPage": "Previous page",
+    "nextPage": "Next page",
+    "print": "Print or save as PDF",
+    "printHint": "Prints all pages of the book, {{size}}.",
+    "done": "Done",
+    "doneFailed": "Your latest changes are not saved yet, so the editor stays open. Check the save status, then press Done again.",
     "previewFailed": "The latest changes could not be saved, so the preview was not opened.",
     "range": "Between {{min}} and {{max}}",
     "conflict": "This book was changed in another tab or device. Editing is paused until you choose.",
@@ -994,6 +1012,7 @@
     "goneLink": "Back to my yearbooks",
     "strip": "Pages",
     "pageOf": "Page {{n}} of {{total}}: {{name}}",
+    "notesShared": "This layout applies to every notes page.",
     "page": {
       "cover": "Cover",
       "profile": "Profile",
@@ -1106,6 +1125,7 @@
       "noSnap": "Do not snap to guides while dragging",
       "ratio": "Keep the proportions while resizing",
       "snap15": "Turn in steps of 15 degrees while rotating",
+      "pages": "Go to the previous or next page of the book",
       "help": "Show or hide this list"
     },
     "dir": {

@@ -6,7 +6,7 @@ import { ClassBookPages } from "../ClassBookPages";
 import { memberBook } from "../classBook";
 import type { LayoutDoc } from "./runtime";
 
-// T-154 (AC4): the class book draws each student's layout on their own pages only. class-book/get does not carry `layout` yet (the web reads it as soon as it does).
+// T-154 (AC4): the class book draws each student's layout on their own pages only. class-book/get carries `layout` since T-167 (null when none, or left out by the size cap: `truncated_layouts`).
 
 const text = (id: string, s: string) => ({
   id,
@@ -75,6 +75,12 @@ describe("the class book draws each student's layout", () => {
     expect(has("BETA")).toHaveLength(1); // student B has one note: one notes page
     expect(has("BETA")[0]).toContain('data-page="notes"');
     expect(out.indexOf("ALPHA")).toBeLessThan(out.indexOf("BETA"));
+  });
+  it("a student whose layout was left out by the size cap draws as without one; the others keep theirs", () => {
+    const out = html(book([a, { ...b, layout: null }]));
+    expect(out).toContain("ALPHA");
+    expect(out).not.toContain("BETA");
+    expect(out).toContain("gửi S2"); // their notes page is still printed
   });
   it("a student on a template without a layout block, or with no layout, draws as before", () => {
     const plain = html(book([member(1, null), member(2, null, "navy-classic")]));
