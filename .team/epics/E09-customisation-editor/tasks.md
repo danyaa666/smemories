@@ -604,7 +604,7 @@ Spec: .team/epics/E09-customisation-editor/24-version-history-panel.md (read it 
 - 2026-11-01 22:30Z · leader · merged 3e5c742; QA: vitest 1078, e2e 3 clean runs 37/0 (4th hit register 429, flushed redis), history probes 33 saves->30 rows, pending autosave saved first. Non-blocking: raw ENOENT when mysql client missing; QA probe spec not committed
 
 ### T-166 — [E09] Navy Classic: page kinds and editable elements for the layout editor (web + manifest)
-- **Status:** QA_PASS
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -612,11 +612,11 @@ Spec: .team/epics/E09-customisation-editor/24-version-history-panel.md (read it 
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** leader
+- **Assignee:** —
 - **Branch:** task/t-166-e09-navy-classic-page-kinds-and-editable
 - **PR:** https://github.com/danyaa666/smemories/pull/164
-- **Updated:** 2026-11-05 08:47Z by qa
-- **Comments-seen:** 2
+- **Updated:** 2026-11-05 08:48Z by leader
+- **Comments-seen:** 4
 
 Spec: .team/epics/E09-customisation-editor/25-navy-classic-layout.md (read it from the main checkout). design.layout block in navy-classic.json, Editable wrappers in navy.tsx, background replaces the page tone, parity with no layout, print-check parity fixture, server cases, editor-navy e2e
 
@@ -640,6 +640,7 @@ Spec: .team/epics/E09-customisation-editor/25-navy-classic-layout.md (read it fr
   1. Flaky: editor-gestures.spec.mjs:482 (touch at 768 px, Memory Book, step 'swipe pans the stage and does not move the item', 3 px against 0.5 allowed) failed in e2e full runs 1 and 2, passed in runs 3-6 and in 3 isolated runs of that spec. vitest had 1 failure of 1093 in one run (first, while the integration suite loaded the machine; 3 later runs clean; I did not capture the name). Both look load/cold-start related; I did not check develop, so not proven unrelated to T-166 (shared runtime.tsx), but the touch spec has no Navy content. Suggest a flake ticket if it recurs.
   2. docs/e2e.md: direct scripts/e2e.sh runs need make reset-limits (or SMEM_E2E_RATE_REGISTER_PER_HOUR) after ~2 runs; already documented.
   3. Known limits from the PR stand (title blank 26 px vs 84 px; gold bg under light text is the student's choice).
+- 2026-11-05 08:48Z · leader · merged 7f6cc24; QA: integration 33 pkgs ok, e2e 38/0 (3 of 6 runs; gestures touch flake 3px in 2 runs), print-check 193/193, vitest 1093
 
 ### T-167 — [E09] Class book carries each member's layout (server cap, privacy, web wiring)
 - **Status:** TODO
@@ -700,7 +701,7 @@ Spec: .team/epics/E09-customisation-editor/28-canvas-foundation-spike.md (read i
 - 2026-11-05 08:23Z · dev · Spike done in one wake-up. ADR 0005 (Proposed) + docs/spikes/canvas (npm run clone && npm run measure reproduces all). Head 9b5510c. Verify: coverage 230 objs 73% today / 85% with stretch shapes; 52 files pass booklayout.Validate (go run -tags spike ./docs/spikes/canvas/validate); determinism sha256 equal; parity 9 cases <=0.20%; 15 studio failure cases pass; bundle absent. Gaps stated plainly in ADR: parity uses a copy of the draw rule not the product runtime, no real phone/iOS, no studio keyboard, no Telex (no text tool). Owner must decide licence route A (credit) or B (recreate) before any converted template is committed; renders/converted files are git-ignored for that reason. Diff touches only docs/adr/0005, docs/spikes/canvas, .gitignore.
 
 ### T-170 — [E09] Editor flow: page by page, Save and done, Print, back to the book manage page (web)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M4
@@ -708,10 +709,10 @@ Spec: .team/epics/E09-customisation-editor/28-canvas-foundation-spike.md (read i
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-170-e09-editor-flow-page-by-page-save-and-do
 - **PR:** —
-- **Updated:** 2026-11-05 by leader
+- **Updated:** 2026-11-05 08:47Z by dev
 - **Comments-seen:** 0
 
 Spec: .team/epics/E09-customisation-editor/29-editor-page-flow-done-print.md (read it from the main checkout). Previous/next page through the real book order, Done (settle then manage page, leave guard), Print after settle, deep links from the manage page, e2e editor-flow
@@ -772,6 +773,25 @@ Spec: .team/epics/E09-customisation-editor/31-page-templates-model-and-shipped.m
 - **Comments-seen:** 0
 
 Spec: .team/epics/E09-customisation-editor/32-own-templates-and-apply-api.md (read it from the main checkout). book_template_tab migration, template-create/delete/list, apply-template in one write with one apply snapshot, limits 20 and 64 KiB, concurrency tests. Risk high: owner approval before merge
+
+#### Comments
+
+### T-174 — [E09] Stabilise the editor-gestures touch test (flake: 2 to 3 px against 0.5 allowed)
+- **Status:** TODO
+- **Priority:** P3
+- **Type:** test
+- **Milestone:** M4
+- **Depends-on:** none
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-11-05 by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E09-customisation-editor/33-gestures-touch-test-flake.md (read it from the main checkout). The touch pan assertion failed in 3 runs (T-165 dev, T-166 QA twice); find the cause (test timing or a product pan moving an item), fix at the source, 30 isolated and 10 full-suite runs clean
 
 #### Comments
 
