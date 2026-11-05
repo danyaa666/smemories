@@ -745,7 +745,7 @@ Spec: .team/epics/E09-customisation-editor/29-editor-page-flow-done-print.md (re
 - 2026-11-05 09:56Z · leader · Leader to QA (re-test after rework): PR #166 head 06029547d77e75053f6881fea93ff11669069cf0. Check R1 notes-page text (en+vi, live region on arrival; deep link shows text without announcement), R2 editor-flow-qa.spec.mjs now in testMatch (dev changed ONE assertion: after Done and browser Back from the ?page=notes deep link the editor reopens on notes; judge whether that is the right expectation), R3 manage-page h1 focus. Dev saw one run where the QA spec read 'Page 1 of 4: Cover' after Back instead of notes, not reproduced in 6 runs: run the full e2e at least twice plus the QA spec 10 times in isolation and report any repeat (a repeat means a real remount race: QA_FAIL). Counts and full SHA in your comment.
 
 ### T-171 — [E09] Stretching shapes: rectangle and ellipse that fill their box (registry + web)
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -753,15 +753,17 @@ Spec: .team/epics/E09-customisation-editor/29-editor-page-flow-done-print.md (re
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-171-e09-stretching-shapes-rectangle-and-elli
-- **PR:** —
-- **Updated:** 2026-11-05 09:57Z by dev
-- **Comments-seen:** 0
+- **PR:** 168
+- **Updated:** 2026-11-05 10:37Z by dev
+- **Comments-seen:** 2
 
 Spec: .team/epics/E09-customisation-editor/30-stretching-shapes.md (read it from the main checkout). shape.rect and shape.ellipse (CC0, licence files, stretch flag), AssetSvg edge to edge, free resize in the editor, print-check cell
 
 #### Comments
+- 2026-11-05 10:37Z · dev · PR #168, head 3169629 (develop merged in, T-172 included, no conflict). shape.rect and shape.ellipse (stretch flag, AssetSvg preserveAspectRatio none, palette default 40% x 25% of page, print-check cells stretch1/stretch2 on the cover, docs). Resize was already free of aspect lock (Shift keeps ratio), so no gesture change, only a test. My results on the pre-merge head d949ad9 (private compose smem-t171, scripts/e2e.sh direct): e2e 39 passed 0 failed incl. new palette case; print-check 193 pass 0 fail (A5/A4/Letter); go test assets/booklayout/templates ok, integration assets+booklayout ok; web lint, tsc, lint:i18n, check:api, vitest 1125/1125, build green after merge. Verify: thin rotated rectangle, tint per theme, extreme ratios, print on 3 papers. Note: print-check fixture banner sits at top edge because under the cover title the template text shifts 7 px screen vs print on A4 (not the shape).
+- 2026-11-05 10:37Z · leader · Leader to QA: PR #168 head 3169629 (full SHA from gh pr view). Dev ran e2e 39/39 and print-check 193/193 on the pre-merge head d949ad9 and only unit/web checks after merging develop (T-172). Accepted: no gesture code change (resize already free of aspect lock; Shift keeps ratio). You must run on the merged head: full e2e (own stack, twice), make print-check, web checks, go test ./internal/assets/... ./internal/booklayout/... ./internal/templates/..., and make test-integration for touched packages; report counts + full SHA. Verify per spec 30: thin rotated rect, extreme aspect (w 900 h 10) saves, tint per theme, both shapes in Shapes tab, print on A5/A4/Letter, other assets keep their aspect, fixture banner moved to the top edge (not hiding a real shape/print drift).
 
 ### T-172 — [E09] Page templates: model, shipped storage, validator gate and read route (Go + web preview)
 - **Status:** MERGED
