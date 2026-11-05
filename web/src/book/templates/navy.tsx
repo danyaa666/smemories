@@ -4,6 +4,7 @@ import { BookSignature, hasSignature } from "../BookSignature";
 import { useDesign } from "../design";
 import { FitText } from "../fit";
 import { Photo, Sheet, useBookEnv } from "../env";
+import { Editable, LayoutLayer, useLayoutBg, type TemplateLayout } from "../layout/runtime";
 import { designHeight } from "../sizes";
 import type { Template } from "./index";
 import "./navy.css";
@@ -17,17 +18,34 @@ import "./navy.css";
 const GOLD = "var(--nc-gold)";
 const DARK_GOLD = "var(--nc-bronze)";
 
-/** The page: the theme and the font set of the book's design (the first of each when it has none) are attributes of the element navy.css reads. */
-function Page({ tone, children }: { tone: "navy" | "cream"; children: ReactNode }) {
+/**
+ * The sheet and its page: the theme and the font set of the book's design (the first of each when it has none) are attributes of the element navy.css
+ * reads. The student's page background (T-166) replaces the tone's colour (and shows its picture) behind the frame and the text; `label` is also the
+ * page kind of the layout.
+ */
+function Page({
+  label,
+  tone,
+  children,
+}: {
+  label: string;
+  tone: "navy" | "cream";
+  children: ReactNode;
+}) {
   const { theme, fonts } = useDesign();
+  const lbg = useLayoutBg(label);
   return (
-    <div
-      className={`nc-page nc-${tone}`}
-      data-theme={theme || undefined}
-      data-fonts={fonts || undefined}
-    >
-      {children}
-    </div>
+    <Sheet label={label} layer={<LayoutLayer kind={label} theme={theme} fonts={fonts} />}>
+      <div
+        className={`nc-page nc-${tone}`}
+        data-theme={theme || undefined}
+        data-fonts={fonts || undefined}
+        style={lbg.color ? { backgroundColor: lbg.color } : undefined}
+      >
+        {lbg.node}
+        {children}
+      </div>
+    </Sheet>
   );
 }
 
@@ -121,22 +139,26 @@ function Head({
 }) {
   return (
     <div className="nc-head" style={{ top }}>
-      <Own
-        id={`${page}.eyebrow`}
-        fallback={eyebrow}
-        fitKey={`${page}:eyebrow`}
-        className="caps nc-eyebrow"
-        fitClass="nc-eyebrow-fit"
-        style={{ fontSize: 12 }}
-      />
-      <Own
-        id={`${page}.heading`}
-        fallback={title}
-        fitKey={`${page}:heading`}
-        className="serif nc-title"
-        fitClass="nc-title-fit"
-        style={{ fontSize: 68 }}
-      />
+      <Editable layoutId={`${page}.eyebrow`}>
+        <Own
+          id={`${page}.eyebrow`}
+          fallback={eyebrow}
+          fitKey={`${page}:eyebrow`}
+          className="caps nc-eyebrow"
+          fitClass="nc-eyebrow-fit"
+          style={{ fontSize: 12 }}
+        />
+      </Editable>
+      <Editable layoutId={`${page}.heading`}>
+        <Own
+          id={`${page}.heading`}
+          fallback={title}
+          fitKey={`${page}:heading`}
+          className="serif nc-title"
+          fitClass="nc-title-fit"
+          style={{ fontSize: 68 }}
+        />
+      </Editable>
       <Divider width={220} color={DARK_GOLD} />
     </div>
   );
@@ -146,12 +168,12 @@ function Cover({ data }: { data: BookData }) {
   const { t } = useBookEnv();
   const y = data.yearbook;
   return (
-    <Sheet label="cover">
-      <Page tone="navy">
-        <Frame outer={36} inner={44} />
-        <div className="nc-cover-top">
-          <Cap />
-          {y.school_name && (
+    <Page label="cover" tone="navy">
+      <Frame outer={36} inner={44} />
+      <div className="nc-cover-top">
+        <Cap />
+        {y.school_name && (
+          <Editable layoutId="cover.school">
             <FitText
               fitKey="cover:school"
               className="caps nc-line nc-school"
@@ -160,13 +182,17 @@ function Cover({ data }: { data: BookData }) {
             >
               {y.school_name}
             </FitText>
-          )}
-          <Divider width={260} color={GOLD} />
-          {y.graduation_year !== null ? (
-            <>
+          </Editable>
+        )}
+        <Divider width={260} color={GOLD} />
+        {y.graduation_year !== null ? (
+          <>
+            <Editable layoutId="cover.year" group="nc-year-block">
               <div className="serif nc-class-of">{t("bookPages.navy.classOf")}</div>
               <div className="serif nc-year">{y.graduation_year}</div>
-              <Divider width={260} color={GOLD} />
+            </Editable>
+            <Divider width={260} color={GOLD} />
+            <Editable layoutId="cover.title">
               <FitText
                 fitKey="cover:title"
                 className="caps nc-line nc-sub"
@@ -175,9 +201,11 @@ function Cover({ data }: { data: BookData }) {
               >
                 {y.title}
               </FitText>
-            </>
-          ) : (
-            <>
+            </Editable>
+          </>
+        ) : (
+          <>
+            <Editable layoutId="cover.title">
               <FitText
                 fitKey="cover:title"
                 className="serif nc-line nc-title-only"
@@ -186,12 +214,14 @@ function Cover({ data }: { data: BookData }) {
               >
                 {y.title}
               </FitText>
-              <Divider width={260} color={GOLD} />
-            </>
-          )}
-        </div>
-        <div className="nc-cover-foot">
-          {y.motto && (
+            </Editable>
+            <Divider width={260} color={GOLD} />
+          </>
+        )}
+      </div>
+      <div className="nc-cover-foot">
+        {y.motto && (
+          <Editable layoutId="cover.motto">
             <FitText
               fitKey="cover:motto"
               className="serif nc-line nc-motto"
@@ -200,8 +230,10 @@ function Cover({ data }: { data: BookData }) {
             >
               {y.motto}
             </FitText>
-          )}
-          {y.class_name && (
+          </Editable>
+        )}
+        {y.class_name && (
+          <Editable layoutId="cover.class">
             <FitText
               fitKey="cover:class"
               className="caps nc-line nc-gold-caps"
@@ -210,10 +242,10 @@ function Cover({ data }: { data: BookData }) {
             >
               {y.class_name}
             </FitText>
-          )}
-        </div>
-      </Page>
-    </Sheet>
+          </Editable>
+        )}
+      </div>
+    </Page>
   );
 }
 
@@ -271,57 +303,57 @@ function Profile({ data }: { data: BookData }) {
   const room = designHeight(size) - LETTER_TOP - LETTER_BOTTOM - SIGN_H - LETTER_GAP * paras.length;
   const scale = Math.min(1, room / paras.reduce((n, q) => n + paraHeight(q.text), 0));
   return (
-    <Sheet label="profile">
-      <Page tone="cream">
-        <Head
-          page="profile"
-          eyebrow={t("bookPages.navy.profileEyebrow")}
-          title={t("bookPages.aboutMe")}
-          top={72}
-        />
-        <div className="nc-letter">
-          <div className="nc-letter-text">
-            {paras.map((q) => (
-              <Para key={q.fitKey} {...q} height={Math.floor(paraHeight(q.text) * scale)} />
-            ))}
-            <div className="nc-sign">
+    <Page label="profile" tone="cream">
+      <Head
+        page="profile"
+        eyebrow={t("bookPages.navy.profileEyebrow")}
+        title={t("bookPages.aboutMe")}
+        top={72}
+      />
+      <div className="nc-letter">
+        <div className="nc-letter-text">
+          {paras.map((q) => (
+            <Para key={q.fitKey} {...q} height={Math.floor(paraHeight(q.text) * scale)} />
+          ))}
+          <div className="nc-sign">
+            <FitText
+              fitKey="profile:name"
+              className="serif nc-line nc-signature"
+              style={{ fontSize: 40 }}
+              minScale={0.3}
+            >
+              {p.full_name}
+            </FitText>
+            {signLine && (
               <FitText
-                fitKey="profile:name"
-                className="serif nc-line nc-signature"
-                style={{ fontSize: 40 }}
-                minScale={0.3}
+                fitKey="profile:line"
+                className="caps nc-line nc-sign-line"
+                style={{ fontSize: 12 }}
+                minScale={0.35}
               >
-                {p.full_name}
+                {signLine}
               </FitText>
-              {signLine && (
-                <FitText
-                  fitKey="profile:line"
-                  className="caps nc-line nc-sign-line"
-                  style={{ fontSize: 12 }}
-                  minScale={0.35}
-                >
-                  {signLine}
-                </FitText>
-              )}
-            </div>
-          </div>
-          <div className="nc-letter-photo">
-            <Photo id={p.photo_media_id} className="nc-oval" />
-            {y.graduation_year !== null && (
-              <div className="serif nc-caption">
-                {t("bookPages.classOf", { year: y.graduation_year })}
-              </div>
             )}
           </div>
         </div>
-        <div className="nc-footer">
-          <div className="caps nc-footer-class">
-            {y.graduation_year !== null && t("bookPages.classOf", { year: y.graduation_year })}
-          </div>
-          <div className="caps nc-footer-title">{y.title}</div>
+        <div className="nc-letter-photo">
+          <Editable layoutId="profile.photo">
+            <Photo id={p.photo_media_id} className="nc-oval" />
+          </Editable>
+          {y.graduation_year !== null && (
+            <div className="serif nc-caption">
+              {t("bookPages.classOf", { year: y.graduation_year })}
+            </div>
+          )}
         </div>
-      </Page>
-    </Sheet>
+      </div>
+      <div className="nc-footer">
+        <div className="caps nc-footer-class">
+          {y.graduation_year !== null && t("bookPages.classOf", { year: y.graduation_year })}
+        </div>
+        <div className="caps nc-footer-title">{y.title}</div>
+      </div>
+    </Page>
   );
 }
 
@@ -381,40 +413,38 @@ function Notes({ notes, data }: { notes: BookNote[]; data: BookData }) {
   const { t } = useBookEnv();
   const y = data.yearbook;
   return (
-    <Sheet label="notes">
-      <Page tone="cream">
-        <Frame outer={28} inner={34} />
-        <Head
-          page="notes"
-          eyebrow={t("bookPages.navy.autographsEyebrow")}
-          title={t("bookPages.navy.autographs")}
-          top={76}
-        />
-        <div className="nc-grid">
-          {notes.map((n) => (
-            <Autograph key={n.id} note={n} />
-          ))}
+    <Page label="notes" tone="cream">
+      <Frame outer={28} inner={34} />
+      <Head
+        page="notes"
+        eyebrow={t("bookPages.navy.autographsEyebrow")}
+        title={t("bookPages.navy.autographs")}
+        top={76}
+      />
+      <div className="nc-grid">
+        {notes.map((n) => (
+          <Autograph key={n.id} note={n} />
+        ))}
+      </div>
+      <div className="nc-farewell">
+        <Divider width={220} color={DARK_GOLD} />
+        <div className="serif nc-farewell-text">
+          {y.graduation_year !== null
+            ? t("bookPages.navy.farewellYear", { year: y.graduation_year })
+            : t("bookPages.navy.farewell")}
         </div>
-        <div className="nc-farewell">
-          <Divider width={220} color={DARK_GOLD} />
-          <div className="serif nc-farewell-text">
-            {y.graduation_year !== null
-              ? t("bookPages.navy.farewellYear", { year: y.graduation_year })
-              : t("bookPages.navy.farewell")}
-          </div>
-          {y.school_name && (
-            <FitText
-              fitKey="notes:school"
-              className="caps nc-line nc-gold-caps nc-dark"
-              style={{ fontSize: 11 }}
-              minScale={0.35}
-            >
-              {y.school_name}
-            </FitText>
-          )}
-        </div>
-      </Page>
-    </Sheet>
+        {y.school_name && (
+          <FitText
+            fitKey="notes:school"
+            className="caps nc-line nc-gold-caps nc-dark"
+            style={{ fontSize: 11 }}
+            minScale={0.35}
+          >
+            {y.school_name}
+          </FitText>
+        )}
+      </div>
+    </Page>
   );
 }
 
@@ -423,31 +453,31 @@ function Back({ data }: { data: BookData }) {
   const { t } = useBookEnv();
   const y = data.yearbook;
   return (
-    <Sheet label="back">
-      <Page tone="navy">
-        <Frame outer={36} inner={44} />
-        <div className="nc-back">
-          <Cap />
-          {y.school_name && (
-            <FitText
-              fitKey="back:school"
-              className="caps nc-line nc-school"
-              style={{ fontSize: 16 }}
-              minScale={0.3}
-            >
-              {y.school_name}
-            </FitText>
-          )}
-          <Divider width={260} color={GOLD} />
+    <Page label="back" tone="navy">
+      <Frame outer={36} inner={44} />
+      <div className="nc-back">
+        <Cap />
+        {y.school_name && (
           <FitText
-            fitKey="back:title"
-            className="serif nc-line nc-title-only"
-            style={{ fontSize: 48 }}
-            minScale={0.35}
+            fitKey="back:school"
+            className="caps nc-line nc-school"
+            style={{ fontSize: 16 }}
+            minScale={0.3}
           >
-            {y.title}
+            {y.school_name}
           </FitText>
-          <Divider width={260} color={GOLD} />
+        )}
+        <Divider width={260} color={GOLD} />
+        <FitText
+          fitKey="back:title"
+          className="serif nc-line nc-title-only"
+          style={{ fontSize: 48 }}
+          minScale={0.35}
+        >
+          {y.title}
+        </FitText>
+        <Divider width={260} color={GOLD} />
+        <Editable layoutId="back.thanks">
           <Own
             id="back.thanks"
             fallback={t("bookPages.thanks")}
@@ -456,18 +486,55 @@ function Back({ data }: { data: BookData }) {
             fitClass="nc-thanks-fit"
             style={{ fontSize: 26 }}
           />
-        </div>
-        {y.graduation_year !== null && (
+        </Editable>
+      </div>
+      {y.graduation_year !== null && (
+        <Editable layoutId="back.footer">
           <div className="nc-cover-foot">
             <div className="caps nc-line nc-gold-caps" style={{ fontSize: 11 }}>
               {t("bookPages.classOf", { year: y.graduation_year })}
             </div>
           </div>
-        )}
-      </Page>
-    </Sheet>
+        </Editable>
+      )}
+    </Page>
   );
 }
+
+/**
+ * What the layout layer needs of this template (T-166), as for Memory Book (memory.tsx). `colors` and `fonts` are the CSS behind the manifest's
+ * `design.layout` tokens (navy.css: ink = the dark colour of the theme, paper = the light one); `natural` lists the elements the student may move (the
+ * manifest's `editable` ids; a test pins them) with the place each has on the A5 page, in design px, in the order the page draws them. The cover and back
+ * pages are dark, so a new text there is `paper`, not `ink`. The cover title is 26 px high with a graduation year and 84 px without; the blank it leaves
+ * when moved is the first. The gold frames, the dividers and the cap are decoration and stay where they are.
+ */
+const LAYOUT: TemplateLayout = {
+  colors: {
+    ink: "var(--nc-dark)",
+    paper: "var(--nc-light)",
+    gold: "var(--nc-gold)",
+    bronze: "var(--nc-bronze)",
+  },
+  fonts: { display: "var(--nc-serif)", body: "var(--nc-caps)" },
+  textSize: { min: 8, max: 96 },
+  pageClass: "nc-page",
+  layerClass: "nc-layer",
+  defaultColor: { cover: "paper", back: "paper" },
+  natural: {
+    "cover.school": { left: 80, top: 232, w: 656, h: 28, flow: true },
+    "cover.year": { left: 80, top: 328, w: 656, h: 271, flow: true },
+    "cover.title": { left: 80, top: 649, w: 656, h: 26, flow: true },
+    "cover.motto": { left: 80, top: 1004, w: 656, h: 36, flow: true },
+    "cover.class": { left: 80, top: 1046, w: 656, h: 20, flow: true },
+    "profile.eyebrow": { left: 56, top: 72, w: 704, h: 18, flow: true },
+    "profile.heading": { left: 56, top: 100, w: 704, h: 68, flow: true },
+    "profile.photo": { left: 534, top: 270, w: 200, h: 260, flow: true },
+    "notes.eyebrow": { left: 56, top: 76, w: 704, h: 18, flow: true },
+    "notes.heading": { left: 56, top: 104, w: 704, h: 68, flow: true },
+    "back.thanks": { left: 148, top: 708, w: 520, h: 37, flow: true },
+    "back.footer": { left: 80, top: 1046, w: 656, h: 20 },
+  },
+};
 
 export const navyClassic: Template = {
   id: "navy-classic",
@@ -488,6 +555,7 @@ export const navyClassic: Template = {
     "notes.heading": "bookPages.navy.autographs",
     "back.thanks": "bookPages.thanks",
   },
+  layout: LAYOUT,
   Cover,
   Profile,
   Notes,

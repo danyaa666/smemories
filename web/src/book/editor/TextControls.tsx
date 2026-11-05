@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import type { TemplateLayout } from "../layout/runtime";
+import { defaultColorOf, type TemplateLayout } from "../layout/runtime";
 import { MAX_TEXT, runeCount, setText, type LayoutItem, type Op } from "./document";
 import type { GestureStore } from "./gestures/useGestures";
 import { NumField } from "./NumField";
@@ -40,7 +40,10 @@ export function TextControls({
   const colors = Object.keys(spec.colors);
   const { min, max } = spec.textSize;
   const font = item.font !== undefined && fonts.includes(item.font) ? item.font : "body";
-  const color = item.color !== undefined && colors.includes(item.color) ? item.color : "ink";
+  const color =
+    item.color !== undefined && colors.includes(item.color)
+      ? item.color
+      : defaultColorOf(spec, kind);
   const size = Math.min(max, Math.max(min, item.size ?? DEFAULT_SIZE));
   const set = (patch: Parameters<typeof setText>[2]) => run(setText(kind, item.id, patch));
   const align = item.align ?? "left";

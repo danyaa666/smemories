@@ -382,12 +382,46 @@ func TestInvalidDocuments(t *testing.T) {
 		}
 	}
 	// a template without a layout block cannot hold one
-	nid := e.book(alice, "navy-classic")
-	e.call("POST", "/api/book-layout/save", alice, save(nid, 0, doc())).status(400, "ERROR_INVALID_LAYOUT")
 	cid := e.book(alice, "classic")
 	e.call("POST", "/api/book-layout/save", alice, save(cid, 0, doc())).status(400, "ERROR_INVALID_LAYOUT")
-	if e.counted("invalid") < 2 {
+	if e.counted("invalid") < 1 {
 		t.Errorf("invalid counter %d", e.counted("invalid"))
+	}
+}
+
+// T-166: Navy Classic holds a layout in its own element ids. Memory Book's ids are refused on a Navy book, a Navy id on a Memory Book,
+// and switching the template deletes the layout as it does for Memory Book.
+func TestNavyClassicLayout(t *testing.T) {
+	e := newEnv(t, nil, 0)
+	alice := e.register("alice@example.com")
+	id := e.book(alice, "navy-classic")
+	navyText := `{"id":"a1b2c3","t":"text","text":"Lớp 12A1","font":"display","size":28,"color":"gold","align":"center","bold":true,"x":100,"w":400,"h":120,"cy":500}`
+	navy := `{"v":1,"pages":{` +
+		`"cover":{"bg":{"color":"gold"},"overrides":{"cover.title":{"x":100,"w":600,"h":80,"cy":300,"r":-4},"cover.motto":{"hidden":true},"cover.year":{"x":50}},"items":[` + navyText + `]},` +
+		`"profile":{"bg":{"color":"paper"},"overrides":{"profile.photo":{"x":500,"w":200,"h":260,"cy":400},"profile.eyebrow":{"hidden":true}}},` +
+		`"notes":{"overrides":{"notes.heading":{"x":80}}},"back":{"bg":{"color":"ink"},"overrides":{"back.thanks":{"x":90},"back.footer":{"hidden":true}}}}}`
+	e.call("POST", "/api/book-layout/save", alice, save(id, 0, navy)).status(200, "OK")
+	for _, bad := range []string{
+		`{"v":1,"pages":{"cover":{"overrides":{"cover.photo":{"x":120}}}}}`,   // an element of Memory Book
+		`{"v":1,"pages":{"cover":{"overrides":{"profile.photo":{"x":120}}}}}`, // an element of another kind
+		`{"v":1,"pages":{"cover":{"bg":{"color":"accent"}}}}`,                 // a colour of Memory Book
+		`{"v":1,"pages":{"cover":{"items":[{"id":"abcdef","t":"asset","asset":"sticker.gold-star","tint":"white","x":0,"w":100,"h":100,"cy":500}]}}}`,
+	} {
+		e.call("POST", "/api/book-layout/save", alice, save(id, 1, bad)).status(400, "ERROR_INVALID_LAYOUT")
+	}
+	if v := e.call("GET", get(id), alice, "").data()["version"]; v != float64(1) {
+		t.Fatalf("a refused save changed the version: %v", v)
+	}
+	// the other way round: a Navy element on a Memory Book
+	mid := e.book(alice, "memory-book")
+	e.call("POST", "/api/book-layout/save", alice, save(mid, 0, `{"v":1,"pages":{"cover":{"overrides":{"cover.motto":{"hidden":true}}}}}`)).status(400, "ERROR_INVALID_LAYOUT")
+	// the template change deletes the layout
+	e.call("POST", "/api/yearbook/update", alice, fmt.Sprintf(`{"id":%q,"template_id":"memory-book"}`, id)).status(200, "OK")
+	if d := e.call("GET", get(id), alice, "").status(200, "OK").data(); d["layout"] != nil || d["template_id"] != "memory-book" {
+		t.Fatalf("after the template change: %v", d)
+	}
+	if e.count(`SELECT COUNT(*) FROM book_layout_tab`) != 0 {
+		t.Fatal("the layout survived the template change")
 	}
 }
 

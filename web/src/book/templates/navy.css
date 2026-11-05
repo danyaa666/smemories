@@ -6,7 +6,9 @@
    gold = frames and accents on the dark pages; bronze = small accents on the cream pages. Text pairs (light on dark, gold on dark, dark on light,
    bronze on light) are all >= 4.5:1 (checked by design.test.ts, listed in docs/templates.md). */
 .nc-page,
-.nc-page[data-theme="navy"] {
+.nc-layer,
+.nc-page[data-theme="navy"],
+.nc-layer[data-theme="navy"] {
   --nc-dark: #1b2a4a;
   --nc-light: #f7f3ea;
   --nc-gold: #c9a86a;
@@ -14,7 +16,8 @@
   --nc-photo: #dcd6c9;
   --nc-rule: rgba(27, 42, 74, 0.22);
 }
-.nc-page[data-theme="burgundy"] {
+.nc-page[data-theme="burgundy"],
+.nc-layer[data-theme="burgundy"] {
   --nc-dark: #4a1a2b;
   --nc-light: #faf3ee;
   --nc-gold: #d9b57c;
@@ -22,7 +25,8 @@
   --nc-photo: #e6d6cf;
   --nc-rule: rgba(74, 26, 43, 0.22);
 }
-.nc-page[data-theme="forest"] {
+.nc-page[data-theme="forest"],
+.nc-layer[data-theme="forest"] {
   --nc-dark: #143a2f;
   --nc-light: #f4f6ee;
   --nc-gold: #cfb06e;
@@ -35,12 +39,15 @@
    upright (no italics: Nunito has none, and a slanted copy would be synthesised). A @font-face is fetched only when text uses it, so the files of the set
    that is not active are never requested. No other family in a stack: a family named there would be fetched for a character the first one lacks. */
 .nc-page,
-.nc-page[data-fonts="classic"] {
+.nc-layer,
+.nc-page[data-fonts="classic"],
+.nc-layer[data-fonts="classic"] {
   --nc-serif: "Cormorant Garamond", serif;
   --nc-caps: "Be Vietnam Pro", sans-serif;
   --nc-italic: italic;
 }
-.nc-page[data-fonts="modern"] {
+.nc-page[data-fonts="modern"],
+.nc-layer[data-fonts="modern"] {
   --nc-serif: Nunito, sans-serif;
   --nc-caps: Nunito, sans-serif;
   --nc-italic: normal;
@@ -73,6 +80,23 @@
   text-transform: uppercase;
   letter-spacing: 0.28em;
   font-weight: 500;
+}
+/* The year block of the cover (the class-of line and the year) as one box once the student moves it (Editable group): the column it was a part of. */
+/* A moved element is drawn straight into the page, so it no longer inherits the centring of the column it came from (.nc-cover-top, .nc-head, .nc-back, ...). */
+.nc-page .mb-ov {
+  text-align: center;
+}
+.mb-ov > .nc-thanks {
+  max-width: none; /* the box is the student's, not the 520 px of the back page's column */
+}
+.nc-year-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+.nc-year-block .nc-class-of {
+  margin-top: 0; /* the column's 18 px above the line belong to the column, not to the box */
 }
 .nc-frame {
   position: absolute;

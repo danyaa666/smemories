@@ -102,7 +102,7 @@ describe("the editor route", () => {
   });
 
   it("says so for a template that cannot hold a layout", async () => {
-    const calls = serve({ template: "navy-classic" });
+    const calls = serve({ template: "classic" });
     renderApp(`/yearbooks/${BOOK}/editor`);
     expect(await screen.findByText(/does not support free layout/)).toBeInTheDocument();
     expect(calls.some((c) => c.path.startsWith("/book-layout"))).toBe(false);

@@ -21,7 +21,7 @@ export function Swatches({
   const { t } = useTranslation();
   return (
     <div
-      className="mb-layer ed-swatches"
+      className={["mb-layer", spec.layerClass, "ed-swatches"].filter(Boolean).join(" ")}
       data-theme={scope.theme || undefined}
       data-fonts={scope.fonts || undefined}
       role="radiogroup"
