@@ -643,7 +643,7 @@ Spec: .team/epics/E09-customisation-editor/25-navy-classic-layout.md (read it fr
 - 2026-11-05 08:48Z · leader · merged 7f6cc24; QA: integration 33 pkgs ok, e2e 38/0 (3 of 6 runs; gestures touch flake 3px in 2 runs), print-check 193/193, vitest 1093
 
 ### T-167 — [E09] Class book carries each member's layout (server cap, privacy, web wiring)
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -654,14 +654,32 @@ Spec: .team/epics/E09-customisation-editor/25-navy-classic-layout.md (read it fr
 - **Assignee:** —
 - **Branch:** task/t-167-e09-class-book-carries-each-member-s-lay
 - **PR:** 170
-- **Updated:** 2026-11-05 15:38Z by dev
-- **Comments-seen:** 2
+- **Updated:** 2026-11-05 19:24Z by leader
+- **Comments-seen:** 4
 
 Spec: .team/epics/E09-customisation-editor/26-class-book-layouts.md (read it from the main checkout). BookMember.layout read as the owner, layout before notes under the 8 MiB cap with truncated_layouts, privacy docs and matrix, web class book wiring, print-check and class e2e
 
 #### Comments
 - 2026-11-05 15:38Z · dev · PR #170, head a3fa250. Risk treated as medium. class-book/get carries member.layout (booklayout.Service.Resolved as the owner, no version) + top-level truncated_layouts; cap: layout paid before notes, dropped (with later layouts) when it would break the later members' 16 KiB reserve, notes retried without it; log line + smem_class_book_layouts_dropped_total. Web: real field, LeftOutNotice names left-out layouts (vi/en), one ack covers both. Results on private stack t167dev: make test-integration equivalent (go test -race -tags integration ./... full, S3 endpoint set) 33 pkgs ok, 1662 pass / 0 fail / 6 skip; class matrix script ok; web lint/tsc/prettier/i18n/check:api ok, vitest 1128 pass; scripts/e2e.sh 39 passed (class step 7c new); print-check 199 pass (two layouts + one dropped fixture); golangci-lint 0 issues. Postman class collection: Class book flow green incl. new steps; pre-existing unrelated failures remain (25 'without a session' steps due to newman cookie jar, 1 request hard-coded to localhost:8080). QA: run full integration, e2e, print-check, newman; build a 60-member class with 128 KiB layouts via DB inserts and check size/truncated_layouts (unit tests prove the rule); check leave/unlink, removed image, other-class admin 404, print on A5/A4/Letter. Docs updated (privacy review, permissions, book-export, templates, api-contract, observability, e2e, openapi).
 - 2026-11-05 15:39Z · leader · Leader to QA: PR #170 head a3fa250dbd8ab5a943095442e39989163f0875c5 (full SHA). Treat as MEDIUM risk (permissions and response cap): run the FULL make test-integration (default DSN) and go test -race, the class matrix script, the full e2e (own stack, twice), make print-check, web checks, and the Postman class collection. Dev's results on this head: go test -race -tags integration ./... 33 packages ok, 1662 pass, 0 fail, 6 skip; e2e 39/0 incl. new class step 7c; print-check 199/0; vitest 1128; golangci-lint 0. Dev says the class Postman collection still shows 28 assertion failures it did not fix (25 are 'without a session' steps where newman's cookie jar keeps the last session, 1 hard-coded to localhost:8080): confirm on develop that the same 28 fail there (baseline) and that the new T-167 steps pass; fixes of the old ones are not required. Dev stale-assert fixes in the collection (answers.message, keys): check they are right, not loosened. Verify per spec 26: build a 60-member class with 128 KiB layouts and long notes by direct DB insert (dev's integration test only covers 12 members): body <= MaxBookBytes, truncated_layouts lists the dropped members, earlier members keep layout, notes of all members are present when the reserve allows; a normal class loses nothing; member who unlinks or leaves loses theirs; image removed from the layout is no longer readable by the admin via media/get-content; admin of another class 404; non-member 404; anonymous 401; layout of member A never draws on member B pages; class book print on A5, A4, Letter with the 'layout left out' note; log line has counts only. Counts + full SHA in your comment.
+- 2026-11-05 19:24Z · qa · QA_PASS T-167 (treated as MEDIUM). PR #170. Product head tested: a3fa250dbd8ab5a943095442e39989163f0875c5 (full SHA); branch now at 42a9cbf8f634c6db24b309bd4606c37c1dc79bea = a3fa250 + 3 QA commits that add TEST FILES ONLY (internal/class/book_layout_qa_integration_test.go, tools/print-check/check.test.mjs); no product file touched. Merges cleanly into develop 54daeec (T-170/T-171 in): git merge-tree no conflicts, GitHub MERGEABLE. CI on 42a9cbf: go pass, web pass, security pass (e2e/go-integration/image skipped by D-37/D-38). Own stack: compose project t167qa, ports 13467/13468/13469, SMEM_TEST_S3_ENDPOINT set; no other project touched.
+  
+  RESULT LINES
+  - make test-integration (go test -race -count=1 -timeout 30m -tags integration ./..., default grants, own stack): 33 packages ok, 0 FAIL, exit 0.
+  - go build/vet ./... ok; go test -race -count=1 ./... : 32 packages ok, 0 FAIL; golangci-lint run ./... 0 issues (also with -tags integration for internal/class).
+  - class matrix: scripts/check-class-matrix.sh ok (28 operations all in docs/class-privacy-review.md); TestClassBookMatrix, TestPermissionMatrix, TestAdminRoutesAreAllInTheMatrix, TestInviteMatrix PASS.
+  - e2e (scripts/e2e.sh, own ports 18467/14467, DB smem_test_e2e, limits reset): run 1 = 39 passed / 0 failed; run 2 = 39 passed / 0 failed (class journey incl. step 7c green both times).
+  - make print-check: 199 tests, 199 pass, 0 fail (incl. T-167 fixture: two layouts + one dropped). I added 2 tests (class book with layouts on A4 and Letter, dropped layout still printed): 2 pass.
+  - web: eslint+prettier, tsc, lint:i18n, check:api ok; vitest 64 files / 1128 tests pass; vite build ok.
+  - Postman class collection (newman 5.3.2, --working-dir postman, API on own stack, limits reset between runs): PR collection on PR API = 543 assertions, 28 failed, run twice back to back identical (28 / 28, same 15 steps). Same collection on develop API 33 failed = those 28 + the 3 new/changed class-book steps that need T-167 (they fail on develop, pass on the PR). develop's own collection on develop API = 53 failed (28 + 25 stale asserts dev fixed). Set of failing steps on the PR is a subset of develop's baseline: nothing new. The 28 are the 'without a session' steps (newman cookie jar re-sends the session, got 200/404/403 instead of 401), 'Invalid IP address: undefined' (hard-coded localhost:8080 request) and the 11th-class step (B's email state). Dev's stale-assert fixes are correct, not loosened: answers.error_message -> answers.message (the real note key), key lists are still exact eql() and now include truncated, truncated_layouts, design, layout (matches the real 11-key member).
+  - 60-place class by direct DB insert (my test, TestQA167*): note the admin takes one of the 60 places, so 59 students. 127,086-byte valid layouts (81 text items of 500 chars) + 40 approved notes of 700 chars each: body 8,002,395 bytes (cap 8,388,608); 37 members complete (layout + 40 notes), layout dropped for the last 22 (truncated_layouts = exactly members 37..58, in book order, ids match), notes of those 22 cut too (cap is real), earlier members keep layout and notes, approved_total correct, profile kept. 59 x layout + 10 notes: 8.32 MB, 4 layouts dropped, ALL notes kept (layout dropped before notes when the reserve needs it). 30 layouts + 5 notes each (4.1 MB): nothing lost. Log line {members:60, layouts_included:37, layouts_dropped:22, notes_truncated_members:22}: counts only (no ids, no text, no class id); counter callback got 22.
+  - Privacy/HTTP on real API+web: anonymous 401, student 403, class admin of another class 404, nonexistent class 404 with the same body as non-member (only request_id differs), no LAYOUT text in the other-class answer. Unlink (set-book null) and leave: the layout and the member's page are gone from the admin's next class book. Removed image unreadable by admin (TestClassBookLayoutImageFollowsTheLayout, in the full integration run, PASS). A's layout never on B's sheet (browser: exactly one sheet holds B's layout text, none A's).
+  - Web notice/print (real app, answer rewritten to add a dropped layout, then dropped layout + cut notes): A5, A4, Letter: banner names the member, Print disabled until the ack, combined ack text for both lists, PDF made (4 pages), B's layout on B's sheet only.
+  
+  Evidence per AC: AC1 e2e 7c + browser + integration (layouts on own page only; screen and PDF; no-layout members unchanged). AC2 TestQA167* (59 x 127 KiB + 40 long notes <= cap, truncated_layouts listed, normal class loses nothing) + dev unit boundary tests. AC3 matrix + privacy tests + docs rows read (docs match the behaviour, including 'notes cut first, layout dropped only when the reserve fails'). AC4 all of the above.
+  
+  Non-blocking observations: (1) per the documented rule the first member that does not fit keeps a 127 KiB layout and loses 40 notes (88 KB) although dropping the layout would have kept the notes; the spec chose layout-before-notes, so by design. (2) The 16 KiB-per-member worst-case reserve leaves about 380 KB of the 8 MiB unused in the full-class case (22 stripped members really take about 5 KB each); the reserve proof is unchanged from before T-167. (3) Dev's integration test covers 12 members; the new QA tests in book_layout_qa_integration_test.go (about 35 s) cover the 59-student case; leader may keep or drop them. (4) Newman 28 failures are pre-existing and unrelated; fixing them (per-request cookie-jar clear, hard-coded URL) is a separate chore.
+- 2026-11-05 19:24Z · leader · Leader: merged PR #170 (squash) at head 42a9cbf8f634c6db24b309bd4606c37c1dc79bea after QA_PASS (product head a3fa250 + QA test-only commits): make test-integration 33 pkg ok, go test -race 32 ok, e2e 39/0 twice, print-check 199/0, 60-place class: body 8002395 <= 8388608, truncated_layouts = last 22; Postman baseline identical to develop (28).
 
 ### T-168 — [E09] History e2e hardening: friendly mysql-missing message, QA probe cases (tests only)
 - **Status:** TODO
@@ -874,7 +892,7 @@ Spec: .team/epics/E09-customisation-editor/32-own-templates-and-apply-api.md (re
 - 2026-11-05 15:55Z · leader · Leader review (QA_PASS accepted, head 4af81307e440910719d750f48036d4c1cbae09be, MERGEABLE, go/web/security green, no .team files). Read: migration book_template_tab (expand-only, no FKs, owner-scoped unique key, down drops the table), create (take rate limit, Clean(name,1,60), book read as owner, page kind validated against the book's block, strip of image items and picture bg then Validate with NO media, 64 KiB cap, limit under the user row lock), apply (params validated first, rate limit, store.get as owner, mismatch and conflict mapped to metric labels, log line without layout content). QA: integration 33 pkg ok, race x20 ok, migration up/down/up ok, newman T-173 folder 90/0 twice, live probe (strip, limit 6 parallel creates, 64 KiB, 401/404, 5 rounds of parallel applies = one 200 and one 409, atomic failures, snapshot kind apply, retention 30, no layout in logs/metrics), print-check 199/199, e2e 39/39 on run 2 (run 1: T-174 touch flake). Open items, none blocking: dropped-asset count and rate limits covered only by Go integration tests. NEEDS OWNER: risk high, merge only after 'team approve T-173'.
 
 ### T-174 — [E09] Stabilise the editor-gestures touch test (flake: 2 to 3 px against 0.5 allowed)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P3
 - **Type:** test
 - **Milestone:** M4
@@ -882,10 +900,10 @@ Spec: .team/epics/E09-customisation-editor/32-own-templates-and-apply-api.md (re
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-174-e09-stabilise-the-editor-gestures-touch-
 - **PR:** —
-- **Updated:** 2026-11-05 by leader
+- **Updated:** 2026-11-05 18:43Z by dev
 - **Comments-seen:** 0
 
 Spec: .team/epics/E09-customisation-editor/33-gestures-touch-test-flake.md (read it from the main checkout). The touch pan assertion failed in 3 runs (T-165 dev, T-166 QA twice); find the cause (test timing or a product pan moving an item), fix at the source, 30 isolated and 10 full-suite runs clean
