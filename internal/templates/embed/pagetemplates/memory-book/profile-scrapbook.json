@@ -1,0 +1,53 @@
+{
+ "id": "profile-scrapbook",
+ "label_en": "Scrapbook profile",
+ "label_vi": "Trang sổ lưu niệm",
+ "kind": "profile",
+ "source": "authored",
+ "licence": "LICENCE.txt",
+ "page": {
+  "overrides": {
+   "profile.photo": {
+    "x": 59,
+    "w": 294,
+    "h": 355,
+    "cy": 258,
+    "r": 5
+   }
+  },
+  "items": [
+   {
+    "id": "prscrap01",
+    "t": "asset",
+    "asset": "sticker.tape-stripes",
+    "x": 86,
+    "w": 184,
+    "h": 184,
+    "cy": 179,
+    "r": -8,
+    "tint": "accent"
+   },
+   {
+    "id": "prscrap02",
+    "t": "asset",
+    "asset": "sticker.flower-badge-yellow",
+    "x": 846,
+    "w": 118,
+    "h": 118,
+    "cy": 67,
+    "r": 0
+   },
+   {
+    "id": "prscrap03",
+    "t": "asset",
+    "asset": "shape.heart",
+    "x": 792,
+    "w": 44,
+    "h": 44,
+    "cy": 95,
+    "r": -12,
+    "tint": "accent"
+   }
+  ]
+ }
+}

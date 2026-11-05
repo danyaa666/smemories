@@ -1,0 +1,72 @@
+{
+ "id": "cover-polaroid",
+ "label_en": "Big polaroid cover",
+ "label_vi": "Bìa ảnh polaroid",
+ "kind": "cover",
+ "source": "authored",
+ "licence": "LICENCE.txt",
+ "page": {
+  "overrides": {
+   "cover.photo": {
+    "x": 159,
+    "w": 564,
+    "h": 637,
+    "cy": 587,
+    "r": -4
+   },
+   "cover.sticker": {
+    "x": 699,
+    "w": 216,
+    "h": 216,
+    "cy": 784,
+    "r": 12
+   }
+  },
+  "items": [
+   {
+    "id": "cvpolar01",
+    "t": "asset",
+    "asset": "sticker.tape-dots",
+    "x": 282,
+    "w": 282,
+    "h": 282,
+    "cy": 421,
+    "r": -5,
+    "tint": "accent"
+   },
+   {
+    "id": "cvpolar02",
+    "t": "asset",
+    "asset": "sticker.tape-stripes",
+    "x": 49,
+    "w": 196,
+    "h": 196,
+    "cy": 751,
+    "r": 38,
+    "tint": "soft"
+   },
+   {
+    "id": "cvpolar03",
+    "t": "asset",
+    "asset": "shape.heart",
+    "x": 797,
+    "w": 78,
+    "h": 78,
+    "cy": 356,
+    "r": 14,
+    "tint": "accent"
+   },
+   {
+    "id": "cvpolar04",
+    "t": "asset",
+    "asset": "sticker.doodle-sparkle",
+    "x": 833,
+    "w": 86,
+    "h": 86,
+    "cy": 514,
+    "r": 0,
+    "tint": "white"
+   }
+  ]
+ }
+}

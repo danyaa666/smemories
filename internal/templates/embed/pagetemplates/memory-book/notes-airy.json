@@ -11,29 +11,26 @@
   },
   "items": [
    {
-    "id": "s1e2f3",
+    "id": "noairy01",
     "t": "asset",
-    "x": 440,
-    "w": 120,
-    "h": 90,
-    "cy": 760,
+    "asset": "sticker.doodle-sparkle",
+    "x": 686,
+    "w": 37,
+    "h": 37,
+    "cy": 44,
     "r": 0,
-    "asset": "shape.heart",
     "tint": "accent"
    },
    {
-    "id": "t1e2f3",
-    "t": "text",
-    "x": 100,
-    "w": 800,
-    "h": 70,
-    "cy": 860,
+    "id": "noairy02",
+    "t": "asset",
+    "asset": "sticker.doodle-sparkle",
+    "x": 743,
+    "w": 27,
+    "h": 27,
+    "cy": 60,
     "r": 0,
-    "text": "Cảm ơn bạn đã ở lại trong trang này",
-    "font": "body",
-    "size": 20,
-    "color": "ink",
-    "align": "center"
+    "tint": "soft"
    }
   ]
  }
