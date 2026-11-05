@@ -1,0 +1,576 @@
+{
+ "doory_commit": "ref: refs/heads/main",
+ "templates": {
+  "bold-sale-announcement": {
+   "canvas": [
+    1080,
+    1080
+   ],
+   "pages": 1,
+   "fit": {
+    "objects": 19,
+    "exact": 4,
+    "approx": 10,
+    "cannot": 5,
+    "strict_exact": 0,
+    "converted_pct": 74,
+    "exact_pct": 21
+   },
+   "notes": {
+    "vector_path": 3,
+    "photo_slot_mapped": 1,
+    "mask_dropped": 1,
+    "color_snap": 13,
+    "shape_substituted": 2,
+    "font_map": 11,
+    "line_height_dropped": 7,
+    "outline_only_shape": 1,
+    "non_square_shape": 1,
+    "off_page": 0,
+    "size_clamped": 0
+   },
+   "cover": {
+    "objects": 19,
+    "exact": 4,
+    "approx": 8,
+    "cannot": 7,
+    "strict_exact": 0,
+    "converted_pct": 63,
+    "exact_pct": 21
+   },
+   "cover_pages": [
+    {
+     "page": 0,
+     "scale": 1.314
+    }
+   ],
+   "fit+stretch": {
+    "objects": 19,
+    "exact": 4,
+    "approx": 11,
+    "cannot": 4,
+    "strict_exact": 0,
+    "converted_pct": 79,
+    "exact_pct": 21
+   }
+  },
+  "bold-youtube-thumbnail": {
+   "canvas": [
+    1280,
+    720
+   ],
+   "pages": 1,
+   "fit": {
+    "objects": 8,
+    "exact": 0,
+    "approx": 4,
+    "cannot": 4,
+    "strict_exact": 0,
+    "converted_pct": 50,
+    "exact_pct": 0
+   },
+   "notes": {
+    "vector_path": 2,
+    "photo_slot_mapped": 1,
+    "non_square_shape": 2,
+    "shadow_dropped": 2,
+    "effect_shadow_dropped": 2,
+    "color_snap": 3,
+    "font_map": 3,
+    "line_height_dropped": 3,
+    "size_clamped": 1,
+    "box_clamped": 0,
+    "gradient_fill_averaged": 0,
+    "shape_substituted": 0
+   },
+   "cover": {
+    "objects": 8,
+    "exact": 0,
+    "approx": 4,
+    "cannot": 4,
+    "strict_exact": 0,
+    "converted_pct": 50,
+    "exact_pct": 0
+   },
+   "cover_pages": [
+    {
+     "page": 0,
+     "scale": 1.971
+    }
+   ],
+   "fit+stretch": {
+    "objects": 8,
+    "exact": 0,
+    "approx": 6,
+    "cannot": 2,
+    "strict_exact": 0,
+    "converted_pct": 75,
+    "exact_pct": 0
+   }
+  },
+  "botanical-celebration-invitation": {
+   "canvas": [
+    480,
+    672
+   ],
+   "pages": 1,
+   "fit": {
+    "objects": 21,
+    "exact": 2,
+    "approx": 11,
+    "cannot": 8,
+    "strict_exact": 0,
+    "converted_pct": 62,
+    "exact_pct": 10
+   },
+   "notes": {
+    "vector_path": 2,
+    "color_snap": 13,
+    "font_map": 13,
+    "letter_spacing_dropped": 10,
+    "line_height_dropped": 4,
+    "non_square_shape": 6,
+    "line_as_thin_box": 0,
+    "arrowhead_dropped": 0,
+    "box_clamped": 0
+   },
+   "cover": {
+    "objects": 21,
+    "exact": 2,
+    "approx": 11,
+    "cannot": 8,
+    "strict_exact": 0,
+    "converted_pct": 62,
+    "exact_pct": 10
+   },
+   "cover_pages": [
+    {
+     "page": 0,
+     "scale": 2.111
+    }
+   ],
+   "fit+stretch": {
+    "objects": 21,
+    "exact": 2,
+    "approx": 17,
+    "cannot": 2,
+    "strict_exact": 0,
+    "converted_pct": 90,
+    "exact_pct": 10
+   }
+  },
+  "clean-business-card": {
+   "canvas": [
+    336,
+    192
+   ],
+   "pages": 2,
+   "fit": {
+    "objects": 15,
+    "exact": 3,
+    "approx": 7,
+    "cannot": 5,
+    "strict_exact": 0,
+    "converted_pct": 67,
+    "exact_pct": 20
+   },
+   "notes": {
+    "color_snap": 10,
+    "font_map": 10,
+    "size_clamped": 1,
+    "line_height_dropped": 1,
+    "letter_spacing_dropped": 6,
+    "non_square_shape": 1,
+    "vector_path": 3,
+    "qr_code": 1,
+    "box_clamped": 0,
+    "shape_substituted": 0
+   },
+   "cover": {
+    "objects": 15,
+    "exact": 3,
+    "approx": 7,
+    "cannot": 5,
+    "strict_exact": 0,
+    "converted_pct": 67,
+    "exact_pct": 20
+   },
+   "cover_pages": [
+    {
+     "page": 0,
+     "scale": 7.39
+    },
+    {
+     "page": 1,
+     "scale": 7.39
+    }
+   ],
+   "fit+stretch": {
+    "objects": 15,
+    "exact": 3,
+    "approx": 8,
+    "cannot": 4,
+    "strict_exact": 0,
+    "converted_pct": 73,
+    "exact_pct": 20
+   }
+  },
+  "grand-opening-flyer": {
+   "canvas": [
+    816,
+    1056
+   ],
+   "pages": 1,
+   "fit": {
+    "objects": 15,
+    "exact": 1,
+    "approx": 10,
+    "cannot": 4,
+    "strict_exact": 0,
+    "converted_pct": 73,
+    "exact_pct": 7
+   },
+   "notes": {
+    "color_snap": 11,
+    "font_map": 11,
+    "letter_spacing_dropped": 8,
+    "size_clamped": 1,
+    "line_height_dropped": 5,
+    "non_square_shape": 4,
+    "line_as_thin_box": 0,
+    "arrowhead_dropped": 0,
+    "box_clamped": 0
+   },
+   "cover": {
+    "objects": 15,
+    "exact": 1,
+    "approx": 10,
+    "cannot": 4,
+    "strict_exact": 0,
+    "converted_pct": 73,
+    "exact_pct": 7
+   },
+   "cover_pages": [
+    {
+     "page": 0,
+     "scale": 1.344
+    }
+   ],
+   "fit+stretch": {
+    "objects": 15,
+    "exact": 1,
+    "approx": 14,
+    "cannot": 0,
+    "strict_exact": 0,
+    "converted_pct": 100,
+    "exact_pct": 7
+   }
+  },
+  "modern-pitch-deck": {
+   "canvas": [
+    1920,
+    1080
+   ],
+   "pages": 3,
+   "fit": {
+    "objects": 52,
+    "exact": 25,
+    "approx": 18,
+    "cannot": 9,
+    "strict_exact": 0,
+    "converted_pct": 83,
+    "exact_pct": 48
+   },
+   "notes": {
+    "color_snap": 42,
+    "shape_substituted": 6,
+    "font_map": 36,
+    "line_height_dropped": 11,
+    "non_square_shape": 9,
+    "photo_slot_mapped": 1,
+    "mask_dropped": 1,
+    "off_page": 0,
+    "size_clamped": 0,
+    "box_clamped": 0,
+    "stroke_dropped": 0,
+    "line_as_thin_box": 0,
+    "arrowhead_dropped": 0
+   },
+   "cover": {
+    "objects": 52,
+    "exact": 6,
+    "approx": 25,
+    "cannot": 21,
+    "strict_exact": 0,
+    "converted_pct": 60,
+    "exact_pct": 12
+   },
+   "cover_pages": [
+    {
+     "page": 0,
+     "scale": 1.314
+    },
+    {
+     "page": 1,
+     "scale": 1.314
+    },
+    {
+     "page": 2,
+     "scale": 1.314
+    }
+   ],
+   "fit+stretch": {
+    "objects": 52,
+    "exact": 25,
+    "approx": 27,
+    "cannot": 0,
+    "strict_exact": 0,
+    "converted_pct": 100,
+    "exact_pct": 48
+   }
+  },
+  "modern-resume": {
+   "canvas": [
+    794,
+    1123
+   ],
+   "pages": 1,
+   "fit": {
+    "objects": 64,
+    "exact": 10,
+    "approx": 31,
+    "cannot": 23,
+    "strict_exact": 0,
+    "converted_pct": 64,
+    "exact_pct": 16
+   },
+   "notes": {
+    "photo_slot_mapped": 1,
+    "mask_dropped": 1,
+    "color_snap": 55,
+    "font_map": 46,
+    "letter_spacing_dropped": 15,
+    "line_height_dropped": 16,
+    "over_item_cap": 15,
+    "vector_path": 4,
+    "non_square_shape": 4,
+    "stroke_dropped": 4,
+    "shape_substituted": 9,
+    "box_clamped": 5,
+    "line_as_thin_box": 0,
+    "arrowhead_dropped": 0
+   },
+   "cover": {
+    "objects": 64,
+    "exact": 10,
+    "approx": 31,
+    "cannot": 23,
+    "strict_exact": 0,
+    "converted_pct": 64,
+    "exact_pct": 16
+   },
+   "cover_pages": [
+    {
+     "page": 0,
+     "scale": 1.264
+    }
+   ],
+   "fit+stretch": {
+    "objects": 64,
+    "exact": 10,
+    "approx": 31,
+    "cannot": 23,
+    "strict_exact": 0,
+    "converted_pct": 64,
+    "exact_pct": 16
+   }
+  },
+  "night-bloom-concert-poster": {
+   "canvas": [
+    1728,
+    2304
+   ],
+   "pages": 1,
+   "fit": {
+    "objects": 17,
+    "exact": 1,
+    "approx": 14,
+    "cannot": 2,
+    "strict_exact": 0,
+    "converted_pct": 88,
+    "exact_pct": 6
+   },
+   "notes": {
+    "color_snap": 13,
+    "font_map": 15,
+    "line_height_dropped": 12,
+    "effect_outline_dropped": 2,
+    "text_outline_dropped": 2,
+    "gradient_fill_averaged": 1,
+    "letter_spacing_dropped": 6,
+    "non_square_shape": 2,
+    "shape_substituted": 0
+   },
+   "cover": {
+    "objects": 17,
+    "exact": 1,
+    "approx": 14,
+    "cannot": 2,
+    "strict_exact": 0,
+    "converted_pct": 88,
+    "exact_pct": 6
+   },
+   "cover_pages": [
+    {
+     "page": 0,
+     "scale": 0.616
+    }
+   ],
+   "fit+stretch": {
+    "objects": 17,
+    "exact": 1,
+    "approx": 16,
+    "cannot": 0,
+    "strict_exact": 0,
+    "converted_pct": 100,
+    "exact_pct": 6
+   }
+  },
+  "rooftop-event-story": {
+   "canvas": [
+    1080,
+    1920
+   ],
+   "pages": 1,
+   "fit": {
+    "objects": 16,
+    "exact": 8,
+    "approx": 6,
+    "cannot": 2,
+    "strict_exact": 0,
+    "converted_pct": 88,
+    "exact_pct": 50
+   },
+   "notes": {
+    "photo_slot_mapped": 1,
+    "non_square_shape": 2,
+    "color_snap": 13,
+    "font_map": 13,
+    "letter_spacing_dropped": 3,
+    "line_height_dropped": 2,
+    "off_page": 0,
+    "gradient_fill_averaged": 0,
+    "shape_substituted": 0
+   },
+   "cover": {
+    "objects": 16,
+    "exact": 1,
+    "approx": 3,
+    "cannot": 12,
+    "strict_exact": 0,
+    "converted_pct": 25,
+    "exact_pct": 6
+   },
+   "cover_pages": [
+    {
+     "page": 0,
+     "scale": 0.926
+    }
+   ],
+   "fit+stretch": {
+    "objects": 16,
+    "exact": 8,
+    "approx": 8,
+    "cannot": 0,
+    "strict_exact": 0,
+    "converted_pct": 100,
+    "exact_pct": 50
+   }
+  },
+  "serif-quote-card": {
+   "canvas": [
+    1080,
+    1080
+   ],
+   "pages": 1,
+   "fit": {
+    "objects": 3,
+    "exact": 0,
+    "approx": 3,
+    "cannot": 0,
+    "strict_exact": 0,
+    "converted_pct": 100,
+    "exact_pct": 0
+   },
+   "notes": {
+    "color_snap": 3,
+    "font_map": 3,
+    "line_height_dropped": 1,
+    "run_styles_dropped": 1,
+    "letter_spacing_dropped": 2
+   },
+   "cover": {
+    "objects": 3,
+    "exact": 0,
+    "approx": 3,
+    "cannot": 0,
+    "strict_exact": 0,
+    "converted_pct": 100,
+    "exact_pct": 0
+   },
+   "cover_pages": [
+    {
+     "page": 0,
+     "scale": 1.314
+    }
+   ],
+   "fit+stretch": {
+    "objects": 3,
+    "exact": 0,
+    "approx": 3,
+    "cannot": 0,
+    "strict_exact": 0,
+    "converted_pct": 100,
+    "exact_pct": 0
+   }
+  }
+ },
+ "totals": {
+  "objects": 230,
+  "exact": 54,
+  "approx": 114,
+  "cannot": 62,
+  "strict_exact": 0,
+  "converted_pct": 73,
+  "exact_pct": 23
+ },
+ "by_mode": {
+  "fit": {
+   "objects": 230,
+   "exact": 54,
+   "approx": 114,
+   "cannot": 62,
+   "strict_exact": 0,
+   "converted_pct": 73,
+   "exact_pct": 23
+  },
+  "cover": {
+   "objects": 230,
+   "exact": 28,
+   "approx": 116,
+   "cannot": 86,
+   "strict_exact": 0,
+   "converted_pct": 63,
+   "exact_pct": 12
+  },
+  "fit+stretch": {
+   "objects": 230,
+   "exact": 54,
+   "approx": 141,
+   "cannot": 35,
+   "strict_exact": 0,
+   "converted_pct": 85,
+   "exact_pct": 23
+  }
+ }
+}

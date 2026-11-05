@@ -1,0 +1,42 @@
+{
+ "best": [
+  {
+   "slug": "modern-pitch-deck",
+   "objects": 52,
+   "pct": 100,
+   "exact": 48
+  },
+  {
+   "slug": "night-bloom-concert-poster",
+   "objects": 17,
+   "pct": 100,
+   "exact": 6
+  },
+  {
+   "slug": "rooftop-event-story",
+   "objects": 16,
+   "pct": 100,
+   "exact": 50
+  }
+ ],
+ "worst": [
+  {
+   "slug": "modern-resume",
+   "objects": 64,
+   "pct": 64,
+   "exact": 16
+  },
+  {
+   "slug": "clean-business-card",
+   "objects": 15,
+   "pct": 73,
+   "exact": 20
+  },
+  {
+   "slug": "bold-youtube-thumbnail",
+   "objects": 8,
+   "pct": 75,
+   "exact": 0
+  }
+ ]
+}

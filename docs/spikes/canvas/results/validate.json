@@ -1,0 +1,336 @@
+{
+ "files": 52,
+ "per_kind_ok_of_total": {
+  "back": [
+   13,
+   13
+  ],
+  "cover": [
+   13,
+   13
+  ],
+  "notes": [
+   13,
+   13
+  ],
+  "profile": [
+   13,
+   13
+  ]
+ },
+ "rejected": 0,
+ "results": [
+  {
+   "file": "bold-sale-announcement-p0-back.json",
+   "ok": true,
+   "items": 13,
+   "canonical_same": true
+  },
+  {
+   "file": "bold-sale-announcement-p0-cover.json",
+   "ok": true,
+   "items": 13,
+   "canonical_same": true
+  },
+  {
+   "file": "bold-sale-announcement-p0-notes.json",
+   "ok": true,
+   "items": 13,
+   "canonical_same": true
+  },
+  {
+   "file": "bold-sale-announcement-p0-profile.json",
+   "ok": true,
+   "items": 13,
+   "canonical_same": true
+  },
+  {
+   "file": "bold-youtube-thumbnail-p0-back.json",
+   "ok": true,
+   "items": 3,
+   "canonical_same": true
+  },
+  {
+   "file": "bold-youtube-thumbnail-p0-cover.json",
+   "ok": true,
+   "items": 3,
+   "canonical_same": true
+  },
+  {
+   "file": "bold-youtube-thumbnail-p0-notes.json",
+   "ok": true,
+   "items": 3,
+   "canonical_same": true
+  },
+  {
+   "file": "bold-youtube-thumbnail-p0-profile.json",
+   "ok": true,
+   "items": 3,
+   "canonical_same": true
+  },
+  {
+   "file": "botanical-celebration-invitation-p0-back.json",
+   "ok": true,
+   "items": 13,
+   "canonical_same": true
+  },
+  {
+   "file": "botanical-celebration-invitation-p0-cover.json",
+   "ok": true,
+   "items": 13,
+   "canonical_same": true
+  },
+  {
+   "file": "botanical-celebration-invitation-p0-notes.json",
+   "ok": true,
+   "items": 13,
+   "canonical_same": true
+  },
+  {
+   "file": "botanical-celebration-invitation-p0-profile.json",
+   "ok": true,
+   "items": 13,
+   "canonical_same": true
+  },
+  {
+   "file": "clean-business-card-p0-back.json",
+   "ok": true,
+   "items": 3,
+   "canonical_same": true
+  },
+  {
+   "file": "clean-business-card-p0-cover.json",
+   "ok": true,
+   "items": 3,
+   "canonical_same": true
+  },
+  {
+   "file": "clean-business-card-p0-notes.json",
+   "ok": true,
+   "items": 3,
+   "canonical_same": true
+  },
+  {
+   "file": "clean-business-card-p0-profile.json",
+   "ok": true,
+   "items": 3,
+   "canonical_same": true
+  },
+  {
+   "file": "clean-business-card-p1-back.json",
+   "ok": true,
+   "items": 7,
+   "canonical_same": true
+  },
+  {
+   "file": "clean-business-card-p1-cover.json",
+   "ok": true,
+   "items": 7,
+   "canonical_same": true
+  },
+  {
+   "file": "clean-business-card-p1-notes.json",
+   "ok": true,
+   "items": 7,
+   "canonical_same": true
+  },
+  {
+   "file": "clean-business-card-p1-profile.json",
+   "ok": true,
+   "items": 7,
+   "canonical_same": true
+  },
+  {
+   "file": "grand-opening-flyer-p0-back.json",
+   "ok": true,
+   "items": 11,
+   "canonical_same": true
+  },
+  {
+   "file": "grand-opening-flyer-p0-cover.json",
+   "ok": true,
+   "items": 11,
+   "canonical_same": true
+  },
+  {
+   "file": "grand-opening-flyer-p0-notes.json",
+   "ok": true,
+   "items": 11,
+   "canonical_same": true
+  },
+  {
+   "file": "grand-opening-flyer-p0-profile.json",
+   "ok": true,
+   "items": 11,
+   "canonical_same": true
+  },
+  {
+   "file": "modern-pitch-deck-p0-back.json",
+   "ok": true,
+   "items": 8,
+   "canonical_same": true
+  },
+  {
+   "file": "modern-pitch-deck-p0-cover.json",
+   "ok": true,
+   "items": 8,
+   "canonical_same": true
+  },
+  {
+   "file": "modern-pitch-deck-p0-notes.json",
+   "ok": true,
+   "items": 8,
+   "canonical_same": true
+  },
+  {
+   "file": "modern-pitch-deck-p0-profile.json",
+   "ok": true,
+   "items": 8,
+   "canonical_same": true
+  },
+  {
+   "file": "modern-pitch-deck-p1-back.json",
+   "ok": true,
+   "items": 14,
+   "canonical_same": true
+  },
+  {
+   "file": "modern-pitch-deck-p1-cover.json",
+   "ok": true,
+   "items": 14,
+   "canonical_same": true
+  },
+  {
+   "file": "modern-pitch-deck-p1-notes.json",
+   "ok": true,
+   "items": 14,
+   "canonical_same": true
+  },
+  {
+   "file": "modern-pitch-deck-p1-profile.json",
+   "ok": true,
+   "items": 14,
+   "canonical_same": true
+  },
+  {
+   "file": "modern-pitch-deck-p2-back.json",
+   "ok": true,
+   "items": 20,
+   "canonical_same": true
+  },
+  {
+   "file": "modern-pitch-deck-p2-cover.json",
+   "ok": true,
+   "items": 20,
+   "canonical_same": true
+  },
+  {
+   "file": "modern-pitch-deck-p2-notes.json",
+   "ok": true,
+   "items": 20,
+   "canonical_same": true
+  },
+  {
+   "file": "modern-pitch-deck-p2-profile.json",
+   "ok": true,
+   "items": 20,
+   "canonical_same": true
+  },
+  {
+   "file": "modern-resume-p0-back.json",
+   "ok": true,
+   "items": 40,
+   "canonical_same": true
+  },
+  {
+   "file": "modern-resume-p0-cover.json",
+   "ok": true,
+   "items": 40,
+   "canonical_same": true
+  },
+  {
+   "file": "modern-resume-p0-notes.json",
+   "ok": true,
+   "items": 40,
+   "canonical_same": true
+  },
+  {
+   "file": "modern-resume-p0-profile.json",
+   "ok": true,
+   "items": 40,
+   "canonical_same": true
+  },
+  {
+   "file": "night-bloom-concert-poster-p0-back.json",
+   "ok": true,
+   "items": 15,
+   "canonical_same": true
+  },
+  {
+   "file": "night-bloom-concert-poster-p0-cover.json",
+   "ok": true,
+   "items": 15,
+   "canonical_same": true
+  },
+  {
+   "file": "night-bloom-concert-poster-p0-notes.json",
+   "ok": true,
+   "items": 15,
+   "canonical_same": true
+  },
+  {
+   "file": "night-bloom-concert-poster-p0-profile.json",
+   "ok": true,
+   "items": 15,
+   "canonical_same": true
+  },
+  {
+   "file": "rooftop-event-story-p0-back.json",
+   "ok": true,
+   "items": 13,
+   "canonical_same": true
+  },
+  {
+   "file": "rooftop-event-story-p0-cover.json",
+   "ok": true,
+   "items": 13,
+   "canonical_same": true
+  },
+  {
+   "file": "rooftop-event-story-p0-notes.json",
+   "ok": true,
+   "items": 13,
+   "canonical_same": true
+  },
+  {
+   "file": "rooftop-event-story-p0-profile.json",
+   "ok": true,
+   "items": 13,
+   "canonical_same": true
+  },
+  {
+   "file": "serif-quote-card-p0-back.json",
+   "ok": true,
+   "items": 3,
+   "canonical_same": true
+  },
+  {
+   "file": "serif-quote-card-p0-cover.json",
+   "ok": true,
+   "items": 3,
+   "canonical_same": true
+  },
+  {
+   "file": "serif-quote-card-p0-notes.json",
+   "ok": true,
+   "items": 3,
+   "canonical_same": true
+  },
+  {
+   "file": "serif-quote-card-p0-profile.json",
+   "ok": true,
+   "items": 3,
+   "canonical_same": true
+  }
+ ]
+}
