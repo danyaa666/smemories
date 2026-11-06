@@ -155,3 +155,38 @@ func TestDistinctGateCatchesTwins(t *testing.T) {
 		}
 	}
 }
+
+// The limit itself: pages whose decoration overlaps at 0.79 pass and at 0.81 fail (QA of T-180: without a pair on each side of 0.8 a ">=" turned
+// into ">" or a dropped override survived). One box of 99.96 px against a box nested in it, so the overlap is the ratio of their widths in grid cells
+// (79/100, 80/100 and 81/100); the same box given as a full-box override instead of an item counts the same, a tilt-only override adds nothing.
+func TestDistinctLimitBoundary(t *testing.T) {
+	box := func(w int) json.RawMessage {
+		return json.RawMessage(fmt.Sprintf(`{"items":[{"id":"aaaaaa","t":"asset","asset":"star","x":0,"w":%d,"h":100,"cy":500,"r":0}]}`, w))
+	}
+	boxAsOverride := func(w int) json.RawMessage {
+		return json.RawMessage(fmt.Sprintf(`{"overrides":{"cover.photo":{"x":0,"w":%d,"h":100,"cy":500,"r":0}}}`, w))
+	}
+	base := box(980) // 100 cells wide
+	for _, c := range []struct {
+		name string
+		page json.RawMessage
+		iou  float64
+		like bool
+	}{
+		{"79 of 100 cells", box(770), 0.79, false},
+		{"80 of 100 cells: the limit itself fails", box(780), 0.80, true},
+		{"81 of 100 cells", box(790), 0.81, true},
+		{"79 of 100 cells, as an override", boxAsOverride(770), 0.79, false},
+		{"81 of 100 cells, as an override", boxAsOverride(790), 0.81, true},
+		{"a tilt only", json.RawMessage(`{"overrides":{"cover.photo":{"r":5}}}`), 0, false},
+	} {
+		got := decorationOverlap(base, c.page)
+		if c.iou > 0 && (got < c.iou-0.005 || got > c.iou+0.005) {
+			t.Errorf("%s: overlap %.3f, want %.2f", c.name, got, c.iou)
+		}
+		list := []PageTemplate{{ID: "a", Page: base}, {ID: "b", Page: c.page}}
+		if alike := len(tooAlike(list)) > 0; alike != c.like {
+			t.Errorf("%s: overlap %.3f, alike=%v, want %v", c.name, got, alike, c.like)
+		}
+	}
+}

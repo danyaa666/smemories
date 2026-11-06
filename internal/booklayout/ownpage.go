@@ -99,15 +99,15 @@ func pageDoc(kind string, page []byte) []byte {
 	return []byte(`{"v":1,"pages":{` + string(k) + `:` + string(page) + `}}`)
 }
 
-// pageOf returns pages.<kind> of a document, nil when there is none.
+// pageOf returns pages.<kind> of a document, nil when there is none. Keys are matched exactly (a struct field would match "pAgEs" too, which
+// withPage would then write next to "pages": found by FuzzWithPage, not reachable with a validated document).
 func pageOf(doc []byte, kind string) json.RawMessage {
-	var d struct {
-		Pages map[string]json.RawMessage `json:"pages"`
-	}
-	if json.Unmarshal(doc, &d) != nil {
+	var root map[string]json.RawMessage
+	var pages map[string]json.RawMessage
+	if json.Unmarshal(doc, &root) != nil || json.Unmarshal(root["pages"], &pages) != nil {
 		return nil
 	}
-	return d.Pages[kind]
+	return pages[kind]
 }
 
 // withPage returns the document cur (nil = none yet) with pages.<kind> replaced by page and everything else as it was.
@@ -117,6 +117,9 @@ func withPage(cur []byte, kind string, page []byte) ([]byte, error) {
 	if cur != nil {
 		if err := json.Unmarshal(cur, &root); err != nil {
 			return nil, apperr.Wrap(apperr.Internal, err, "stored layout")
+		}
+		if root == nil { // "null" unmarshals to a nil map (found by FuzzWithPage)
+			return nil, apperr.New(apperr.Internal, "stored layout")
 		}
 		if raw, ok := root["pages"]; ok {
 			if err := json.Unmarshal(raw, &pages); err != nil || pages == nil {

@@ -6118,6 +6118,122 @@
               ]
             },
             {
+              "name": "13b. 17 levels of nesting: 400 ERROR_INVALID_LAYOUT too_deep, before the document is decoded (T-179)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/save",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "save"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"base_version\":0,\"layout\":{}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "// 17 levels of objects under pages.cover; the real documents are 5 deep, the limit is 16",
+                      "const layout = '{\"v\":1,\"pages\":{\"cover\":' + '{\"a\":'.repeat(15) + '1' + '}'.repeat(15) + '}}';",
+                      "pm.request.body.update('{\"yearbook_id\":\"' + pm.collectionVariables.get('bookId') + '\",\"base_version\":0,\"layout\":' + layout + '}');"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_INVALID_LAYOUT', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_LAYOUT'));",
+                      "pm.test('problem too_deep', () => pm.expect(pm.response.json().data.problems.some(p => p.code === 'too_deep')).to.eql(true));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "13c. template-create with a 9 KiB body: 413 before it is decoded (T-179)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/template-create",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "template-create"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"base_version\":0,\"layout\":{}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "// the 8 KiB cap of the small routes: an id, a kind and a name never need more",
+                      "pm.request.body.update('{\"yearbook_id\":\"' + pm.collectionVariables.get('bookId') + '\",\"kind\":\"cover\",\"name\":\"' + 'a'.repeat(9 * 1024) + '\"}');"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 413', () => pm.response.to.have.status(413));",
+                      "pm.test('ERROR_TOO_LARGE', () => pm.expect(pm.response.json().status).to.eql('ERROR_TOO_LARGE'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
               "name": "14. No base_version: ERROR_PARAM",
               "request": {
                 "method": "POST",
