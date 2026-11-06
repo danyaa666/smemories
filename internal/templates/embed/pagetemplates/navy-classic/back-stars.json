@@ -1,0 +1,103 @@
+{
+ "id": "back-stars",
+ "label_en": "Starry back",
+ "label_vi": "Bìa sau đêm sao",
+ "kind": "back",
+ "source": "authored",
+ "licence": "LICENCE.txt",
+ "page": {
+  "bg": {
+   "color": "ink"
+  },
+  "items": [
+   {
+    "id": "ncbstr01",
+    "t": "asset",
+    "asset": "shape.star",
+    "x": 339,
+    "w": 27,
+    "h": 27,
+    "cy": 160,
+    "r": 0,
+    "tint": "gold"
+   },
+   {
+    "id": "ncbstr02",
+    "t": "asset",
+    "asset": "shape.star",
+    "x": 406,
+    "w": 42,
+    "h": 42,
+    "cy": 160,
+    "r": 0,
+    "tint": "gold"
+   },
+   {
+    "id": "ncbstr03",
+    "t": "asset",
+    "asset": "shape.star",
+    "x": 469,
+    "w": 61,
+    "h": 61,
+    "cy": 160,
+    "r": 0,
+    "tint": "gold"
+   },
+   {
+    "id": "ncbstr04",
+    "t": "asset",
+    "asset": "shape.star",
+    "x": 553,
+    "w": 42,
+    "h": 42,
+    "cy": 160,
+    "r": 0,
+    "tint": "gold"
+   },
+   {
+    "id": "ncbstr05",
+    "t": "asset",
+    "asset": "shape.star",
+    "x": 634,
+    "w": 27,
+    "h": 27,
+    "cy": 160,
+    "r": 0,
+    "tint": "gold"
+   },
+   {
+    "id": "ncbstr06",
+    "t": "asset",
+    "asset": "sticker.doodle-sparkle",
+    "x": 159,
+    "w": 49,
+    "h": 49,
+    "cy": 780,
+    "r": 0,
+    "tint": "gold"
+   },
+   {
+    "id": "ncbstr07",
+    "t": "asset",
+    "asset": "sticker.doodle-sparkle",
+    "x": 792,
+    "w": 49,
+    "h": 49,
+    "cy": 780,
+    "r": 0,
+    "tint": "gold"
+   },
+   {
+    "id": "ncbstr08",
+    "t": "asset",
+    "asset": "shape.star",
+    "x": 484,
+    "w": 32,
+    "h": 32,
+    "cy": 780,
+    "r": 0,
+    "tint": "gold"
+   }
+  ]
+ }
+}

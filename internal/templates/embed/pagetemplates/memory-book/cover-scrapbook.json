@@ -1,0 +1,125 @@
+{
+ "id": "cover-scrapbook",
+ "label_en": "Scrapbook cover",
+ "label_vi": "Bìa sổ lưu niệm",
+ "kind": "cover",
+ "source": "authored",
+ "licence": "LICENCE.txt",
+ "page": {
+  "bg": {
+   "color": "white"
+  },
+  "overrides": {
+   "cover.photo": {
+    "x": 123,
+    "w": 429,
+    "h": 502,
+    "cy": 557,
+    "r": -9
+   },
+   "cover.sticker": {
+    "x": 637,
+    "w": 233,
+    "h": 233,
+    "cy": 427,
+    "r": -14
+   }
+  },
+  "items": [
+   {
+    "id": "cvscrap01",
+    "t": "asset",
+    "asset": "sticker.tape-stripes",
+    "x": 208,
+    "w": 245,
+    "h": 245,
+    "cy": 432,
+    "r": -8,
+    "tint": "accent"
+   },
+   {
+    "id": "cvscrap02",
+    "t": "asset",
+    "asset": "sticker.cool-sun",
+    "x": 686,
+    "w": 184,
+    "h": 184,
+    "cy": 617,
+    "r": 8
+   },
+   {
+    "id": "cvscrap03",
+    "t": "asset",
+    "asset": "sticker.star-face",
+    "x": 135,
+    "w": 147,
+    "h": 147,
+    "cy": 803,
+    "r": -10
+   },
+   {
+    "id": "cvscrap04",
+    "t": "asset",
+    "asset": "sticker.paper-plane",
+    "x": 466,
+    "w": 159,
+    "h": 159,
+    "cy": 816,
+    "r": 6
+   },
+   {
+    "id": "cvscrap05",
+    "t": "asset",
+    "asset": "sticker.doodle-loops",
+    "x": 637,
+    "w": 270,
+    "h": 98,
+    "cy": 751,
+    "r": 0,
+    "tint": "accent"
+   },
+   {
+    "id": "cvscrap06",
+    "t": "asset",
+    "asset": "shape.burst",
+    "x": 846,
+    "w": 98,
+    "h": 98,
+    "cy": 59,
+    "r": 10,
+    "tint": "accent"
+   },
+   {
+    "id": "cvscrap07",
+    "t": "asset",
+    "asset": "sticker.gold-star",
+    "x": 760,
+    "w": 86,
+    "h": 86,
+    "cy": 842,
+    "r": 14
+   },
+   {
+    "id": "cvscrap08",
+    "t": "asset",
+    "asset": "sticker.doodle-zigzag",
+    "x": 118,
+    "w": 245,
+    "h": 74,
+    "cy": 846,
+    "r": 0,
+    "tint": "soft"
+   },
+   {
+    "id": "cvscrap09",
+    "t": "asset",
+    "asset": "sticker.happy-cloud",
+    "x": 539,
+    "w": 98,
+    "h": 98,
+    "cy": 60,
+    "r": 0
+   }
+  ]
+ }
+}

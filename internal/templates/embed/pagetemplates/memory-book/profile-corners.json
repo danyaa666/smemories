@@ -1,0 +1,46 @@
+{
+ "id": "profile-corners",
+ "label_en": "Photo frame profile",
+ "label_vi": "Trang ảnh khung viền",
+ "kind": "profile",
+ "source": "authored",
+ "licence": "LICENCE.txt",
+ "page": {
+  "bg": {
+   "color": "white"
+  },
+  "overrides": {
+   "profile.photo": {
+    "x": 54,
+    "w": 294,
+    "h": 348,
+    "cy": 273,
+    "r": -4
+   }
+  },
+  "items": [
+   {
+    "id": "prcorn01",
+    "t": "asset",
+    "asset": "frame.rounded-border",
+    "x": 42,
+    "w": 319,
+    "h": 368,
+    "cy": 273,
+    "r": -4,
+    "tint": "accent"
+   },
+   {
+    "id": "prcorn02",
+    "t": "asset",
+    "asset": "shape.heart",
+    "x": 858,
+    "w": 69,
+    "h": 69,
+    "cy": 62,
+    "r": 12,
+    "tint": "accent"
+   }
+  ]
+ }
+}

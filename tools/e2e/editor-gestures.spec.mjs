@@ -89,6 +89,33 @@ const box = (loc) =>
     const r = el.getBoundingClientRect();
     return { l: r.left, t: r.top, w: r.width, h: r.height, cx: r.left + r.width / 2, cy: r.top + r.height / 2 };
   });
+/**
+ * Waits until a scroller has stopped (its scroll position unchanged over 3 animation frames: a touch swipe ends in a fling that goes on for about 200 ms,
+ * longer under load), then reads the item and the sheet in ONE evaluation, so both come from the same frame (T-174). Two separate reads while the
+ * stage was still gliding differed by the glide of the frames between them (2 to 3 px) and looked like an item that had moved.
+ */
+const settledRects = (page, id) =>
+  page.evaluate(
+    ([itemId]) =>
+      new Promise((resolve) => {
+        const scroller = document.querySelector(".ed-scroll");
+        const item = document.querySelector(`.ed-pagebox [data-layout-item='${itemId}']`);
+        const sheet = document.querySelector(".ed-pagebox .bk-sheet");
+        let last = "";
+        let still = 0;
+        const tick = () => {
+          const pos = `${scroller.scrollLeft},${scroller.scrollTop}`;
+          still = pos === last ? still + 1 : 0;
+          last = pos;
+          if (still < 3) return requestAnimationFrame(tick);
+          const a = item.getBoundingClientRect();
+          const b = sheet.getBoundingClientRect();
+          resolve({ item: { l: a.left, t: a.top }, sheet: { l: b.left, t: b.top }, style: item.getAttribute("style"), scrollLeft: scroller.scrollLeft });
+        };
+        requestAnimationFrame(tick);
+      }),
+    [id],
+  );
 const angleOf = (loc) =>
   loc.evaluate((el) => {
     const m = new DOMMatrix(getComputedStyle(el).transform);
@@ -495,15 +522,17 @@ test("touch at 768 px: the first tap selects, a drag of the selected item moves 
     await hit.evaluate((el) => el.scrollIntoView({ block: "center", inline: "center" }));
     const scroller = page.locator(".ed-scroll");
     const before = await scroller.evaluate((el) => ({ x: el.scrollLeft, y: el.scrollTop }));
+    const at0 = await settledRects(page, STAR.id);
     const b0 = await box(item);
-    const sheet0 = await box(page.locator(".ed-pagebox .bk-sheet"));
     await touch("touchStart", b0.cx, b0.cy);
     for (let i = 1; i <= 10; i++) await touch("touchMove", b0.cx - i * 8, b0.cy);
     await touch("touchEnd");
     await expect.poll(async () => (await scroller.evaluate((el) => el.scrollLeft)) - before.x).toBeGreaterThan(20);
-    const sheet1 = await box(page.locator(".ed-pagebox .bk-sheet"));
-    const b1 = await box(item);
-    expect(Math.abs(b1.l - b0.l - (sheet1.l - sheet0.l)), "the item stayed where it is on the page").toBeLessThanOrEqual(0.5);
+    const at1 = await settledRects(page, STAR.id); // after the fling has ended, item and sheet from one frame
+    expect(at1.scrollLeft - at0.scrollLeft, "the stage was panned").toBeGreaterThan(20);
+    expect(at1.style, "the item's stored box is unchanged").toBe(at0.style);
+    expect(Math.abs(at1.item.l - at0.item.l - (at1.sheet.l - at0.sheet.l)), "the item stayed where it is on the page").toBeLessThanOrEqual(0.5);
+    expect(Math.abs(at1.item.t - at0.item.t - (at1.sheet.t - at0.sheet.t)), "the item stayed where it is on the page (vertical)").toBeLessThanOrEqual(0.5);
     await expect(page.getByRole("button", { name: "Undo" })).toBeDisabled();
   });
   await step("the first tap selects", async () => {

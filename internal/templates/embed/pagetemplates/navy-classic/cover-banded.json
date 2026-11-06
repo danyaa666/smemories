@@ -1,0 +1,75 @@
+{
+ "id": "cover-banded",
+ "label_en": "Banded cover",
+ "label_vi": "Bìa dải viền",
+ "kind": "cover",
+ "source": "authored",
+ "licence": "LICENCE.txt",
+ "page": {
+  "bg": {
+   "color": "ink"
+  },
+  "overrides": {
+   "cover.year": {
+    "r": -5
+   }
+  },
+  "items": [
+   {
+    "id": "nccband01",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 194,
+    "w": 613,
+    "h": 12,
+    "cy": 80,
+    "r": 0,
+    "tint": "gold"
+   },
+   {
+    "id": "nccband02",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 194,
+    "w": 613,
+    "h": 12,
+    "cy": 94,
+    "r": 0,
+    "tint": "gold"
+   },
+   {
+    "id": "nccband03",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 83,
+    "w": 368,
+    "h": 12,
+    "cy": 700,
+    "r": 0,
+    "tint": "gold"
+   },
+   {
+    "id": "nccband04",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 549,
+    "w": 368,
+    "h": 12,
+    "cy": 700,
+    "r": 0,
+    "tint": "gold"
+   },
+   {
+    "id": "nccband05",
+    "t": "asset",
+    "asset": "sticker.doodle-sparkle",
+    "x": 466,
+    "w": 69,
+    "h": 69,
+    "cy": 700,
+    "r": 0,
+    "tint": "gold"
+   }
+  ]
+ }
+}

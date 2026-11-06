@@ -239,7 +239,7 @@ A **page template** is the value of `pages.<kind>` of a layout document (`bg`, `
 
   ```json
   {"id": "cover-sunny", "label_en": "Sunny cover", "label_vi": "Bìa nắng", "kind": "cover", "source": "authored", "licence": "LICENCE.txt",
-   "page": {"bg": {"color": "soft"}, "items": [{"id": "s1a2b3", "t": "asset", "asset": "shape.star", "tint": "accent", "x": 800, "w": 150, "h": 110, "cy": 70, "r": 12}]}}
+   "page": {"bg": {"color": "paper"}, "items": [{"id": "cvsunny01", "t": "asset", "asset": "shape.star", "tint": "accent", "x": 846, "w": 103, "h": 103, "cy": 62, "r": 14}]}}
   ```
 
   `kind` is one of that template's page kinds. `source` is `authored` (we drew it; nothing derived from another project ships until the owner has chosen the licence route, ADR 0005 Q6). `licence` names a non-empty file in the same folder (`LICENCE.txt`, one per folder). Names are plain text of 1 to 60 characters. A file is at most 64 KiB and has no unknown member.
@@ -256,6 +256,39 @@ A **page template** is the value of `pages.<kind>` of a layout document (`bg`, `
 - **Apply.** `book-layout/apply-template` `{yearbook_id, base_version, kind, source, template_id}` builds the new document as the stored one with `pages.<kind>` replaced by the template's page (the other pages untouched), validates the **whole** document with `ValidateRestore` (a gone asset or design image is dropped and counted in `dropped`; any other problem is `ERROR_INVALID_LAYOUT`), and writes it with the same transaction as `save` and `restore`: under the `yearbook_tab` row lock it compares `base_version` with the book's version, stores the document it replaces as **one snapshot of kind `apply`** (always, like a restore; it counts towards the 30 kept), writes the layout and bumps the version by one. Anything that fails (stale version, a template of another book template `ERROR_TEMPLATE_MISMATCH`, a page that does not validate, a template of another kind `ERROR_PARAM`) happens before or inside that one transaction, so a failed apply changes neither the document nor the history. A stale version is checked before the page is validated, so an old editor gets the stored document, not a verdict on a page it has not seen. Undo is the existing version restore. A book with no layout gets one (nothing to snapshot).
 - **Account deletion and export.** There is no account deletion or export code yet (T-025). When it is added: delete the user's `book_template_tab` rows with the user (`DELETE ... WHERE owner_id = ?` in the user-delete transaction; the orphan check `dbtest.AssertNoOrphans` already lists `book_template_tab.owner_id -> user_tab`, so the T-025 test fails until it does) and list the **count** of own templates in the data export.
 - **Observability.** `smem_page_templates_created_total`, `smem_page_templates_deleted_total`, `smem_page_template_items_stripped_total`, `smem_page_template_applies_total{source,result}` and the snapshot kind `apply` in `smem_layout_snapshots_total`; one INFO line per apply ("page template applied": book public id, kind, source, versions, `dropped`; no layout content). See [observability.md](observability.md).
+
+#### Shipped Memory Book templates (T-177)
+
+Sixteen templates, four per page kind, authored by us (nothing from Doory or any other source; provenance in `LICENCE.txt` of the folder). Memory Book is the playful template, so the looks run from calm and airy to busy and scrapbook-like. The contact sheet is [images/page-templates-memory-book.png](images/page-templates-memory-book.png) (A5; `node tools/print-check/contact-sheet.mjs` writes the A5, A4 and Letter sheets into `docs/images/`, `--sizes A4 --out DIR` for one other paper or folder).
+
+| Id | Kind | Look |
+|---|---|---|
+| `cover-sunny` | cover | calm: paper page, a star, a squiggle and a sparkle; everything of the book where it is |
+| `cover-polaroid` | cover | the template's lavender page kept; one big polaroid, the sticker over its corner, tape and a heart |
+| `cover-scrapbook` | cover | busy: white page, the photo tilted, the sticker beside it, six clip-art stickers, doodles and tape |
+| `cover-title-low` | cover | the title moved under the photo, the photo to the right, the sticker to the left; doodles fill the gap the title leaves |
+| `profile-calm` | profile | calm: paper page and two sparkles in the corner |
+| `profile-corners` | profile | white page, the photo bigger and tilted inside a rounded frame, a heart |
+| `profile-scrapbook` | profile | the photo tilted with a strip of tape, a flower badge and a heart in the corner |
+| `profile-tilted` | profile | white page, heading and photo tilted, a star and a sparkle |
+| `notes-airy` | notes | white page and two small sparkles beside the heading |
+| `notes-tape` | notes | heading tilted, a strip of tape beside it |
+| `notes-doodle` | notes | white page, a squiggle and a sparkle beside the heading |
+| `notes-stickers` | notes | heading tilted the other way, a smiling star and a gold star |
+| `back-thanks` | back | calm: paper page, three hearts under the pact, a sparkle |
+| `back-pact` | back | white page, the pact tilted, a heart, a star and a squiggle |
+| `back-stickers` | back | busy: cloud, smiling star, sun, red heart and a plane around the pact |
+| `back-doodle` | back | white page, the pact tilted the other way, loops, a zigzag, a burst and a sparkle |
+
+**Rules (the same file format as above, plus these; all in Go tests, `internal/booklayout/shipped_memory_book_test.go`):**
+- **Four or more per kind, unique ids and labels per kind** (case-insensitive, `label_en` and `label_vi`), labels at most 24 characters (the gallery card), no two templates of a kind with the same `page` bytes.
+- **No prose, no picture.** A text item may hold only digits, punctuation and symbols (none is used so far: a template must never put a sentence of any language into a student's book); no `image` item, no `bg.media`; at most 40 items.
+- **Colours.** The page colour is `paper` or `white`, or none (the template's own: lavender on the cover, paper elsewhere). The book draws its own text (`ink`, `soft`) straight on the page and a template cannot recolour it, so **the gate holds `ink` and `soft` to 4.5:1 against the page colour in all three themes** (WCAG formula, the token table of `memory.css`, which a test keeps in step with the file): `accent`, `soft` and `ink` pages fail it. A text item, if one is ever added, is held to the same ratio. Decoration (tints, tape, stickers) is not held to it.
+- **Boxes.** Every stored box is inside the 5 mm safe margin of the manifest on A5, A4 and Letter (the runtime also keeps every box inside the page, so nothing bleeds: a tilt may take a corner a few millimetres over the margin). No decoration may sit on a text element that the template gives a box of its own (`cover.title`, the headings, `back.pact`); for a moved text element the test uses the rotated outline of both boxes on each paper. For elements the template only tilts, and for the book's own text, `tools/print-check` does it on the real page (below).
+- **Where decoration goes.** The pages are nearly full: the cover has free room, the others only the corner of the heading row (profile and back: x from 650 of 816 px; notes: x 540 to 650, above the "No." tag, the title row ends at 520 whatever the text) and, on the back, the band under the pact. Put tilt, page colour and small stickers there; do not put anything over the fields, notes, signatures or photos' captions.
+- **Print-check** (`tools/print-check/check.test.mjs`, "page templates", one case per template on A5, A4 and Letter, 48 cases): the sample book has the name "Nguyễn Thị Phương Anh", three notes (the second 2000 characters) with signatures on every note and a photo on every page. Each case checks the page count and size, that all fonts are embedded and the name is in the PDF, print against screen below the standing threshold (the template may add 0.5 % to the plain page's noise), every item's box in print within 2 px of the screen at 192 dpi, **that no decoration covers any text of the page or a signature** (the painted shapes against the text lines in the DOM), and, with the stress book (60-character names everywhere), that the template adds no cut-off text and no text leaves its page. The notes templates leave the autograph alone because the signature is part of the book's own message box, never an editable element.
+
+**Adding one:** copy a file, change `id` (also the file name), the two labels (at most 24 characters, different from the other looks of the kind), the item ids (letters and digits, 6 to 26, unique) and the placement; keep decoration in the free places above; use only registry assets and add any new one to `LICENCE.txt`. Run `go test ./internal/booklayout/`, `node tools/print-check/contact-sheet.mjs --sizes A5 --out /tmp/sheet` and look at the PNG, then `cd tools/print-check && node --test --test-name-pattern="<id>" check.test.mjs`. If you add a look, regenerate the committed A5 sheet and keep it under 600 KB.
 
 ### Adding a theme, font set, section, text or picture to an html template (T-147)
 
@@ -543,3 +576,47 @@ year and is not replaceable. The template's wording keeps its plain markup; a re
 variables to show and the class that sets a sample word); everything else is the template's `customise.tpl.navy-classic.*` locale keys.
 Print check (`tools/print-check`, "navy-classic themes x font sets, sections and texts"): every theme x font set on A5 and A4 (9 pages, none blank, that set's fonts only, long names and emoji not cut off, signatures keep the page count
 and never meet a text), hidden and reordered sections on A5 and A4, every text at its maximum length in both font sets, and an unknown design drawing the defaults.
+
+### Shipped Navy Classic templates (T-178)
+
+Sixteen templates, four per page kind, authored by us (nothing from Doory or any other source; provenance in `LICENCE.txt` of `internal/templates/embed/pagetemplates/navy-classic/`). Navy Classic is the formal template, so every look keeps the
+gold frame, the navy and cream pages and the serif letter, and stays **inside the frame's inner rule** (44 px of the 816 px page on the cover and the back, 34 px on the notes page, the 8 mm safe margin on the profile). Ornaments are restrained: gold or
+bronze stars, sparkles, rows of small diamonds, bars, a seal, and a few tilts of the template's own heading, year and portrait. The looks run from stately (a star and two dotted rules) to modern-classic (banded, tilted). The contact sheet is
+[images/page-templates-navy-classic.png](images/page-templates-navy-classic.png) (A5; `node tools/print-check/contact-sheet-navy.mjs` writes the A5, A4 and Letter sheets into `docs/images/`, `--sizes A4 --out DIR` for one other paper or folder).
+
+| Id | Kind | Look |
+|---|---|---|
+| `cover-gold` | cover | stately: one gold star under the title, a dotted rule of four diamonds on each side |
+| `cover-seal` | cover | a gold seal (burst, ring and star) under the title between short dotted rules |
+| `cover-stars` | cover | starry: stars and sparkles in both side columns, one above the cap, three small stars under the title |
+| `cover-banded` | cover | two gold bars above the cap, a bar either side of a sparkle under the title, the year tilted 5 degrees |
+| `profile-cream` | profile | a bronze star between two dotted rules of diamonds, under the heading |
+| `profile-portrait` | profile | the portrait larger (240 x 330 px) and a sparkle pair and a bronze swash under it |
+| `profile-tilted` | profile | the portrait tilted 8 degrees, a gold star on its corner, a sparkle and a small star below |
+| `profile-crest` | profile | a gold seal under the portrait and a dotted column of bronze diamonds between letter and portrait |
+| `notes-cream` | notes | a bronze sparkle each side of the heading |
+| `notes-rules` | notes | a dotted rule with a star under the heading and a bronze bar above the farewell |
+| `notes-corners` | notes | a gold sparkle in each corner inside the frame |
+| `notes-tilted` | notes | the heading tilted 6 degrees, two stars and a sparkle around it |
+| `back-thanks` | back | a gold heart over the cap between dotted rules |
+| `back-seal` | back | a gold seal under the thanks |
+| `back-stars` | back | a row of five graded stars over the cap, a sparkle, a star and a sparkle under the thanks |
+| `back-rules` | back | two gold bars over the cap, a bar either side of a sparkle under the thanks |
+
+**Rules (the file format above, plus these; all in Go tests, `internal/booklayout/shipped_navy_classic_test.go`):**
+- **Four or more per kind, unique ids and labels per kind** (case-insensitive, both languages), labels at most 24 characters (the gallery card), no two templates of a kind with the same `page` bytes.
+- **No prose, no picture.** A text item may hold only digits, punctuation and symbols (none is used: a template must never put a sentence of any language into a student's book; the four T-172 files had one each and were rewritten); no `image` item, no `bg.media`; at most 40 items.
+- **Colours.** The page colour is the template's own (`ink` on the cover and the back, `paper` on the profile and the notes) or set to the same value. The book draws its own text straight on the page and a template cannot recolour it (light and gold on the dark pages, dark and bronze on the cream ones),
+  so **the gate holds those two colours to 4.5:1 against the page colour in all three themes** (WCAG formula, the token table of `navy.css`, which a test keeps in step with the file): a `paper` cover, a `gold` page or an `ink` profile fail it. A text item, if one is ever added, is held to the same ratio. Decoration (tints) is not held to it; tints are the theme's tokens, so a theme change recolours the ornaments with the page.
+- **Boxes.** Every stored box, rotated as drawn, is inside the 8 mm safe margin of the manifest on A5, A4 and Letter and, on a page with a frame, 4 px inside its inner rule (the runtime keeps every box inside the page, so nothing bleeds). No decoration may sit on a text element that the template gives a box of its own;
+  for elements the template only tilts, and for the book's own text, the signatures, the dividers and cap, the autograph grid, the profile letter and the footer, `tools/print-check` does it on the real page (below).
+- **Where decoration goes.** The pages are nearly full. Cover: above the cap (y up to 140 px), the side columns between the school line and the title (y 270 to 620) and the band between the title and the motto (y 690 to 880, which fits A5, A4 and Letter). Profile: the band under the heading divider (y 200 to 255) and the column right of the letter below the portrait.
+  Notes: beside the heading (the default heading is 212 px wide: a long custom heading runs under such ornaments, so move them), the band between the heading divider and the grid (y 205 to 240), the band above the farewell, and the corners. Back: the bands above the cap and under the thanks.
+  The pages are laid out in design px from the top (cover, profile, notes) or centred (back), and a decoration's `cy` is a fraction of the page's height, so a band is placed where it clears on A5, A4 and Letter alike (the print check proves it on all three).
+- **Element tilts.** A moved element is drawn at its A5 place whatever the paper (`LAYOUT.natural`), so a template only tilts elements that sit at the same place on every paper (`cover.year`, `notes.heading`, `profile.photo`), never the bottom-anchored or centred ones (`back.thanks`, `cover.motto`).
+- **Bars and rules.** The smallest box the validator accepts is 10 permille of the page width, so a `shape.rect` bar is 8 px thick, not a hairline. Dotted rules are `shape.rect` boxes rotated 45 degrees (diamonds).
+- **Print-check** (`tools/print-check/templates-navy.test.mjs`, one case per template on A5, A4 and Letter, 48 cases): the sample book has the name "Nguyễn Thị Phương Anh", nine notes (the second 2000 characters, four to a page: three notes pages) with signatures and a photo on the profile. Each case checks the page count and size, that all fonts are embedded and the name is in the PDF,
+  print against screen below the standing threshold (the template may add 0.5 % to the plain page's noise), every item's box in print within 2 px of the screen at 192 dpi, **that no decoration covers a text, a signature or an ornament of the page and none crosses the frame's inner rule** (the painted shapes against the DOM), and, with the stress book (60-character names everywhere), that the template adds no cut-off text and no text leaves its page.
+  The notes templates leave the autograph alone: the editable list never includes it.
+
+**Adding one:** copy a file, change `id` (also the file name), the two labels (at most 24 characters, different from the other looks of the kind), the item ids (letters and digits, 6 to 26, unique) and the placement; keep decoration in the free places above; use only registry assets and add any new one to `LICENCE.txt`. Run `go test ./internal/booklayout/`, `node tools/print-check/contact-sheet-navy.mjs --sizes A5 --out /tmp/sheet` and look at the PNG, then `cd tools/print-check && node --test --test-name-pattern="<id>" templates-navy.test.mjs`. If you add a look, regenerate the committed A5 sheet and keep it under 600 KB.

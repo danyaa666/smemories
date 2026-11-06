@@ -1,0 +1,28 @@
+{
+ "id": "notes-tape",
+ "label_en": "Taped notes",
+ "label_vi": "Lời nhắn dán băng",
+ "kind": "notes",
+ "source": "authored",
+ "licence": "LICENCE.txt",
+ "page": {
+  "overrides": {
+   "notes.heading": {
+    "r": -2
+   }
+  },
+  "items": [
+   {
+    "id": "notape01",
+    "t": "asset",
+    "asset": "sticker.tape-plain",
+    "x": 672,
+    "w": 98,
+    "h": 98,
+    "cy": 62,
+    "r": -8,
+    "tint": "accent"
+   }
+  ]
+ }
+}

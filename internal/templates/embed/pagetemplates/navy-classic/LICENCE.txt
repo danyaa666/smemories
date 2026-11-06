@@ -1,7 +1,15 @@
 Page templates for Navy Classic (internal/templates/embed/pagetemplates/navy-classic)
 
-These page templates were authored by the SMemories team in task T-172 from our own text and our own registry assets (licence "authored", CC0 1.0
-Universal, see web/src/book/assets/licences/authored.txt). They contain no third-party artwork, no photo and nothing derived from another
-project. The team dedicates them to the public domain under CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/).
+These page templates are the project's own authoring: they were made by the SMemories team (task T-172 for the first four, task T-178 for the others) as
+placements of registry assets, colours and tilts on our own pages. Like the authored assets (licence "authored", see
+web/src/book/assets/licences/authored.txt and docs/assets.md) the team dedicates them to the public domain under CC0 1.0 Universal
+(https://creativecommons.org/publicdomain/zero/1.0/).
 
-Date: 2026-11-05
+Nothing is copied from Doory or from any other template source, image or text: no file, picture, wording or layout of another project is in these files. Other
+templates and designs were looked at only as inspiration for the kind of look (a formal gold-on-navy book, stately to modern-classic), never traced or reused.
+The files hold no sentence in any language, no photo and no link.
+
+They use only assets of the registry (web/src/book/assets/registry.json), all authored by the team (CC0, web/src/book/assets/licences/authored.txt):
+shape.burst, shape.circle, shape.heart, shape.rect, shape.star, sticker.doodle-sparkle, sticker.doodle-underline.
+
+Date: 2026-11-06

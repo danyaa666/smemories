@@ -1,0 +1,56 @@
+{
+ "id": "profile-portrait",
+ "label_en": "Large portrait",
+ "label_vi": "Chân dung lớn",
+ "kind": "profile",
+ "source": "authored",
+ "licence": "LICENCE.txt",
+ "page": {
+  "bg": {
+   "color": "paper"
+  },
+  "overrides": {
+   "profile.photo": {
+    "x": 618,
+    "w": 294,
+    "h": 404,
+    "cy": 357
+   }
+  },
+  "items": [
+   {
+    "id": "ncpport01",
+    "t": "asset",
+    "asset": "sticker.doodle-sparkle",
+    "x": 750,
+    "w": 69,
+    "h": 69,
+    "cy": 620,
+    "r": 0,
+    "tint": "bronze"
+   },
+   {
+    "id": "ncpport02",
+    "t": "asset",
+    "asset": "sticker.doodle-sparkle",
+    "x": 837,
+    "w": 42,
+    "h": 42,
+    "cy": 680,
+    "r": 0,
+    "tint": "gold"
+   },
+   {
+    "id": "ncpport03",
+    "t": "asset",
+    "asset": "sticker.doodle-underline",
+    "x": 675,
+    "w": 184,
+    "h": 184,
+    "cy": 760,
+    "r": 0,
+    "tint": "bronze"
+   }
+  ]
+ }
+}

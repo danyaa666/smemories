@@ -863,7 +863,7 @@ func TestTemplateList(t *testing.T) {
 		if i > 0 && all[i-1].LabelEN > p.LabelEN {
 			t.Errorf("not sorted by label: %q before %q", all[i-1].LabelEN, p.LabelEN)
 		}
-		if strings.Contains(string(p.Page), "gold") { // the navy palette never reaches a memory-book
+		if strings.Contains(string(p.Page), `"gold"`) { // the navy palette never reaches a memory-book
 			t.Errorf("%s holds a navy token", p.ID)
 		}
 	}

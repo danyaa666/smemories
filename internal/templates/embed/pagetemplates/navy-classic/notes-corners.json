@@ -1,0 +1,59 @@
+{
+ "id": "notes-corners",
+ "label_en": "Corner ornaments",
+ "label_vi": "Lời nhắn góc hoa",
+ "kind": "notes",
+ "source": "authored",
+ "licence": "LICENCE.txt",
+ "page": {
+  "bg": {
+   "color": "paper"
+  },
+  "items": [
+   {
+    "id": "ncncor01",
+    "t": "asset",
+    "asset": "sticker.doodle-sparkle",
+    "x": 56,
+    "w": 49,
+    "h": 49,
+    "cy": 56,
+    "r": 0,
+    "tint": "gold"
+   },
+   {
+    "id": "ncncor02",
+    "t": "asset",
+    "asset": "sticker.doodle-sparkle",
+    "x": 895,
+    "w": 49,
+    "h": 49,
+    "cy": 56,
+    "r": 0,
+    "tint": "gold"
+   },
+   {
+    "id": "ncncor03",
+    "t": "asset",
+    "asset": "sticker.doodle-sparkle",
+    "x": 56,
+    "w": 49,
+    "h": 49,
+    "cy": 940,
+    "r": 0,
+    "tint": "gold"
+   },
+   {
+    "id": "ncncor04",
+    "t": "asset",
+    "asset": "sticker.doodle-sparkle",
+    "x": 895,
+    "w": 49,
+    "h": 49,
+    "cy": 940,
+    "r": 0,
+    "tint": "gold"
+   }
+  ]
+ }
+}
