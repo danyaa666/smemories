@@ -270,6 +270,7 @@ describe("keyboard", () => {
     await mount();
     const radios = await open();
     await userEvent.tab(); // from the panel to Refresh
+    await userEvent.tab(); // then "Save this page as a template" (T-176)
     await userEvent.tab(); // and to the first card
     expect(radios[0]).toHaveFocus();
     await userEvent.keyboard("{ArrowDown}");

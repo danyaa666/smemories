@@ -31,7 +31,8 @@ export function Dialog({
   const cancel = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     const before = document.activeElement;
-    cancel.current?.focus(); // the safe choice first
+    // the safe choice first, unless the body has a field marked `data-autofocus` (a name to type)
+    (box.current?.querySelector<HTMLElement>("[data-autofocus]") ?? cancel.current)?.focus();
     return () => {
       if (!(before instanceof HTMLElement)) return;
       before.focus();

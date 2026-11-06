@@ -47,7 +47,8 @@
 .ed-toolbar button[aria-disabled="true"],
 .ed-toolbar button:disabled,
 .ed-bar button:disabled,
-.ed-panel button:disabled {
+.ed-panel button:disabled,
+.ed-panel button[aria-disabled="true"] {
   opacity: 0.5;
   cursor: default;
 }
@@ -670,6 +671,10 @@
 }
 .ed-tpl-name {
   font-weight: 600;
+}
+.ed-tpl-new {
+  font-weight: 400;
+  color: var(--color-primary);
 }
 .ed-tpl-buttons {
   display: flex;

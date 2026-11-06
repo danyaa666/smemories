@@ -5,29 +5,39 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type CSSProperties,
   type KeyboardEvent,
   type ReactNode,
 } from "react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
-import { deleteOwnTemplate, listPageTemplates } from "../../api/bookLayout";
+import { createOwnTemplate, deleteOwnTemplate, listPageTemplates } from "../../api/bookLayout";
 import type { BookData } from "../../api/book";
 import { ApiError } from "../../api/client";
 import { Banner } from "../../components/ui/Banner";
 import { Button } from "../../components/ui/Button";
 import { Dialog } from "../../components/ui/Dialog";
+import { TextField } from "../../components/ui/TextField";
 import { BookPages, type OnePage } from "../BookPages";
 import type { SectionId } from "../design";
 import { pagePx, SIZES, type PageSize } from "../sizes";
 import { withPage, type LayoutDoc } from "./document";
 import {
   allCards,
+  checkName,
   groupTemplates,
+  hasWork,
+  keepSummary,
   MAX_THUMBS,
+  NAME_MAX,
+  nameLength,
   remember,
+  saveAsTemplate,
   templateError,
   type Lists,
+  type NameError,
+  type SaveError,
   type TemplateCard,
   type TemplateError,
 } from "./templates";
@@ -45,6 +55,22 @@ export function useTemplateErrorText() {
 }
 
 const noop = () => {};
+
+/** `navigator.onLine`, kept up to date by the browser's online and offline events. */
+function useOnline() {
+  return useSyncExternalStore(
+    (cb) => {
+      window.addEventListener("online", cb);
+      window.addEventListener("offline", cb);
+      return () => {
+        window.removeEventListener("online", cb);
+        window.removeEventListener("offline", cb);
+      };
+    },
+    () => navigator.onLine,
+    () => true,
+  );
+}
 const pageOf = (kind: SectionId): OnePage =>
   kind === "notes" ? { section: kind, index: 0 } : { section: kind };
 
@@ -129,7 +155,8 @@ function useDrawn(ids: string[]) {
  * The Templates side panel (T-175): the templates of the page kind being edited, shipped and the student's own, each with a thumbnail, Preview,
  * Apply (and Delete for an own one). It is mounted only while open; the list is read then, again when the kind changes (kept for the two newest
  * kinds), and on "Refresh" or when the shell changes `key`; never polled. Preview and Apply are the shell's (they need the editor and the stage).
- * T-176 adds "Save this page as a template" next to Refresh (`.ed-tpl-actions`) and one more entry in `Lists` is all its new template needs.
+ * "Save this page as a template" (T-176) sits next to Refresh: a name dialog, `settle()`, one `template-create`, then the list of this kind is read
+ * again and the new card takes focus. It touches nothing in the editor (the shell only shows the toast).
  */
 export function TemplatesPanel({
   bookId,
@@ -144,6 +171,8 @@ export function TemplatesPanel({
   onPreview,
   onApply,
   onDeleted,
+  settle,
+  onSaved,
   children,
 }: {
   bookId: string;
@@ -160,6 +189,10 @@ export function TemplatesPanel({
   onPreview: (card: TemplateCard) => void;
   onApply: (card: TemplateCard) => void;
   onDeleted: (card: TemplateCard) => void;
+  /** `store.settle`: the server copies the book's stored page, so the save waits until it is the editor's. */
+  settle: () => Promise<boolean>;
+  /** A template was saved: the text for the toast and the live region. */
+  onSaved: (text: string) => void;
   /** The preview banner and the apply error: inside the panel, so that Shift+Tab from the list reaches them in a few steps. */
   children?: ReactNode;
 }) {
@@ -178,6 +211,22 @@ export function TemplatesPanel({
   const [deleteError, setDeleteError] = useState("");
   const radios = useRef<(HTMLButtonElement | null)[]>([]);
   const aside = useRef<HTMLElement>(null);
+  // save as a template (T-176)
+  const online = useOnline();
+  const ownGroup = useRef<HTMLDivElement>(null);
+  const saveOnce = useRef(false);
+  const focusedNew = useRef("");
+  const [saving, setSaving] = useState(false); // the dialog is open
+  const [name, setName] = useState("");
+  const [nameError, setNameError] = useState<NameError | null>(null);
+  const [saveBusy, setSaveBusy] = useState(false);
+  const [saveFailure, setSaveFailure] = useState<{
+    error: SaveError;
+    seconds?: number;
+    limit?: number;
+  } | null>(null);
+  const [atLimit, setAtLimit] = useState<number | null>(null); // the 409 said so; a delete or Refresh forgets it
+  const [newId, setNewId] = useState("");
 
   const have = lists[kind] !== undefined;
   useEffect(() => aside.current?.focus(), []);
@@ -202,6 +251,7 @@ export function TemplatesPanel({
   }, [bookId, kind, have, nonce]);
   const refresh = useCallback(() => {
     setFailure(null);
+    setAtLimit(null);
     setLists({});
     setNonce((n) => n + 1);
   }, []);
@@ -213,6 +263,82 @@ export function TemplatesPanel({
   );
   const cards = useMemo(() => (groups ? allCards(groups) : []), [groups]);
   const { root, drawn } = useDrawn(cards.map(cardKey));
+
+  // the new card takes the focus once the list has been read again (once per saved template)
+  useEffect(() => {
+    if (!newId || focusedNew.current === newId) return;
+    const i = cards.findIndex((c) => c.id === newId);
+    if (i < 0) return;
+    focusedNew.current = newId;
+    radios.current[i]?.focus();
+    radios.current[i]?.scrollIntoView?.({ block: "nearest" });
+  }, [newId, cards]);
+
+  const kept = keepSummary(doc, kind);
+  const noPage = !hasWork(doc, kind);
+  const reason = !online ? "offline" : previewId !== null ? "preview" : noPage ? "empty" : null;
+  const showOwn = () => ownGroup.current?.scrollIntoView?.({ block: "nearest" });
+  const limitText = (limit: number) => t("editor.templates.save.err.limit", { limit });
+  const openSave = () => {
+    if (reason || busy) return;
+    if (atLimit !== null) {
+      showOwn(); // the dialog would be bound to fail: say why and show the group to delete from
+      return;
+    }
+    const own = groups?.own.length ?? 0;
+    setName(
+      t("editor.templates.save.defaultName", {
+        section: t(`editor.templates.save.section.${kind}`),
+        n: own + 1,
+      }),
+    );
+    setNameError(null);
+    setSaveFailure(null);
+    setSaving(true);
+  };
+  const submitSave = async () => {
+    if (saveOnce.current) return; // a double click sends one request
+    const checked = checkName(name);
+    if (!checked.ok) {
+      setNameError(checked.error);
+      return;
+    }
+    saveOnce.current = true;
+    const k = kind;
+    setSaveBusy(true);
+    setNameError(null);
+    setSaveFailure(null);
+    const r = await saveAsTemplate(checked.name, {
+      settle,
+      create: (n) => createOwnTemplate(bookId, k, n),
+    });
+    saveOnce.current = false;
+    setSaveBusy(false);
+    if (r.ok) {
+      setSaving(false);
+      setAtLimit(null);
+      setNewId(r.id);
+      setLists((l) => Object.fromEntries(Object.entries(l).filter(([x]) => x !== k))); // read it again
+      onSaved(
+        t("editor.templates.save.saved", { name: r.name }) +
+          (r.stripped > 0 ? ` ${t("editor.templates.save.notSaved", { count: r.stripped })}` : ""),
+      );
+      return;
+    }
+    setSaveFailure({
+      error: r.error,
+      ...(r.retryAfter !== undefined ? { seconds: r.retryAfter } : {}),
+      ...(r.limit !== undefined ? { limit: r.limit } : {}),
+    });
+    if (r.error === "limit") {
+      setAtLimit(r.limit ?? 20);
+      showOwn();
+    }
+  };
+  const saveErrorText = (f: NonNullable<typeof saveFailure>) =>
+    f.error === "limit"
+      ? limitText(f.limit ?? 20)
+      : t(`editor.templates.save.err.${f.error}`, { seconds: f.seconds ?? 5 });
 
   const move = (e: KeyboardEvent, from: number) => {
     const n = cards.length;
@@ -255,6 +381,7 @@ export function TemplatesPanel({
     }
     setDeleteBusy(false);
     setDeleting(null);
+    setAtLimit(null); // a place is free again
     setLists((l) => ({ ...l, [kind]: (l[kind] ?? []).filter((x) => x.id !== card.id) }));
     setCursor(0);
     onDeleted(card);
@@ -263,9 +390,10 @@ export function TemplatesPanel({
   };
 
   let n = 0;
-  const group = (title: string, list: TemplateCard[]) => (
-    <div role="group" aria-label={title} className="ed-tpl-group">
+  const group = (title: string, list: TemplateCard[], own = false) => (
+    <div role="group" aria-label={title} className="ed-tpl-group" ref={own ? ownGroup : undefined}>
       <h3>{title}</h3>
+      {own && <p className="ed-hint">{t("editor.templates.save.limitHint")}</p>}
       {list.length === 0 && <p className="ed-hint">{t("editor.templates.empty")}</p>}
       {list.map((c) => {
         const i = n++;
@@ -274,13 +402,14 @@ export function TemplatesPanel({
           items: t("editor.templates.items", { count: c.items }),
           source: t(`editor.templates.source.${c.source}`),
         });
+        const fresh = c.id === newId;
         return (
           <div className="ed-tpl-card" key={cardKey(c)} data-tid={cardKey(c)}>
             <button
               type="button"
               role="radio"
               aria-checked={cardKey(c) === previewId}
-              aria-label={label}
+              aria-label={fresh ? `${label}, ${t("editor.templates.save.new")}` : label}
               tabIndex={i === cursor ? 0 : -1}
               ref={(el) => void (radios.current[i] = el)}
               className="ed-tpl-pick"
@@ -297,7 +426,10 @@ export function TemplatesPanel({
                 bookT={bookT}
                 drawn={drawn.has(cardKey(c))}
               />
-              <span className="ed-tpl-name">{c.name}</span>
+              <span className="ed-tpl-name">
+                {c.name}
+                {fresh && <span className="ed-tpl-new"> {t("editor.templates.save.new")}</span>}
+              </span>
               <span className="ed-hint">
                 {t("editor.templates.items", { count: c.items })}
                 {c.source === "own" && <> · {t("editor.templates.noImages")}</>}
@@ -337,7 +469,19 @@ export function TemplatesPanel({
         <Button onClick={refresh} disabled={!items && !failed}>
           {t("editor.templates.refresh")}
         </Button>
+        <Button
+          aria-disabled={reason !== null || busy || undefined}
+          aria-describedby="ed-tpl-save-note"
+          onClick={openSave}
+        >
+          {t("editor.templates.save.button")}
+        </Button>
       </div>
+      <p id="ed-tpl-save-note" className="ed-hint">
+        {reason
+          ? t(`editor.templates.save.reason.${reason}`)
+          : atLimit !== null && limitText(atLimit)}
+      </p>
       {!items && !failed && <p role="status">{t("editor.templates.loading")}</p>}
       {failed && (
         <Banner variant="error" action={<Button onClick={refresh}>{t("auth.retry")}</Button>}>
@@ -352,8 +496,66 @@ export function TemplatesPanel({
           ref={root}
         >
           {group(t("editor.templates.shipped"), groups.shipped)}
-          {group(t("editor.templates.own"), groups.own)}
+          {group(t("editor.templates.own"), groups.own, true)}
         </div>
+      )}
+      {saving && (
+        <Dialog
+          title={t("editor.templates.save.title")}
+          confirmLabel={t("editor.templates.save.confirm")}
+          cancelLabel={
+            saveFailure?.error === "invalid"
+              ? t("editor.templates.save.back")
+              : t("editor.templates.cancel")
+          }
+          busy={saveBusy}
+          onConfirm={() => void submitSave()}
+          onCancel={() => !saveBusy && setSaving(false)}
+        >
+          <p>
+            {t("editor.templates.save.summary", {
+              what: t(`editor.templates.what.${kind}`),
+              kept:
+                [
+                  kept.items > 0 && t("editor.templates.save.keep.items", { count: kept.items }),
+                  kept.moved > 0 && t("editor.templates.save.keep.moved", { count: kept.moved }),
+                  kept.background && t("editor.templates.save.keep.background"),
+                ]
+                  .filter(Boolean)
+                  .join(", ") || t("editor.templates.save.keep.none"),
+            })}{" "}
+            {kept.images > 0 && t("editor.templates.save.images", { count: kept.images })}
+          </p>
+          <TextField
+            data-autofocus
+            label={t("editor.templates.save.nameLabel")}
+            value={name}
+            autoComplete="off"
+            spellCheck={false}
+            error={
+              nameError
+                ? t(`editor.templates.save.nameErr.${nameError}`, { max: NAME_MAX })
+                : undefined
+            }
+            onChange={(e) => {
+              setName(e.target.value);
+              setNameError(null);
+            }}
+            onKeyDown={(e) => {
+              if (e.key !== "Enter" || e.nativeEvent.isComposing) return; // Enter ends an IME composition first
+              e.preventDefault();
+              void submitSave();
+            }}
+          />
+          <p className={`ed-hint${nameLength(name) > NAME_MAX ? " error" : ""}`} aria-live="polite">
+            {t("editor.templates.save.counter", { used: nameLength(name), max: NAME_MAX })}
+          </p>
+          {saveFailure && (
+            <p role="alert" className="error">
+              {saveErrorText(saveFailure)}
+            </p>
+          )}
+        </Dialog>
       )}
       {deleting && (
         <Dialog

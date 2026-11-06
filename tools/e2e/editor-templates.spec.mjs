@@ -310,6 +310,7 @@ test("keyboard only: open, walk the cards, preview, apply with the confirm, focu
   const n = await radios.count();
   expect(n).toBeGreaterThan(0);
   await page.keyboard.press("Tab"); // Refresh
+  await page.keyboard.press("Tab"); // Save this page as a template (T-176)
   await page.keyboard.press("Tab"); // the first card
   await expect(radios.first()).toBeFocused();
   await page.keyboard.press("End");

@@ -61,6 +61,17 @@ export const listPageTemplates = (yearbookId: string, kind?: string) =>
 // Own templates and apply (T-173, screen T-175). `apply-template` is the only one of them that writes the layout; all share the save rate limit.
 export type TemplateSource = PageTemplate["source"];
 
+/** What `template-create` answers: the new template without its page; `stripped` counts the image items and the picture background left out. */
+export type OwnTemplateCreated = S["BookLayoutTemplateCreateResponse"]["data"];
+
+/** Copies the book's STORED `pages.<kind>` into a new own template (T-173: 409 `ERROR_TEMPLATE_LIMIT` with `data.limit` at 20 per user, all kinds). */
+export const createOwnTemplate = (yearbookId: string, kind: string, name: string) =>
+  postJson<OwnTemplateCreated>("/book-layout/template-create", {
+    yearbook_id: yearbookId,
+    kind,
+    name,
+  });
+
 /** Deletes one of the caller's own templates (404 for an unknown or foreign id); books that used it do not change. */
 export const deleteOwnTemplate = (id: string) =>
   postJson<void>("/book-layout/template-delete", { id });

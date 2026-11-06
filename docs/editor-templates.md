@@ -1,4 +1,4 @@
-# Page templates in the editor (T-175)
+# Page templates in the editor (T-175, T-176)
 
 The **Templates** button in the editor's toolbar (vi "Mẫu trang") opens a side panel that lists the templates of **the kind of the page being edited** and applies one to that kind. It is the screen over the server side of T-172 (shipped templates, `template-list`) and T-173 (own templates, `template-create`, `template-delete`, `apply-template`); the rules of those routes are in [api-contract.md](api-contract.md) and [templates.md](templates.md).
 
@@ -17,9 +17,35 @@ The **Templates** button in the editor's toolbar (vi "Mẫu trang") opens a side
 
 ## Own and shipped
 
-Shipped templates come from files of the server and cannot be changed or deleted. Own templates are created from a page the student saved (T-176 adds that screen to this panel; the list model in `templates.ts` and the actions row `.ed-tpl-actions` in `TemplatesPanel.tsx` are the places it extends), at most 20 per user, are text, stickers and shapes only, and belong to the book template they were made on. **Delete** asks "Delete the template 'X'? Books that already used it are not changed.", removes the card and announces it; a 404 (already gone) just refreshes the list.
+Shipped templates come from files of the server and cannot be changed or deleted. Own templates are created from a page the student saved (see "Saving a page as a template" below), at most 20 per user across all page kinds, are text, stickers and shapes only, and belong to the book template they were made on. **Delete** asks "Delete the template 'X'? Books that already used it are not changed.", removes the card and announces it; a 404 (already gone) just refreshes the list.
 
-## Errors (each with its own vi and en text, `editor.templates.err.*`)
+## Saving a page as a template (T-176)
+
+**Save this page as a template** (vi "Lưu trang này thành mẫu") is in the panel next to Refresh, for the kind being edited; there is no second toolbar button, so the keyboard reaches it through Templates, Tab. It opens a name dialog and sends `template-create {yearbook_id, kind, name}`.
+
+- **When it is offered.** It explains instead of opening a dialog (the button is `aria-disabled`, so it stays focusable, and the reason is under it) when the page has no moved element, item or background ("Nothing to save: this page has no changes yet"), while the browser is offline, while a template is previewed (the stage then shows the template, not the stored page), and after a 409 limit answer until a template is deleted or the list is refreshed.
+- **The dialog.** A name (required, plain text, trimmed, at most 60 code points; the counter is a polite live region; default "My cover 2" or "Bìa của tôi 2" from the own templates of the kind already listed), a summary "This saves the cover as it is now: 5 items, 1 moved element, a background. N images are not saved (your own images are not copied to templates)" and *Save* / *Cancel* (*Back* after `ERROR_INVALID_LAYOUT`). Enter saves (not while an IME composes), Esc cancels and returns the focus to the button, Tab stays inside. The name rules are the server's `textx.Clean`: NFC, then trim, then 1 to 60 code points, no control, invisible or line-separator characters (a joiner is allowed); composed and decomposed Vietnamese count the same, because they are compared after NFC, and the name is sent composed. An empty or too long name shows an inline error and sends nothing. The image count in the summary is a **hint from the editor's document** (`image` items and a picture `bg.media`, exactly what the server strips); the server's `stripped` is the truth and is what the toast says.
+- **Save.** `store.settle()` first (the server copies the book's **stored** page, so a pending edit must be saved before the copy), then one `template-create` (a double click sends one request). Success closes the dialog, announces and shows a toast "Template 'X' saved." plus "N images were not saved." when `stripped > 0`, reads the list of the kind again and puts the focus on the new card, which is announced and shown as "new". **A save changes nothing in the editor**: no `adopt`, the document, version, undo stack and autosave are exactly as before, and no `save` is sent for it.
+- **The cap of 20 is per account, across all page kinds**, while the panel lists one kind of one book template at a time, and `template-list` returns no total. So the panel does **not** show a count like "3 of 20" (it would be wrong): the own group says "Up to 20 own templates per account, across all page types", and the 409 (`data.limit`) message says "You have 20 own templates, the most you can keep across all page types. Delete one in the panel first." The dialog stays open with the typed name and the own group is scrolled into view; afterwards the button shows that message instead of opening a dialog that is bound to fail, until a template is deleted in the panel (or Refresh).
+
+### Save errors (`editor.templates.save.err.*`, vi and en)
+
+Nothing in the editor changes for any of them, the dialog stays open and the typed name is kept.
+
+| Case | What the student sees |
+| --- | --- |
+| `ERROR_TEMPLATE_LIMIT` (409, `data.limit`) | the limit message above |
+| `ERROR_TOO_LARGE` | "This page is too big to keep as a template. Remove some items and try again." |
+| `ERROR_INVALID_LAYOUT` | a generic message (the problem list is not shown) and *Back* |
+| `ERROR_PARAM` | "The name was not accepted, or this page has nothing saved yet." |
+| 404 | "This book no longer exists" |
+| 429 | "Try again in N s" (the Retry-After) |
+| offline | "You are offline" |
+| the settle step failed | "latest changes could not be saved yet"; nothing is sent |
+
+The round trip: the template shows in "My templates" of the same book template and kind, previews and applies like any other (also after the page was reset), and is not listed for another kind or for a book on another template (the server filters by book template and kind).
+
+## Errors of apply (each with its own vi and en text, `editor.templates.err.*`)
 
 A failed apply leaves the editor, its history and its autosave exactly as before.
 
@@ -39,10 +65,11 @@ No `template-list` call before the panel opens; at most two kinds in memory; `ap
 
 ## Tests
 
-`templates.test.ts` (list model, `withPage`, apply flow with a fake API), `EditorTemplates.test.tsx` (panel and shell: keyboard walk, preview, apply once, errors, delete), the label cases in `EditorHistory.test.tsx`, and `tools/e2e/editor-templates.spec.mjs` ([e2e.md](e2e.md)).
+`templates.test.ts` (list model, `withPage`, apply flow with a fake API, and for T-176 the name rules, the image hint, the save error mapping and the save state machine), `EditorTemplates.test.tsx` (panel and shell: keyboard walk, preview, apply once, errors, delete), `EditorSaveTemplate.test.tsx` (the button and its reasons, the dialog's keyboard flow, settle first, one request on a double click, the list read again with the new card focused, the editor untouched, every error, the 21st template), the label cases in `EditorHistory.test.tsx`, and `tools/e2e/editor-templates.spec.mjs` and `tools/e2e/editor-save-template.spec.mjs` ([e2e.md](e2e.md)).
 
 ## Not proven by a machine (check by hand)
 
 - A screen reader reading the card names ("Template Clean title, 6 items, shipped"), the banner and the live region.
 - Touch: the 44 px targets of the cards' buttons on a tablet (the editor needs at least 768 px) and a drag-free page scroll over the list.
 - A shipped template on each book template and page kind drawn as the thumbnail shows it (the thumbnail and the applied page use the same components; the print check covers the page itself).
+- The save dialog read by a screen reader (the summary, the polite counter, the error), and the name typed on a phone-sized touch device with Telex or VNI (the e2e types composed text only).

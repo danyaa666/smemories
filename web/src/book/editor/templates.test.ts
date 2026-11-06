@@ -5,12 +5,18 @@ import { withPage } from "./document";
 import {
   allCards,
   applyTemplate,
+  checkName,
   groupTemplates,
   hasWork,
+  keepSummary,
   MAX_KINDS_CACHED,
+  nameLength,
   remember,
+  saveAsTemplate,
+  saveError,
   templateError,
   type ApplyDeps,
+  type SaveDeps,
   type TemplateCard,
 } from "./templates";
 
@@ -201,5 +207,150 @@ describe("applyTemplate", () => {
       },
     });
     expect(await applyTemplate(card, b.d)).toEqual({ ok: false, error: "busy", retryAfter: 12 });
+  });
+});
+
+// T-176: saving a page as an own template. The panel and the dialog are in EditorSaveTemplate.test.tsx.
+
+describe("checkName", () => {
+  it("trims and refuses an empty name", () => {
+    expect(checkName("  Bìa của tôi \n")).toEqual({ ok: true, name: "Bìa của tôi" });
+    expect(checkName("")).toEqual({ ok: false, error: "empty" });
+    expect(checkName(" \t ")).toEqual({ ok: false, error: "empty" });
+  });
+  it("allows 60 code points and refuses 61, counting composed and decomposed Vietnamese the same", () => {
+    const composed = "ệ".repeat(60); // U+1EC7, one code point each
+    const decomposed = "e\u0323\u0302".repeat(60); // e + dot below + circumflex: 180 code points, 60 letters once composed
+    expect([...composed]).toHaveLength(60);
+    expect([...decomposed]).toHaveLength(180);
+    expect(nameLength(decomposed)).toBe(60);
+    expect(checkName(composed)).toEqual({ ok: true, name: composed });
+    expect(checkName(decomposed)).toEqual({ ok: true, name: composed }); // stored in NFC, as the server does
+    expect(checkName("ệ".repeat(61))).toEqual({ ok: false, error: "long" });
+    expect(checkName("e\u0323\u0302".repeat(61))).toEqual({ ok: false, error: "long" });
+  });
+  it("counts an emoji as one code point (not two UTF-16 units)", () => {
+    expect(checkName("😀".repeat(60)).ok).toBe(true);
+    expect(checkName("😀".repeat(61))).toEqual({ ok: false, error: "long" });
+  });
+  it("refuses control, invisible and separator characters but not a joiner", () => {
+    for (const bad of ["a\u0000b", "a\nb", "a\u200bb", "a\u202eb", "a\u2028b", "a\ufeffb"])
+      expect(checkName(bad)).toEqual({ ok: false, error: "chars" });
+    expect(checkName("👨\u200d👩").ok).toBe(true);
+  });
+});
+
+describe("keepSummary", () => {
+  it("counts the items kept, the moved elements, a colour or asset background, and the images that are not copied", () => {
+    const it = (id: string, t: "text" | "asset" | "image") => ({ id, t, x: 1, w: 1, h: 1, cy: 1 });
+    const doc: LayoutDoc = {
+      v: 1,
+      pages: {
+        cover: {
+          bg: { color: "gold" },
+          overrides: { "cover.title": { w: 5 }, "cover.motto": { w: 6 } },
+          items: [
+            it("tAAAAA", "text"),
+            it("sAAAAA", "asset"),
+            it("iAAAAA", "image"),
+            it("iBBBBB", "image"),
+          ],
+        },
+        back: { bg: { media: "01J9Z3K6V8Q4M7N2P5R8M00001" }, items: [it("tBBBBB", "text")] },
+      },
+    };
+    expect(keepSummary(doc, "cover")).toEqual({ items: 2, moved: 2, background: true, images: 2 });
+    // a picture background is an image that is not copied, so it is not "a background" either
+    expect(keepSummary(doc, "back")).toEqual({ items: 1, moved: 0, background: false, images: 1 });
+    expect(keepSummary(doc, "notes")).toEqual({ items: 0, moved: 0, background: false, images: 0 });
+  });
+});
+
+describe("saveError", () => {
+  const api = (status: number, code: string) => new ApiError(status, code, code);
+  it("gives every failure its own key", () => {
+    expect(saveError(api(409, "template_limit"))).toBe("limit");
+    expect(saveError(api(413, "payload_too_large"))).toBe("large");
+    expect(saveError(api(400, "invalid_layout"))).toBe("invalid");
+    expect(saveError(api(400, "invalid_body"))).toBe("param");
+    expect(saveError(api(404, "not_found"))).toBe("gone");
+    expect(saveError(api(429, "rate_limited"))).toBe("busy");
+    expect(saveError(api(0, "network_error"))).toBe("offline");
+    expect(saveError(api(500, "internal_error"))).toBe("other");
+    expect(saveError(new Error("x"))).toBe("other");
+  });
+});
+
+describe("saveAsTemplate", () => {
+  const made = {
+    id: "01J9Z3K6V8Q4M7N2P5R8C00001",
+    name: "Bìa",
+    kind: "cover",
+    stripped: 1,
+  } as never;
+  function deps(over: Partial<SaveDeps> = {}) {
+    const order: string[] = [];
+    const d: SaveDeps = {
+      settle: vi.fn(async () => {
+        order.push("settle");
+        return true;
+      }),
+      create: vi.fn(async (n: string) => {
+        order.push(`create:${n}`);
+        return made;
+      }),
+      ...over,
+    };
+    return { d, order };
+  }
+  it("settles first, then creates once, and reports what the server says was stripped", async () => {
+    const { d, order } = deps();
+    expect(await saveAsTemplate("Bìa", d)).toEqual({
+      ok: true,
+      id: "01J9Z3K6V8Q4M7N2P5R8C00001",
+      name: "Bìa",
+      stripped: 1,
+    });
+    expect(order).toEqual(["settle", "create:Bìa"]);
+  });
+  it("sends nothing when the newest edit could not be saved", async () => {
+    const { d } = deps({ settle: async () => false });
+    expect(await saveAsTemplate("Bìa", d)).toEqual({ ok: false, error: "unsaved" });
+    expect(d.create).not.toHaveBeenCalled();
+  });
+  it.each([
+    [409, "template_limit", "limit"],
+    [413, "payload_too_large", "large"],
+    [400, "invalid_layout", "invalid"],
+    [400, "invalid_body", "param"],
+    [404, "not_found", "gone"],
+    [429, "rate_limited", "busy"],
+    [0, "network_error", "offline"],
+    [500, "internal_error", "other"],
+  ])("maps %i %s to %s", async (status, code, error) => {
+    const { d } = deps({
+      create: async () => {
+        throw new ApiError(status, code, code);
+      },
+    });
+    expect(await saveAsTemplate("Bìa", d)).toMatchObject({ ok: false, error });
+  });
+  it("passes the limit from the 409 data and Retry-After on", async () => {
+    const lim = deps({
+      create: async () => {
+        throw new ApiError(409, "template_limit", "x", undefined, undefined, { limit: 20 });
+      },
+    });
+    expect(await saveAsTemplate("Bìa", lim.d)).toEqual({ ok: false, error: "limit", limit: 20 });
+    const busy = deps({
+      create: async () => {
+        throw new ApiError(429, "rate_limited", "x", undefined, 12);
+      },
+    });
+    expect(await saveAsTemplate("Bìa", busy.d)).toEqual({
+      ok: false,
+      error: "busy",
+      retryAfter: 12,
+    });
   });
 });

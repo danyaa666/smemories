@@ -865,6 +865,12 @@ export function EditorShell({
             onPreview={previewTemplate}
             onApply={askApply}
             onDeleted={(c) => setTplView((v) => (v && cardKey(v.card) === cardKey(c) ? null : v))}
+            settle={ed.settle}
+            onSaved={(msg) => {
+              setToast(msg);
+              setToastHistory(false);
+              say(msg);
+            }}
           >
             {tplPreview && (
               <TemplateBanner

@@ -1347,6 +1347,58 @@
         "offline": "Bạn đang ngoại tuyến. Kiểm tra kết nối rồi thử lại.",
         "unsaved": "Các thay đổi mới nhất chưa lưu được nên chưa áp dụng mẫu nào. Hãy thử lại sau giây lát.",
         "other": "Có lỗi xảy ra. Không có gì bị thay đổi."
+      },
+      "save": {
+        "button": "Lưu trang này thành mẫu",
+        "reason": {
+          "empty": "Chưa có gì để lưu: trang này chưa có thay đổi",
+          "offline": "Bạn đang ngoại tuyến. Hãy kết nối lại để lưu mẫu.",
+          "preview": "Hãy quay lại trang hiện tại của bạn để lưu thành mẫu."
+        },
+        "limitHint": "Tối đa 20 mẫu của riêng bạn cho mỗi tài khoản, tính chung mọi loại trang.",
+        "title": "Lưu trang này thành mẫu",
+        "nameLabel": "Tên mẫu",
+        "counter": "{{used}} trên {{max}} ký tự",
+        "confirm": "Lưu",
+        "back": "Quay lại",
+        "section": {
+          "cover": "Bìa",
+          "profile": "Trang giới thiệu",
+          "notes": "Trang lưu bút",
+          "back": "Bìa sau"
+        },
+        "defaultName": "{{section}} của tôi {{n}}",
+        "summary": "Việc này lưu {{what}} như hiện tại: {{kept}}.",
+        "keep": {
+          "items_one": "{{count}} mục",
+          "items_other": "{{count}} mục",
+          "moved_one": "{{count}} phần tử đã di chuyển",
+          "moved_other": "{{count}} phần tử đã di chuyển",
+          "background": "một nền",
+          "none": "chưa có gì"
+        },
+        "images_one": "{{count}} ảnh không được lưu (ảnh của riêng bạn không được sao chép vào mẫu).",
+        "images_other": "{{count}} ảnh không được lưu (ảnh của riêng bạn không được sao chép vào mẫu).",
+        "nameErr": {
+          "empty": "Hãy nhập tên cho mẫu.",
+          "long": "Dùng tối đa {{max}} ký tự.",
+          "chars": "Tên không được chứa ký tự điều khiển hoặc ký tự vô hình."
+        },
+        "saved": "Đã lưu mẫu '{{name}}'.",
+        "notSaved_one": "{{count}} ảnh đã không được lưu.",
+        "notSaved_other": "{{count}} ảnh đã không được lưu.",
+        "new": "mới",
+        "err": {
+          "limit": "Bạn đã có {{limit}} mẫu của riêng mình, mức tối đa tính chung mọi loại trang. Hãy xóa bớt một mẫu trong bảng trước.",
+          "large": "Trang này quá lớn để lưu thành mẫu. Hãy bớt một số mục rồi thử lại.",
+          "invalid": "Không lưu được trang này thành mẫu. Không có gì bị thay đổi. Chọn Quay lại để trở về.",
+          "param": "Tên chưa được chấp nhận, hoặc trang này chưa có gì được lưu. Hãy kiểm tra tên rồi thử lại.",
+          "gone": "Cuốn sách này không còn nữa nên chưa lưu mẫu nào.",
+          "busy": "Quá nhiều yêu cầu. Thử lại sau {{seconds}} giây.",
+          "offline": "Bạn đang ngoại tuyến. Kiểm tra kết nối rồi thử lại.",
+          "unsaved": "Các thay đổi mới nhất chưa lưu được nên chưa tạo mẫu. Hãy thử lại sau giây lát.",
+          "other": "Có lỗi xảy ra. Không có gì bị thay đổi."
+        }
       }
     }
   }

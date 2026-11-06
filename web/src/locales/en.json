@@ -1347,6 +1347,58 @@
         "offline": "You are offline. Check your connection and try again.",
         "unsaved": "Your latest changes could not be saved yet, so no template was applied. Try again in a moment.",
         "other": "Something went wrong. Nothing was changed."
+      },
+      "save": {
+        "button": "Save this page as a template",
+        "reason": {
+          "empty": "Nothing to save: this page has no changes yet",
+          "offline": "You are offline. Reconnect to save a template.",
+          "preview": "Go back to your current page to save it as a template."
+        },
+        "limitHint": "Up to 20 own templates per account, across all page types.",
+        "title": "Save this page as a template",
+        "nameLabel": "Template name",
+        "counter": "{{used}} of {{max}} characters",
+        "confirm": "Save",
+        "back": "Back",
+        "section": {
+          "cover": "cover",
+          "profile": "profile page",
+          "notes": "notes page",
+          "back": "back cover"
+        },
+        "defaultName": "My {{section}} {{n}}",
+        "summary": "This saves {{what}} as it is now: {{kept}}.",
+        "keep": {
+          "items_one": "{{count}} item",
+          "items_other": "{{count}} items",
+          "moved_one": "{{count}} moved element",
+          "moved_other": "{{count}} moved elements",
+          "background": "a background",
+          "none": "nothing yet"
+        },
+        "images_one": "{{count}} image is not saved (your own images are not copied to templates).",
+        "images_other": "{{count}} images are not saved (your own images are not copied to templates).",
+        "nameErr": {
+          "empty": "Enter a name for the template.",
+          "long": "Use at most {{max}} characters.",
+          "chars": "The name cannot contain control or invisible characters."
+        },
+        "saved": "Template '{{name}}' saved.",
+        "notSaved_one": "{{count}} image was not saved.",
+        "notSaved_other": "{{count}} images were not saved.",
+        "new": "new",
+        "err": {
+          "limit": "You have {{limit}} own templates, the most you can keep across all page types. Delete one in the panel first.",
+          "large": "This page is too big to keep as a template. Remove some items and try again.",
+          "invalid": "This page could not be saved as a template. Nothing was changed. Choose Back to return.",
+          "param": "The name was not accepted, or this page has nothing saved yet. Check the name and try again.",
+          "gone": "This book no longer exists, so no template was saved.",
+          "busy": "Too many requests. Try again in {{seconds}} s.",
+          "offline": "You are offline. Check your connection and try again.",
+          "unsaved": "Your latest changes could not be saved yet, so no template was made. Try again in a moment.",
+          "other": "Something went wrong. Nothing was changed."
+        }
       }
     }
   }
