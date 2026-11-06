@@ -981,7 +981,7 @@ Spec: .team/epics/E09-customisation-editor/34-template-gallery-apply-ui.md (read
 - 2026-11-06 05:18Z · leader · squash-merged PR #176 at 2b8120a1 (QA_PASS: e2e 50/50, print-check 298/298, vitest 1278, exploratory all passed). Follow-ups folded into T-176: own-template cap is per user not per kind; TemplatePreview.test.tsx unhandled errors under load.
 
 ### T-176 — [E09] Save my page as a template (web): name it, see what is kept, use it again
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -989,10 +989,10 @@ Spec: .team/epics/E09-customisation-editor/34-template-gallery-apply-ui.md (read
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-176-e09-save-my-page-as-a-template-web-name-
 - **PR:** —
-- **Updated:** 2026-11-06 05:18Z by leader
+- **Updated:** 2026-11-06 05:19Z by dev
 - **Comments-seen:** 1
 
 Spec: .team/epics/E09-customisation-editor/35-save-page-as-template-ui.md (read it from the main checkout). Button in the Templates panel, dialog with name (60 code points) and a hint of how many images are not saved, template-create after settle, limit 20 message, own list refreshed, e2e editor-save-template
@@ -1064,7 +1064,7 @@ Spec: .team/epics/E09-customisation-editor/37-shipped-templates-navy-classic.md 
 - 2026-11-06 01:36Z · leader · squash-merged PR #174 at 15e66070 (QA_PASS: integration 33 pkgs ok, print-check 250/250, e2e 44/44). Profile and notes variants are close: T-180 widened to profile too.
 
 ### T-179 — [E09] Stage 2 hardening: fuzz the layout parsers, storage budget per user, abuse limits, no content in logs
-- **Status:** READY_FOR_QA
+- **Status:** IN_QA
 - **Priority:** P2
 - **Type:** test
 - **Milestone:** M4
@@ -1072,10 +1072,10 @@ Spec: .team/epics/E09-customisation-editor/37-shipped-templates-navy-classic.md 
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** qa
 - **Branch:** task/t-179-e09-stage-2-hardening-fuzz-the-layout-pa
 - **PR:** https://github.com/danyaa666/smemories/pull/177
-- **Updated:** 2026-11-06 05:15Z by dev
+- **Updated:** 2026-11-06 05:19Z by qa
 - **Comments-seen:** 5
 
 Spec: .team/epics/E09-customisation-editor/38-stage2-hardening-fuzz-storage-abuse.md (read it from the main checkout). Go fuzz targets with seeds in CI, depth/size limits before decode, docs/layout-storage-budget.md with measured numbers, rate-limit and body-cap test per layout route, sentinel test for logs and metrics, text safety, threat model note
@@ -1125,5 +1125,62 @@ Spec: .team/epics/E09-customisation-editor/39-bolder-notes-back-variants.md (rea
   3. The gate ignores asset identity by design; two pages with the same boxes and different stickers are twins (right call).
   HONEST VIEW (A4, long name, no-photo student): Navy Classic is now a real choice for notes, back and profile: stars on the corners, a diamond rule, a seal medallion, an arc of stars, a thick bar; the long name and empty photo oval do not break any look. Memory Book notes and back are still only a choice of sticker clusters and tilt: heading, list and table stay put, so the four cards read as one page with different confetti (notes-airy, notes-doodle, notes-stickers, notes-tape and back-pact vs back-thanks are the weakest pairs). Dev's hard limit (heading wraps over its subtitle if moved, flow content cannot move, about 150 x 70 px free) is real and the finding plus proposed design (movable_in_flow flag, notes columns, back table_height) is on the board for the leader; a runtime change is outside this task. Verdict does not depend on it (AC2 requires distinct looks inside today's rules; they are distinct by the gate).
 - 2026-11-06 02:53Z · leader · squash-merged PR #175 at 8b23f641 (QA_PASS: integration 33 pkgs ok, print-check 298/298, e2e 44/44; gate mutants caught except >= vs > and full-box override boxes). Memory Book notes/back variety limit stays (content blocks cannot move): owner-level runtime decision for the stage 2 exit check.
+
+### T-181 — [E09] Phone mode of the editor: view and light edit below 768 px
+- **Status:** TODO
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M4
+- **Depends-on:** T-170, T-175, T-165
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-11-06 by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E09-customisation-editor/40-phone-mode.md (read it from the main checkout). Phone shell over the same store (bottom sheet property panel, text edited in the sheet, pager, Templates/History as dialogs, undo/redo buttons), no drag handles, shell switch at 768 px keeps state, Playwright touch spec, docs/editor-phone.md, owner manual checks iOS Safari and Gboard
+
+#### Comments
+
+### T-182 — [E09] Accessibility and i18n audit of the editor, with fixes
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M4
+- **Depends-on:** T-176, T-181
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-11-06 by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E09-customisation-editor/41-editor-accessibility-i18n-audit.md (read it from the main checkout). Keyboard-only journey spec, aria snapshots, announcement bounds, contrast/zoom/target checks, hard-coded string check, vi text length, docs/editor-accessibility.md with findings table and owner screen-reader checklist; no new dependency
+
+#### Comments
+
+### T-183 — [E09] Stage 2 exit check: one journey, performance budgets, parity, docs, report against the PRD exit criteria
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** test
+- **Milestone:** M4
+- **Depends-on:** T-176, T-181, T-182
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-11-06 by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E09-customisation-editor/42-stage2-exit-check.md (read it from the main checkout). stage2-journey spec (desktop and tablet), parity for every shipped template on A5/A4/Letter, measured budgets (100 items 30 fps at 4x throttle, print time within 10%, bundle, p95s, memory), API coverage table, docs completeness, docs/stage2-exit-report.md with the owner manual checklist
+
+#### Comments
 
 <!-- tasks:end -->
