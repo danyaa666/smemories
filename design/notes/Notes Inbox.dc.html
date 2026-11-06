@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;family=Fraunces:opsz,wght@9..144,600;9..144,700&amp;family=Patrick+Hand&amp;display=swap">
+<style>
+body{margin:0;background:#E2D9C9;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:#2B2622;-webkit-font-smoothing:antialiased}
+a{color:#1F6B72}a:hover{color:#17555B}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="padding:56px 64px;display:flex;flex-direction:column;gap:56px;width:max-content">
+
+  <header style="display:flex;flex-direction:column;gap:10px;max-width:900px">
+    <div style="font:600 12px/16px 'Be Vietnam Pro';letter-spacing:.14em;text-transform:uppercase;color:#5E554B">SMemories · flow 2 of 2</div>
+    <h1 style="margin:0;font:700 48px/52px Fraunces,Georgia,serif">Notes inbox</h1>
+    <p style="margin:0;font:400 17px/26px 'Be Vietnam Pro';color:#5E554B;text-wrap:pretty">Linh decides what goes in her book. Every note arrives as Pending; only Approved notes print, in the order shown here. <strong style="color:#2B2622">I1 and I2 are live and share data</strong>: filter, approve, hide, delete (with undo), select several, drag cards by the grip to reorder (desktop).</p>
+  </header>
+
+  <section style="display:flex;flex-direction:column;gap:20px">
+    <h2 style="margin:0;font:600 24px/30px Fraunces,Georgia,serif">Live · 1280 and 375</h2>
+    <div style="display:flex;gap:40px;align-items:flex-start">
+
+      <div id="I1" style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;gap:8px;align-items:center;font:500 13px 'Be Vietnam Pro'"><span style="font:600 11px ui-monospace,Menlo,monospace;background:#2B2622;color:#FFFDF8;padding:3px 7px;border-radius:4px">I1</span>Desktop · try it</div>
+        <div style="width:1280px;height:900px;background:#F6EFE3;box-shadow:0 1px 3px rgba(0,0,0,.12);overflow:hidden;display:grid;grid-template-columns:256px minmax(0,1fr);position:relative">
+          <nav aria-label="Yearbook" style="background:#EFE4D2;padding:24px 16px;display:flex;flex-direction:column;gap:20px;border-right:1px solid #E3D8C6">
+            <span style="font:700 24px Fraunces,Georgia,serif;padding:0 8px">SMemories</span>
+            <div style="display:flex;gap:12px;align-items:center;padding:12px;border-radius:14px;background:#FFFDF8;box-shadow:0 1px 2px rgba(43,38,34,.08)">
+              <div style="flex:none;width:40px;background:#FFFDF8;padding:3px 3px 0;box-shadow:0 2px 6px rgba(43,38,34,.16);transform:rotate(-4deg)"><div style="height:40px;background-color:#E4CDB8;background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.35) 0 5px,transparent 5px 10px)"></div><div style="height:8px"></div></div>
+              <div style="display:flex;flex-direction:column;min-width:0"><span style="font:600 15px/20px Fraunces,Georgia,serif">Linh's yearbook</span><span style="font:400 13px/18px 'Be Vietnam Pro';color:#5E554B">Class of 2026</span></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <a href="#I1" style="height:44px;padding:0 12px;border-radius:10px;display:flex;align-items:center;gap:12px;color:#2B2622;text-decoration:none;font:500 15px 'Be Vietnam Pro'" style-hover="background:#E3D8C6"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"></circle><path d="M20 21a8 8 0 0 0-16 0"></path></svg>My profile page</a>
+              <a href="#I1" style="height:44px;padding:0 12px;border-radius:10px;display:flex;align-items:center;gap:12px;color:#2B2622;text-decoration:none;font:500 15px 'Be Vietnam Pro'" style-hover="background:#E3D8C6"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path></svg>Photos</a>
+              <a href="#I1" style="height:44px;padding:0 12px;border-radius:10px;display:flex;align-items:center;gap:12px;color:#2B2622;text-decoration:none;font:500 15px 'Be Vietnam Pro'" style-hover="background:#E3D8C6"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>Note links</a>
+              <a href="#I1" aria-current="page" style="height:44px;padding:0 12px;border-radius:10px;display:flex;align-items:center;gap:12px;color:#2B2622;text-decoration:none;font:600 15px 'Be Vietnam Pro';background:#FFFDF8;box-shadow:0 1px 2px rgba(43,38,34,.08)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C4472A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg><span style="flex:1">Notes from friends</span><sc-if value="{{ pendingCount }}" hint-placeholder-val="{{ 3 }}"><span style="min-width:22px;height:22px;padding:0 6px;box-sizing:border-box;border-radius:11px;background:#C4472A;color:#fff;font:700 12px/22px 'Be Vietnam Pro';text-align:center">{{ pendingCount }}</span></sc-if></a>
+              <a href="#I1" style="height:44px;padding:0 12px;border-radius:10px;display:flex;align-items:center;gap:12px;color:#2B2622;text-decoration:none;font:500 15px 'Be Vietnam Pro'" style-hover="background:#E3D8C6"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>Preview &amp; print</a>
+            </div>
+            <div style="margin-top:auto;display:flex;align-items:center;gap:10px;padding:8px">
+              <span style="width:36px;height:36px;border-radius:50%;background:#2B2622;color:#FFFDF8;display:grid;place-items:center;font:600 13px 'Be Vietnam Pro'">TL</span>
+              <div style="flex:1;display:flex;flex-direction:column;min-width:0"><span style="font:600 14px/18px 'Be Vietnam Pro'">Thảo Linh</span><span style="font:400 12px/16px 'Be Vietnam Pro';color:#5E554B">@thaolinh.26</span></div>
+              <div style="display:flex;padding:2px;border:1.5px solid #8C8172;border-radius:999px;background:#FFFDF8"><span style="width:34px;height:30px;border-radius:999px;background:#2B2622;color:#FFFDF8;display:grid;place-items:center;font:600 12px 'Be Vietnam Pro'">EN</span><span style="width:34px;height:30px;display:grid;place-items:center;font:600 12px 'Be Vietnam Pro'">VI</span></div>
+            </div>
+          </nav>
+
+          <main style="overflow:auto;padding:40px 48px 120px;display:flex;flex-direction:column;gap:20px">
+            <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px">
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <h1 style="margin:0;font:700 40px/46px Fraunces,Georgia,serif">Notes from friends</h1>
+                <p style="margin:0;font:400 16px/24px 'Be Vietnam Pro';color:#5E554B">{{ summary }}</p>
+              </div>
+              <button style="flex:none;height:44px;padding:0 18px;border:1.5px solid #8C8172;border-radius:12px;background:#FFFDF8;color:#2B2622;font:600 15px 'Be Vietnam Pro';display:flex;align-items:center;gap:8px;cursor:pointer" style-hover="background:#EFE4D2"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>Get a note link</button>
+            </div>
+
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:52px">
+              <div role="tablist" aria-label="Filter notes" style="display:flex;gap:4px;padding:4px;background:#EFE4D2;border-radius:14px">
+                <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4">
+                  <button role="tab" aria-selected="{{ t.active }}" onClick="{{ t.pick }}" style="height:40px;padding:0 14px;border:0;border-radius:10px;display:flex;align-items:center;gap:6px;font:{{ t.weight }} 14px 'Be Vietnam Pro';color:#2B2622;background:{{ t.bg }};box-shadow:{{ t.shadow }};cursor:pointer">{{ t.label }}<span style="color:#5E554B;font-weight:500">{{ t.count }}</span></button>
+                </sc-for>
+              </div>
+              <sc-if value="{{ noneSelected }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ selectAll }}" style="height:44px;padding:0 12px 0 4px;border:0;background:transparent;display:flex;align-items:center;gap:6px;font:500 14px 'Be Vietnam Pro';color:#2B2622;cursor:pointer"><span style="width:44px;height:44px;display:grid;place-items:center"><span style="width:22px;height:22px;border:1.5px solid #8C8172;border-radius:6px;background:#FFFDF8;box-sizing:border-box"></span></span>Select all</button>
+              </sc-if>
+              <sc-if value="{{ someSelected }}" hint-placeholder-val="{{ false }}">
+                <div role="toolbar" aria-label="Bulk actions" style="display:flex;align-items:center;gap:8px;padding:4px 4px 4px 16px;border-radius:14px;background:#2B2622;color:#FFFDF8">
+                  <span style="font:600 14px 'Be Vietnam Pro';margin-right:6px">{{ selCount }} selected</span>
+                  <button onClick="{{ bulkApprove }}" style="height:40px;padding:0 14px;border:0;border-radius:10px;background:#FFFDF8;color:#1F6B72;font:600 14px 'Be Vietnam Pro';display:flex;align-items:center;gap:6px;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>Approve</button>
+                  <button onClick="{{ bulkHide }}" style="height:40px;padding:0 14px;border:1.5px solid rgba(255,253,248,.4);border-radius:10px;background:transparent;color:#FFFDF8;font:600 14px 'Be Vietnam Pro';cursor:pointer">Hide</button>
+                  <button onClick="{{ bulkDeleteD }}" style="height:40px;padding:0 14px;border:1.5px solid rgba(255,253,248,.4);border-radius:10px;background:transparent;color:#FFFDF8;font:600 14px 'Be Vietnam Pro';cursor:pointer">Delete</button>
+                  <button onClick="{{ clearSel }}" aria-label="Clear selection" style="width:40px;height:40px;border:0;border-radius:10px;background:transparent;color:#FFFDF8;display:grid;place-items:center;cursor:pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+                </div>
+              </sc-if>
+            </div>
+
+            <p style="margin:-4px 0 0;display:flex;align-items:center;gap:8px;font:400 14px/20px 'Be Vietnam Pro';color:#5E554B"><svg width="16" height="16" viewBox="0 0 24 24" fill="#8C8172"><circle cx="9" cy="5" r="1.6"></circle><circle cx="9" cy="12" r="1.6"></circle><circle cx="9" cy="19" r="1.6"></circle><circle cx="15" cy="5" r="1.6"></circle><circle cx="15" cy="12" r="1.6"></circle><circle cx="15" cy="19" r="1.6"></circle></svg>Drag by the grip to set the order notes appear in your book. Keyboard: ••• then Move up or Move down.</p>
+
+            <sc-if value="{{ listEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#FFFDF8;border-radius:16px;padding:56px 24px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;box-shadow:0 1px 2px rgba(43,38,34,.08)">
+                <div style="position:relative;width:96px;height:96px;border-radius:50%;background:#DDEDEA;display:grid;place-items:center;margin-bottom:6px"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#1F6B72" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg><div style="position:absolute;top:-2px;left:-12px;width:56px;height:18px;background:rgba(242,193,78,.75);transform:rotate(-16deg)"></div></div>
+                <h3 style="margin:0;font:600 24px/30px Fraunces,Georgia,serif">{{ emptyTitle }}</h3>
+                <p style="margin:0;font:400 16px/24px 'Be Vietnam Pro';color:#5E554B;max-width:380px">{{ emptyText }}</p>
+              </div>
+            </sc-if>
+
+            <div role="list" style="display:flex;flex-direction:column;gap:14px">
+              <sc-for list="{{ shown }}" as="n" hint-placeholder-count="3">
+                <article role="listitem" draggable="true" onDragStart="{{ n.dragStart }}" onDragOver="{{ n.dragOver }}" onDrop="{{ n.drop }}" onDragEnd="{{ dragEnd }}" style="position:relative;background:#FFFDF8;border-radius:16px;box-shadow:{{ n.ring }};opacity:{{ n.op }};padding:16px 20px 16px 4px;display:grid;grid-template-columns:28px 44px minmax(0,1fr);column-gap:6px;transition:box-shadow .15s">
+                  <div aria-hidden="true" title="Drag to reorder" style="display:flex;justify-content:center;padding-top:12px;color:#8C8172;cursor:grab"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="5" r="1.6"></circle><circle cx="9" cy="12" r="1.6"></circle><circle cx="9" cy="19" r="1.6"></circle><circle cx="15" cy="5" r="1.6"></circle><circle cx="15" cy="12" r="1.6"></circle><circle cx="15" cy="19" r="1.6"></circle></svg></div>
+                  <button role="checkbox" aria-checked="{{ n.selected }}" aria-label="Select note from {{ n.name }}" onClick="{{ n.toggle }}" style="width:44px;height:44px;border:0;background:transparent;display:grid;place-items:center;padding:0;cursor:pointer">
+                    <sc-if value="{{ n.selected }}" hint-placeholder-val="{{ false }}"><span style="width:22px;height:22px;border-radius:6px;background:#1F6B72;display:grid;place-items:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span></sc-if>
+                    <sc-if value="{{ n.notSelected }}" hint-placeholder-val="{{ true }}"><span style="width:22px;height:22px;border:1.5px solid #8C8172;border-radius:6px;background:#FFFDF8;box-sizing:border-box"></span></sc-if>
+                  </button>
+                  <div style="display:flex;flex-direction:column;gap:12px;min-width:0;padding-top:2px">
+                    <div style="display:flex;align-items:center;gap:12px">
+                      <span style="flex:none;width:40px;height:40px;border-radius:50%;background:{{ n.avBg }};color:{{ n.avFg }};display:grid;place-items:center;font:600 16px 'Be Vietnam Pro'">{{ n.initial }}</span>
+                      <div style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font:600 16px/22px 'Be Vietnam Pro'">{{ n.name }}</span><span style="font:400 13px/18px 'Be Vietnam Pro';color:#5E554B">{{ n.meta }}</span></div>
+                      <sc-if value="{{ n.isPending }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:999px;background:#FBEBC2;color:#7A4E00;font:600 13px/1 'Be Vietnam Pro'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>Pending</span></sc-if>
+                      <sc-if value="{{ n.isApproved }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:999px;background:#DDEDEA;color:#1F6B72;font:600 13px/1 'Be Vietnam Pro'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>Approved</span></sc-if>
+                      <sc-if value="{{ n.isHidden }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:999px;background:#ECE5D9;color:#5E554B;font:600 13px/1 'Be Vietnam Pro'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"></path><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"></path><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"></path><line x1="2" x2="22" y1="2" y2="22"></line></svg>Hidden</span></sc-if>
+                    </div>
+                    <p lang="{{ n.lang }}" style="margin:0;font:400 16px/24px 'Be Vietnam Pro';text-wrap:pretty;max-width:680px">{{ n.msg }}</p>
+                    <sc-if value="{{ n.hasPhotos }}" hint-placeholder-val="{{ false }}">
+                      <div style="display:flex;gap:10px">
+                        <sc-for list="{{ n.photos }}" as="ph" hint-placeholder-count="0">
+                          <div role="img" aria-label="{{ ph.label }}" style="width:112px;height:112px;border-radius:8px;background-color:{{ ph.tint }};background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.35) 0 8px,transparent 8px 16px);display:flex;align-items:flex-end;padding:8px;box-sizing:border-box"><span style="font:500 10px/12px ui-monospace,Menlo,monospace;color:#5E554B">{{ ph.label }}</span></div>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+                    <div style="display:flex;align-items:center;gap:8px;padding-top:12px;border-top:1px solid #E3D8C6;position:relative">
+                      <sc-if value="{{ n.canApprove }}" hint-placeholder-val="{{ true }}"><button onClick="{{ n.approve }}" style="height:44px;padding:0 18px;border:0;border-radius:12px;background:#1F6B72;color:#fff;font:600 15px 'Be Vietnam Pro';display:flex;align-items:center;gap:8px;cursor:pointer" style-hover="background:#17555B"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>Approve</button></sc-if>
+                      <sc-if value="{{ n.canHide }}" hint-placeholder-val="{{ true }}"><button onClick="{{ n.hide }}" style="height:44px;padding:0 16px;border:1.5px solid #8C8172;border-radius:12px;background:#FFFDF8;color:#2B2622;font:600 15px 'Be Vietnam Pro';cursor:pointer" style-hover="background:#EFE4D2">Hide</button></sc-if>
+                      <span style="flex:1"></span>
+                      <button onClick="{{ n.askDeleteD }}" aria-label="Delete note from {{ n.name }}" style="width:44px;height:44px;border:0;border-radius:12px;background:transparent;color:#5E554B;display:grid;place-items:center;cursor:pointer" style-hover="background:#FCE8E4;color:#B42318"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg></button>
+                      <button onClick="{{ n.toggleMenuD }}" aria-label="More actions" aria-expanded="{{ n.menuD }}" style="width:44px;height:44px;border:0;border-radius:12px;background:transparent;color:#2B2622;display:grid;place-items:center;cursor:pointer" style-hover="background:#EFE4D2"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg></button>
+                      <sc-if value="{{ n.menuD }}" hint-placeholder-val="{{ false }}">
+                        <div role="menu" style="position:absolute;right:0;bottom:52px;z-index:5;width:200px;background:#FFFDF8;border-radius:12px;box-shadow:0 12px 32px rgba(43,38,34,.18);padding:6px;display:flex;flex-direction:column">
+                          <button role="menuitem" onClick="{{ n.moveUp }}" style="height:44px;padding:0 12px;border:0;border-radius:8px;background:transparent;text-align:left;font:500 15px 'Be Vietnam Pro';color:#2B2622;cursor:pointer" style-hover="background:#EFE4D2">Move up</button>
+                          <button role="menuitem" onClick="{{ n.moveDown }}" style="height:44px;padding:0 12px;border:0;border-radius:8px;background:transparent;text-align:left;font:500 15px 'Be Vietnam Pro';color:#2B2622;cursor:pointer" style-hover="background:#EFE4D2">Move down</button>
+                        </div>
+                      </sc-if>
+                    </div>
+                  </div>
+                </article>
+              </sc-for>
+            </div>
+          </main>
+
+          <sc-if value="{{ toastD }}" hint-placeholder-val="{{ false }}">
+            <div role="status" style="position:absolute;left:calc(256px + (100% - 256px) / 2);transform:translateX(-50%);bottom:28px;display:flex;align-items:center;gap:12px;padding:6px 6px 6px 16px;min-height:52px;box-sizing:border-box;border-radius:14px;background:#2B2622;color:#FFFDF8;box-shadow:0 12px 32px rgba(43,38,34,.18);font:500 15px/20px 'Be Vietnam Pro';white-space:nowrap"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#BFDCCF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg><span>{{ toastText }}</span><button onClick="{{ undo }}" style="height:40px;padding:0 12px;border:0;border-radius:10px;background:transparent;color:#F2C14E;font:600 15px 'Be Vietnam Pro';cursor:pointer">Undo</button></div>
+          </sc-if>
+          <sc-if value="{{ confirmD }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;inset:0;background:rgba(43,38,34,.45);display:grid;place-items:center;z-index:10">
+              <div role="dialog" aria-modal="true" style="width:460px;background:#FFFDF8;border-radius:24px;box-shadow:0 12px 32px rgba(43,38,34,.18);padding:28px;display:flex;flex-direction:column;gap:12px">
+                <h3 style="margin:0;font:600 24px/30px Fraunces,Georgia,serif">{{ confirmTitle }}</h3>
+                <p style="margin:0;font:400 16px/24px 'Be Vietnam Pro';color:#5E554B">{{ confirmText }}</p>
+                <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+                  <button onClick="{{ hideInstead }}" style="height:44px;padding:0 14px;border:0;border-radius:12px;background:transparent;color:#1F6B72;font:600 15px 'Be Vietnam Pro';cursor:pointer">Hide instead</button>
+                  <button onClick="{{ cancelDel }}" style="height:44px;padding:0 16px;border:1.5px solid #8C8172;border-radius:12px;background:#FFFDF8;color:#2B2622;font:600 15px 'Be Vietnam Pro';cursor:pointer">Cancel</button>
+                  <button onClick="{{ confirmDel }}" style="height:44px;padding:0 18px;border:0;border-radius:12px;background:#B42318;color:#fff;font:600 15px 'Be Vietnam Pro';cursor:pointer" style-hover="background:#911C13">{{ confirmBtn }}</button>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+
+      <div id="I2" style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;gap:8px;align-items:center;font:500 13px 'Be Vietnam Pro'"><span style="font:600 11px ui-monospace,Menlo,monospace;background:#2B2622;color:#FFFDF8;padding:3px 7px;border-radius:4px">I2</span>Mobile · try it</div>
+        <div style="width:375px;height:812px;background:#F6EFE3;box-shadow:0 1px 3px rgba(0,0,0,.12);overflow:hidden;display:flex;flex-direction:column;position:relative">
+          <div style="height:56px;flex:none;padding:0 8px 0 4px;display:flex;align-items:center;gap:4px;border-bottom:1px solid #E3D8C6">
+            <button aria-label="Back to my yearbooks" style="width:44px;height:44px;border:0;background:transparent;display:grid;place-items:center;color:#2B2622"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg></button>
+            <span style="flex:1;font:600 17px Fraunces,Georgia,serif">Linh's yearbook</span>
+            <button onClick="{{ toggleMSelect }}" style="height:44px;padding:0 12px;border:0;border-radius:12px;background:transparent;color:#1F6B72;font:600 15px 'Be Vietnam Pro';cursor:pointer">{{ mSelectLabel }}</button>
+          </div>
+          <div style="flex:1;overflow:auto;padding:20px 16px 24px;display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;flex-direction:column;gap:4px"><h1 style="margin:0;font:700 28px/34px Fraunces,Georgia,serif">Notes from friends</h1><p style="margin:0;font:400 15px/22px 'Be Vietnam Pro';color:#5E554B">{{ summaryShort }}</p></div>
+            <div role="tablist" style="display:flex;gap:4px;padding:4px;background:#EFE4D2;border-radius:14px;overflow-x:auto;margin:0 -16px 0 0;flex:none">
+              <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4">
+                <button role="tab" aria-selected="{{ t.active }}" onClick="{{ t.pick }}" style="flex:none;height:40px;padding:0 12px;border:0;border-radius:10px;display:flex;align-items:center;gap:6px;font:{{ t.weight }} 14px 'Be Vietnam Pro';color:#2B2622;background:{{ t.bg }};box-shadow:{{ t.shadow }};cursor:pointer">{{ t.label }}<span style="color:#5E554B;font-weight:500">{{ t.count }}</span></button>
+              </sc-for>
+            </div>
+            <sc-if value="{{ listEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#FFFDF8;border-radius:16px;padding:40px 20px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px">
+                <div style="width:80px;height:80px;border-radius:50%;background:#DDEDEA;display:grid;place-items:center;margin-bottom:6px"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#1F6B72" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></div>
+                <h3 style="margin:0;font:600 22px/28px Fraunces,Georgia,serif">{{ emptyTitle }}</h3>
+                <p style="margin:0;font:400 15px/22px 'Be Vietnam Pro';color:#5E554B">{{ emptyText }}</p>
+              </div>
+            </sc-if>
+            <sc-for list="{{ shown }}" as="n" hint-placeholder-count="2">
+              <article style="position:relative;background:#FFFDF8;border-radius:16px;box-shadow:{{ n.ringM }};padding:14px 14px 10px;display:flex;flex-direction:column;gap:10px">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <sc-if value="{{ mSelect }}" hint-placeholder-val="{{ false }}">
+                    <button role="checkbox" aria-checked="{{ n.selected }}" aria-label="Select note from {{ n.name }}" onClick="{{ n.toggle }}" style="flex:none;width:44px;height:44px;margin:-6px -4px -6px -8px;border:0;background:transparent;display:grid;place-items:center;padding:0;cursor:pointer">
+                      <sc-if value="{{ n.selected }}" hint-placeholder-val="{{ false }}"><span style="width:22px;height:22px;border-radius:6px;background:#1F6B72;display:grid;place-items:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span></sc-if>
+                      <sc-if value="{{ n.notSelected }}" hint-placeholder-val="{{ true }}"><span style="width:22px;height:22px;border:1.5px solid #8C8172;border-radius:6px;background:#FFFDF8;box-sizing:border-box"></span></sc-if>
+                    </button>
+                  </sc-if>
+                  <span style="flex:none;width:36px;height:36px;border-radius:50%;background:{{ n.avBg }};color:{{ n.avFg }};display:grid;place-items:center;font:600 15px 'Be Vietnam Pro'">{{ n.initial }}</span>
+                  <div style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font:600 15px/20px 'Be Vietnam Pro';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ n.name }}</span><span style="font:400 13px/18px 'Be Vietnam Pro';color:#5E554B;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ n.meta }}</span></div>
+                  <sc-if value="{{ n.isPending }}" hint-placeholder-val="{{ true }}"><span style="flex:none;display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:999px;background:#FBEBC2;color:#7A4E00;font:600 12px/1 'Be Vietnam Pro'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>Pending</span></sc-if>
+                  <sc-if value="{{ n.isApproved }}" hint-placeholder-val="{{ false }}"><span style="flex:none;display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:999px;background:#DDEDEA;color:#1F6B72;font:600 12px/1 'Be Vietnam Pro'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>Approved</span></sc-if>
+                  <sc-if value="{{ n.isHidden }}" hint-placeholder-val="{{ false }}"><span style="flex:none;display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:999px;background:#ECE5D9;color:#5E554B;font:600 12px/1 'Be Vietnam Pro'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="2" x2="22" y1="2" y2="22"></line><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"></path></svg>Hidden</span></sc-if>
+                </div>
+                <p lang="{{ n.lang }}" style="margin:0;font:400 15px/22px 'Be Vietnam Pro';display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden">{{ n.msg }}</p>
+                <sc-if value="{{ n.hasPhotos }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+                    <sc-for list="{{ n.photos }}" as="ph" hint-placeholder-count="0">
+                      <div role="img" aria-label="{{ ph.label }}" style="aspect-ratio:1;border-radius:8px;background-color:{{ ph.tint }};background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.35) 0 8px,transparent 8px 16px)"></div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ mNotSelect }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;gap:8px;align-items:center;position:relative">
+                    <sc-if value="{{ n.canApprove }}" hint-placeholder-val="{{ true }}"><button onClick="{{ n.approve }}" style="flex:1;height:44px;border:0;border-radius:12px;background:#1F6B72;color:#fff;font:600 15px 'Be Vietnam Pro';cursor:pointer">Approve</button></sc-if>
+                    <sc-if value="{{ n.canHide }}" hint-placeholder-val="{{ true }}"><button onClick="{{ n.hide }}" style="flex:1;height:44px;border:1.5px solid #8C8172;border-radius:12px;background:#FFFDF8;color:#2B2622;font:600 15px 'Be Vietnam Pro';cursor:pointer">Hide</button></sc-if>
+                    <button onClick="{{ n.toggleMenuM }}" aria-label="More actions" aria-expanded="{{ n.menuM }}" style="flex:none;width:44px;height:44px;border:0;border-radius:12px;background:transparent;color:#2B2622;display:grid;place-items:center;cursor:pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg></button>
+                    <sc-if value="{{ n.menuM }}" hint-placeholder-val="{{ false }}">
+                      <div role="menu" style="position:absolute;right:0;bottom:50px;z-index:5;width:190px;background:#FFFDF8;border-radius:12px;box-shadow:0 12px 32px rgba(43,38,34,.18);padding:6px;display:flex;flex-direction:column">
+                        <button role="menuitem" onClick="{{ n.moveUp }}" style="height:44px;padding:0 12px;border:0;border-radius:8px;background:transparent;text-align:left;font:500 15px 'Be Vietnam Pro';color:#2B2622">Move up</button>
+                        <button role="menuitem" onClick="{{ n.moveDown }}" style="height:44px;padding:0 12px;border:0;border-radius:8px;background:transparent;text-align:left;font:500 15px 'Be Vietnam Pro';color:#2B2622">Move down</button>
+                        <button role="menuitem" onClick="{{ n.askDeleteM }}" style="height:44px;padding:0 12px;border:0;border-radius:8px;background:transparent;text-align:left;font:500 15px 'Be Vietnam Pro';color:#B42318">Delete note</button>
+                      </div>
+                    </sc-if>
+                  </div>
+                </sc-if>
+              </article>
+            </sc-for>
+          </div>
+          <sc-if value="{{ toastM }}" hint-placeholder-val="{{ false }}">
+            <div role="status" style="position:absolute;left:12px;right:12px;bottom:88px;display:flex;align-items:center;gap:10px;padding:6px 6px 6px 14px;min-height:52px;box-sizing:border-box;border-radius:14px;background:#2B2622;color:#FFFDF8;box-shadow:0 12px 32px rgba(43,38,34,.18);font:500 15px/20px 'Be Vietnam Pro'"><span style="flex:1">{{ toastText }}</span><button onClick="{{ undo }}" style="height:40px;padding:0 12px;border:0;border-radius:10px;background:transparent;color:#F2C14E;font:600 15px 'Be Vietnam Pro';cursor:pointer">Undo</button></div>
+          </sc-if>
+          <sc-if value="{{ mSelect }}" hint-placeholder-val="{{ false }}">
+            <div role="toolbar" aria-label="Bulk actions" style="flex:none;height:76px;padding:0 12px 8px;box-sizing:border-box;background:#2B2622;color:#FFFDF8;display:flex;align-items:center;gap:6px">
+              <span style="flex:1;font:600 15px 'Be Vietnam Pro';padding-left:4px">{{ selCount }} selected</span>
+              <button onClick="{{ bulkApprove }}" style="height:44px;padding:0 14px;border:0;border-radius:10px;background:#FFFDF8;color:#1F6B72;font:600 14px 'Be Vietnam Pro';cursor:pointer">Approve</button>
+              <button onClick="{{ bulkHide }}" style="height:44px;padding:0 12px;border:1.5px solid rgba(255,253,248,.4);border-radius:10px;background:transparent;color:#FFFDF8;font:600 14px 'Be Vietnam Pro';cursor:pointer">Hide</button>
+              <button onClick="{{ bulkDeleteM }}" aria-label="Delete selected" style="width:44px;height:44px;border:1.5px solid rgba(255,253,248,.4);border-radius:10px;background:transparent;color:#FFFDF8;display:grid;place-items:center;cursor:pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg></button>
+            </div>
+          </sc-if>
+          <sc-if value="{{ mNotSelect }}" hint-placeholder-val="{{ true }}">
+            <nav aria-label="Yearbook" style="flex:none;height:76px;padding-bottom:8px;box-sizing:border-box;background:#FFFDF8;border-top:1px solid #E3D8C6;display:grid;grid-template-columns:repeat(4,minmax(0,1fr))">
+              <a href="#I2" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#5E554B;text-decoration:none;font:500 12px 'Be Vietnam Pro'"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"></circle><path d="M20 21a8 8 0 0 0-16 0"></path></svg>Profile</a>
+              <a href="#I2" aria-current="page" style="position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#C4472A;text-decoration:none;font:600 12px 'Be Vietnam Pro'"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg>Notes</a>
+              <a href="#I2" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#5E554B;text-decoration:none;font:500 12px 'Be Vietnam Pro'"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>Links</a>
+              <a href="#I2" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#5E554B;text-decoration:none;font:500 12px 'Be Vietnam Pro'"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>Book</a>
+            </nav>
+          </sc-if>
+          <sc-if value="{{ confirmM }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;inset:0;background:rgba(43,38,34,.45);display:flex;align-items:flex-end;z-index:10">
+              <div role="dialog" aria-modal="true" style="width:100%;background:#FFFDF8;border-radius:24px 24px 0 0;padding:12px 16px 28px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px">
+                <span style="align-self:center;width:40px;height:4px;border-radius:2px;background:#E3D8C6"></span>
+                <h3 style="margin:8px 0 0;font:600 22px/28px Fraunces,Georgia,serif">{{ confirmTitle }}</h3>
+                <p style="margin:0;font:400 15px/22px 'Be Vietnam Pro';color:#5E554B">{{ confirmText }}</p>
+                <button onClick="{{ confirmDel }}" style="margin-top:8px;height:52px;border:0;border-radius:12px;background:#B42318;color:#fff;font:600 16px 'Be Vietnam Pro';cursor:pointer">{{ confirmBtn }}</button>
+                <button onClick="{{ hideInstead }}" style="height:48px;border:1.5px solid #8C8172;border-radius:12px;background:#FFFDF8;color:#2B2622;font:600 16px 'Be Vietnam Pro';cursor:pointer">Hide instead</button>
+                <button onClick="{{ cancelDel }}" style="height:44px;border:0;background:transparent;color:#1F6B72;font:600 15px 'Be Vietnam Pro';cursor:pointer">Cancel</button>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:20px">
+    <h2 style="margin:0;font:600 24px/30px Fraunces,Georgia,serif">Reorder, empty, loading, error · 375</h2>
+    <div style="display:flex;gap:40px;align-items:flex-start">
+
+      <div id="I3" style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;gap:8px;align-items:center;font:500 13px 'Be Vietnam Pro'"><span style="font:600 11px ui-monospace,Menlo,monospace;background:#2B2622;color:#FFFDF8;padding:3px 7px;border-radius:4px">I3</span>Reorder mode · dragging</div>
+        <div style="width:375px;height:700px;background:#F6EFE3;box-shadow:0 1px 3px rgba(0,0,0,.12);overflow:hidden;display:flex;flex-direction:column">
+          <div style="height:56px;flex:none;padding:0 8px 0 16px;display:flex;align-items:center;border-bottom:1px solid #E3D8C6"><span style="flex:1;font:600 17px Fraunces,Georgia,serif">Book order</span><button style="height:44px;padding:0 12px;border:0;background:transparent;color:#1F6B72;font:600 15px 'Be Vietnam Pro'">Done</button></div>
+          <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
+            <p style="margin:0 0 4px;font:400 14px/20px 'Be Vietnam Pro';color:#5E554B">Hold a grip and drag, or use the arrows. Only approved notes are listed, top prints first.</p>
+            <div style="display:flex;align-items:center;gap:10px;height:64px;padding:0 4px 0 6px;border-radius:14px;background:#FFFDF8;box-shadow:0 1px 2px rgba(43,38,34,.08)"><span style="width:28px;display:grid;place-items:center;color:#8C8172"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="5" r="1.6"></circle><circle cx="9" cy="12" r="1.6"></circle><circle cx="9" cy="19" r="1.6"></circle><circle cx="15" cy="5" r="1.6"></circle><circle cx="15" cy="12" r="1.6"></circle><circle cx="15" cy="19" r="1.6"></circle></svg></span><span style="font:600 13px 'Be Vietnam Pro';color:#5E554B;width:16px">1</span><div style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font:600 15px/20px 'Be Vietnam Pro'">Daniel Okafor</span><span style="font:400 13px/18px 'Be Vietnam Pro';color:#5E554B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">You showed me every corner of Saigon…</span></div><button aria-label="Move down" style="width:44px;height:44px;border:0;background:transparent;display:grid;place-items:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2B2622" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></button></div>
+            <div style="height:64px;border-radius:14px;border:2px dashed #C4472A;background:#F9E1D8;box-sizing:border-box;display:grid;place-items:center;font:500 13px 'Be Vietnam Pro';color:#8E2F18">Drop here · position 2</div>
+            <div style="display:flex;align-items:center;gap:10px;height:64px;padding:0 4px 0 6px;border-radius:14px;background:#FFFDF8;box-shadow:0 1px 2px rgba(43,38,34,.08)"><span style="width:28px;display:grid;place-items:center;color:#8C8172"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="5" r="1.6"></circle><circle cx="9" cy="12" r="1.6"></circle><circle cx="9" cy="19" r="1.6"></circle><circle cx="15" cy="5" r="1.6"></circle><circle cx="15" cy="12" r="1.6"></circle><circle cx="15" cy="19" r="1.6"></circle></svg></span><span style="font:600 13px 'Be Vietnam Pro';color:#5E554B;width:16px">3</span><div style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font:600 15px/20px 'Be Vietnam Pro'">Hannah Lee</span><span style="font:400 13px/18px 'Be Vietnam Pro';color:#5E554B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">To the girl who always had a spare pen…</span></div><button aria-label="Move down" style="width:44px;height:44px;border:0;background:transparent;display:grid;place-items:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2B2622" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></button></div>
+            <div style="display:flex;align-items:center;gap:10px;height:64px;padding:0 4px 0 6px;border-radius:14px;background:#FFFDF8;box-shadow:0 1px 2px rgba(43,38,34,.08)"><span style="width:28px;display:grid;place-items:center;color:#8C8172"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="5" r="1.6"></circle><circle cx="9" cy="12" r="1.6"></circle><circle cx="9" cy="19" r="1.6"></circle><circle cx="15" cy="5" r="1.6"></circle><circle cx="15" cy="12" r="1.6"></circle><circle cx="15" cy="19" r="1.6"></circle></svg></span><span style="font:600 13px 'Be Vietnam Pro';color:#5E554B;width:16px">4</span><div style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font:600 15px/20px 'Be Vietnam Pro'">Đặng Quốc Anh</span><span lang="vi" style="font:400 13px/18px 'Be Vietnam Pro';color:#5E554B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Từ hôm đầu tiên ngồi cạnh nhau…</span></div><button aria-label="Move down" style="width:44px;height:44px;border:0;background:transparent;display:grid;place-items:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2B2622" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></button></div>
+            <div style="position:relative;margin-top:-196px;margin-left:10px;margin-right:-6px;display:flex;align-items:center;gap:10px;height:64px;padding:0 4px 0 6px;border-radius:14px;background:#FFFDF8;box-shadow:0 18px 40px rgba(43,38,34,.22);transform:rotate(-1.5deg);z-index:2"><span style="width:28px;display:grid;place-items:center;color:#C4472A"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="5" r="1.6"></circle><circle cx="9" cy="12" r="1.6"></circle><circle cx="9" cy="19" r="1.6"></circle><circle cx="15" cy="5" r="1.6"></circle><circle cx="15" cy="12" r="1.6"></circle><circle cx="15" cy="19" r="1.6"></circle></svg></span><span style="font:600 13px 'Be Vietnam Pro';color:#5E554B;width:16px">5</span><div style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font:600 15px/20px 'Be Vietnam Pro'">Phạm Gia Huy</span><span lang="vi" style="font:400 13px/18px 'Be Vietnam Pro';color:#5E554B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Không có Linh chắc lớp mình…</span></div></div>
+            <div style="height:132px"></div>
+            <div role="status" style="font:400 13px/18px 'Be Vietnam Pro';color:#5E554B;text-align:center">Screen reader: "Phạm Gia Huy's note, moved to position 2 of 5."</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="I4" style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;gap:8px;align-items:center;font:500 13px 'Be Vietnam Pro'"><span style="font:600 11px ui-monospace,Menlo,monospace;background:#2B2622;color:#FFFDF8;padding:3px 7px;border-radius:4px">I4</span>First run · no notes yet</div>
+        <div style="width:375px;height:700px;background:#F6EFE3;box-shadow:0 1px 3px rgba(0,0,0,.12);overflow:hidden;display:flex;flex-direction:column">
+          <div style="height:56px;flex:none;padding:0 8px 0 4px;display:flex;align-items:center;border-bottom:1px solid #E3D8C6"><span style="width:44px;height:44px;display:grid;place-items:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2B2622" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg></span><span style="font:600 17px Fraunces,Georgia,serif">Linh's yearbook</span></div>
+          <div style="flex:1;padding:20px 16px;display:flex;flex-direction:column;gap:20px">
+            <h1 style="margin:0;font:700 28px/34px Fraunces,Georgia,serif">Notes from friends</h1>
+            <div style="background:#FFFDF8;border-radius:16px;padding:36px 20px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px">
+              <div style="position:relative;width:120px;height:132px;margin-bottom:8px"><div style="position:absolute;inset:0;border:1.5px dashed #8C8172;transform:rotate(-4deg);border-radius:2px"></div><div style="position:absolute;inset:0;background:#FFFDF8;box-shadow:0 4px 12px rgba(43,38,34,.12);transform:rotate(3deg);padding:8px 8px 0;box-sizing:border-box;background-image:repeating-linear-gradient(to bottom,transparent 0 15px,rgba(43,38,34,.12) 15px 16px);background-position:0 16px"></div><div style="position:absolute;top:-8px;left:30px;width:64px;height:20px;background:rgba(191,220,207,.9);transform:rotate(-6deg)"></div></div>
+              <h3 style="margin:0;font:600 22px/28px Fraunces,Georgia,serif">No notes yet</h3>
+              <p style="margin:0;font:400 15px/22px 'Be Vietnam Pro';color:#5E554B">Share a link in your class chat. Friends write in your book without making an account.</p>
+              <button style="margin-top:8px;width:100%;height:52px;border:0;border-radius:12px;background:#C4472A;color:#fff;font:600 16px 'Be Vietnam Pro'">Create a note link</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="I5" style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;gap:8px;align-items:center;font:500 13px 'Be Vietnam Pro'"><span style="font:600 11px ui-monospace,Menlo,monospace;background:#2B2622;color:#FFFDF8;padding:3px 7px;border-radius:4px">I5</span>Loading</div>
+        <div aria-busy="true" style="width:375px;height:700px;background:#F6EFE3;box-shadow:0 1px 3px rgba(0,0,0,.12);overflow:hidden;display:flex;flex-direction:column">
+          <div style="height:56px;flex:none;padding:0 8px 0 4px;display:flex;align-items:center;border-bottom:1px solid #E3D8C6"><span style="width:44px;height:44px;display:grid;place-items:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2B2622" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg></span><span style="font:600 17px Fraunces,Georgia,serif">Linh's yearbook</span></div>
+          <div style="padding:20px 16px;display:flex;flex-direction:column;gap:14px">
+            <h1 style="margin:0;font:700 28px/34px Fraunces,Georgia,serif">Notes from friends</h1>
+            <span style="width:60%;height:12px;border-radius:6px;background:#EFE4D2"></span>
+            <div style="height:48px;border-radius:14px;background:#EFE4D2"></div>
+            <div style="background:#FFFDF8;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px"><div style="display:flex;gap:10px;align-items:center"><span style="width:36px;height:36px;border-radius:50%;background:#EFE4D2"></span><div style="flex:1;display:flex;flex-direction:column;gap:6px"><span style="width:50%;height:12px;border-radius:6px;background:#EFE4D2"></span><span style="width:30%;height:10px;border-radius:5px;background:#F2EADC"></span></div></div><span style="height:12px;border-radius:6px;background:#EFE4D2"></span><span style="width:85%;height:12px;border-radius:6px;background:#EFE4D2"></span><div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px"><span style="aspect-ratio:1;border-radius:8px;background:#EFE4D2"></span><span style="aspect-ratio:1;border-radius:8px;background:#EFE4D2"></span></div></div>
+            <div style="background:#FFFDF8;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px"><div style="display:flex;gap:10px;align-items:center"><span style="width:36px;height:36px;border-radius:50%;background:#EFE4D2"></span><div style="flex:1;display:flex;flex-direction:column;gap:6px"><span style="width:40%;height:12px;border-radius:6px;background:#EFE4D2"></span><span style="width:25%;height:10px;border-radius:5px;background:#F2EADC"></span></div></div><span style="height:12px;border-radius:6px;background:#EFE4D2"></span><span style="width:70%;height:12px;border-radius:6px;background:#EFE4D2"></span></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="I6" style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;gap:8px;align-items:center;font:500 13px 'Be Vietnam Pro'"><span style="font:600 11px ui-monospace,Menlo,monospace;background:#2B2622;color:#FFFDF8;padding:3px 7px;border-radius:4px">I6</span>Couldn't load · offline banner</div>
+        <div style="width:375px;height:700px;background:#F6EFE3;box-shadow:0 1px 3px rgba(0,0,0,.12);overflow:hidden;display:flex;flex-direction:column">
+          <div style="height:56px;flex:none;padding:0 8px 0 4px;display:flex;align-items:center;border-bottom:1px solid #E3D8C6"><span style="width:44px;height:44px;display:grid;place-items:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2B2622" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg></span><span style="font:600 17px Fraunces,Georgia,serif">Linh's yearbook</span></div>
+          <div role="status" style="flex:none;display:flex;gap:10px;align-items:flex-start;padding:12px 16px;background:#FBEBC2;color:#5C3B00;font:500 14px/20px 'Be Vietnam Pro'"><svg style="flex:none;margin-top:1px" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h.01"></path><path d="M8.5 16.43a5 5 0 0 1 7 0"></path><path d="M5 12.86a10 10 0 0 1 5.17-2.69"></path><path d="M2 8.82a15 15 0 0 1 4.17-2.65"></path><path d="M10.66 5c4.01-.36 8.14.9 11.34 3.76"></path><line x1="2" x2="22" y1="2" y2="22"></line></svg><span><strong>You're offline.</strong> We'll save your changes when you're back.</span></div>
+          <div style="padding:20px 16px;display:flex;flex-direction:column;gap:20px">
+            <h1 style="margin:0;font:700 28px/34px Fraunces,Georgia,serif">Notes from friends</h1>
+            <div role="alert" style="background:#FFFDF8;border-radius:16px;padding:32px 20px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px">
+              <div style="width:80px;height:80px;border-radius:50%;background:#FCE8E4;display:grid;place-items:center;margin-bottom:6px"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#B42318" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg></div>
+              <h3 style="margin:0;font:600 22px/28px Fraunces,Georgia,serif">We couldn't load your notes</h3>
+              <p style="margin:0;font:400 15px/22px 'Be Vietnam Pro';color:#5E554B">They're safe. Check your connection and try again.</p>
+              <button style="margin-top:8px;height:48px;padding:0 20px;border:1.5px solid #8C8172;border-radius:12px;background:#FFFDF8;color:#2B2622;font:600 16px 'Be Vietnam Pro';display:flex;align-items:center;gap:8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg>Try again</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    filter: 'all', sel: [], toast: null, confirm: null, mSelect: false, drag: null, over: null, menu: null,
+    notes: [
+      { id: 1, short: 'Khoa', name: 'Trần Minh Khoa', rel: 'roommate', when: '2 hours ago', status: 'pending', lang: 'en', msg: "Four years of 2am bánh mì runs and you still never let me pay. I'm going to miss our balcony talks so much. Go be brilliant in Melbourne!", photos: [['#E4CDB8', 'balcony at night'], ['#C9D6D3', 'bánh mì run']] },
+      { id: 2, short: 'Emily', name: 'Emily Carter', rel: 'lab partner', when: '5 hours ago', status: 'pending', lang: 'en', msg: "Lab partner for life. Thanks for carrying me through organic chem and never once laughing at my titrations. Coffee's on me in Saigon, always.", photos: [['#C9D6D3', 'lab coats']] },
+      { id: 3, short: 'Ngọc', name: 'Lê Bảo Ngọc', rel: 'Ngọc mập', when: 'Yesterday', status: 'pending', lang: 'vi', msg: 'Cảm ơn bà vì bốn năm đại học vui nhất đời. Nhớ những đêm ôn thi xuyên đêm ở thư viện ghê! Ra trường rồi vẫn phải đi cà phê với tui nha.', photos: [] },
+      { id: 4, short: 'Daniel', name: 'Daniel Okafor', rel: 'exchange buddy', when: '2 days ago', status: 'approved', lang: 'en', msg: 'You showed me every corner of Saigon worth eating in. I owe you a trip to Lagos, and I will hold you to it.', photos: [['#E8D9B5', 'street food tour'], ['#E4CDB8', 'Bến Thành'], ['#D9D2C5', 'rooftop']] },
+      { id: 5, short: 'Huy', name: 'Phạm Gia Huy', rel: 'class rep', when: '3 days ago', status: 'approved', lang: 'vi', msg: 'Không có Linh chắc lớp mình trễ deadline cả trăm lần rồi. Chúc bà bay thật cao và thật xa!', photos: [['#C9D6D3', 'class photo']] },
+      { id: 6, short: 'Hannah', name: 'Hannah Lee', rel: '', when: '4 days ago', status: 'approved', lang: 'en', msg: 'To the girl who always had a spare pen and a better idea. See you in Melbourne!', photos: [] },
+      { id: 7, short: 'Tâm', name: 'Võ Thanh Tâm', rel: 'badminton club', when: '1 week ago', status: 'hidden', lang: 'en', msg: 'lol remember when you fell asleep in the 7am stats lecture and woke up answering a question', photos: [] },
+      { id: 8, short: 'Quốc Anh', name: 'Đặng Quốc Anh', rel: 'K-building crew', when: '1 week ago', status: 'approved', lang: 'vi', msg: 'Từ hôm đầu tiên ngồi cạnh nhau ở K-building, tui biết là sẽ có một người bạn thân. Cảm ơn Linh nhiều lắm.', photos: [['#E8D9B5', 'first day'], ['#C9D6D3', 'graduation']] }
+    ]
+  };
+  av = [['#BFDCCF', '#17555B'], ['#F4C7B8', '#8E2F18'], ['#F7DFA0', '#6B4500'], ['#D9D2C5', '#4A423B']];
+  componentWillUnmount() { clearTimeout(this.t); }
+  commit(notes, text, extra = {}) {
+    const prev = this.state.notes;
+    clearTimeout(this.t);
+    this.t = setTimeout(() => this.setState({ toast: null }), 5000);
+    this.setState({ notes, toast: { text, prev }, menu: null, ...extra });
+  }
+  setStatus(ids, status) {
+    const n = ids.length;
+    const word = status === 'approved' ? 'approved' : 'hidden';
+    const one = this.state.notes.find(x => x.id === ids[0]);
+    const text = n === 1 ? `${one.short}'s note ${word}.` : `${n} notes ${word}.`;
+    this.commit(this.state.notes.map(x => ids.includes(x.id) ? { ...x, status } : x), text, { sel: [] });
+  }
+  remove(ids) {
+    const text = ids.length === 1 ? 'Note deleted.' : `${ids.length} notes deleted.`;
+    this.commit(this.state.notes.filter(x => !ids.includes(x.id)), text, { sel: this.state.sel.filter(i => !ids.includes(i)), confirm: null });
+  }
+  move(id, d) {
+    const a = [...this.state.notes]; const i = a.findIndex(x => x.id === id); const j = i + d;
+    if (j < 0 || j >= a.length) { this.setState({ menu: null }); return; }
+    [a[i], a[j]] = [a[j], a[i]];
+    this.commit(a, `Moved to position ${j + 1}.`);
+  }
+  ask(ids, frame) { this.setState({ confirm: { ids, frame }, menu: null }); }
+  renderVals() {
+    const s = this.state;
+    const counts = { all: s.notes.length };
+    ['pending', 'approved', 'hidden'].forEach(k => counts[k] = s.notes.filter(n => n.status === k).length);
+    const shownRaw = s.filter === 'all' ? s.notes : s.notes.filter(n => n.status === s.filter);
+    const tabs = [['all', 'All'], ['pending', 'Pending'], ['approved', 'Approved'], ['hidden', 'Hidden']].map(([k, label]) => ({
+      label, count: counts[k], active: s.filter === k,
+      bg: s.filter === k ? '#FFFDF8' : 'transparent',
+      shadow: s.filter === k ? '0 1px 2px rgba(43,38,34,.12)' : 'none',
+      weight: s.filter === k ? 600 : 500,
+      pick: () => this.setState({ filter: k, sel: [], menu: null })
+    }));
+    const base = '0 1px 2px rgba(43,38,34,.08),0 1px 1px rgba(43,38,34,.04)';
+    const shown = shownRaw.map((n, i) => {
+      const selected = s.sel.includes(n.id);
+      const isOver = s.over === n.id && s.drag !== null && s.drag !== n.id;
+      const [avBg, avFg] = this.av[n.id % 4];
+      return {
+        ...n, avBg, avFg, initial: n.short[0],
+        meta: [n.rel, n.when].filter(Boolean).join(' · '),
+        photos: n.photos.map(([tint, label]) => ({ tint, label })), hasPhotos: n.photos.length > 0,
+        isPending: n.status === 'pending', isApproved: n.status === 'approved', isHidden: n.status === 'hidden',
+        canApprove: n.status !== 'approved', canHide: n.status !== 'hidden',
+        selected, notSelected: !selected,
+        ring: isOver ? `0 -4px 0 0 #C4472A,${base}` : selected ? `0 0 0 2px #1F6B72,${base}` : base,
+        ringM: selected ? `0 0 0 2px #1F6B72,${base}` : base,
+        op: s.drag === n.id ? 0.4 : 1,
+        toggle: () => this.setState(st => ({ sel: st.sel.includes(n.id) ? st.sel.filter(x => x !== n.id) : [...st.sel, n.id] })),
+        approve: () => this.setStatus([n.id], 'approved'),
+        hide: () => this.setStatus([n.id], 'hidden'),
+        askDeleteD: () => this.ask([n.id], 'd'), askDeleteM: () => this.ask([n.id], 'm'),
+        menuD: s.menu === 'd' + n.id, menuM: s.menu === 'm' + n.id,
+        toggleMenuD: () => this.setState(st => ({ menu: st.menu === 'd' + n.id ? null : 'd' + n.id })),
+        toggleMenuM: () => this.setState(st => ({ menu: st.menu === 'm' + n.id ? null : 'm' + n.id })),
+        moveUp: () => this.move(n.id, -1), moveDown: () => this.move(n.id, 1),
+        dragStart: e => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(n.id)); this.setState({ drag: n.id, menu: null }); },
+        dragOver: e => { e.preventDefault(); if (s.over !== n.id) this.setState({ over: n.id }); },
+        drop: e => {
+          e.preventDefault();
+          const from = this.state.drag; if (from == null || from === n.id) { this.setState({ drag: null, over: null }); return; }
+          const a = [...this.state.notes]; const fi = a.findIndex(x => x.id === from); const [item] = a.splice(fi, 1);
+          const ti = a.findIndex(x => x.id === n.id); a.splice(ti, 0, item);
+          this.commit(a, `Moved ${item.short}'s note.`, { drag: null, over: null });
+        }
+      };
+    });
+    const c = s.confirm; const cn = c ? c.ids.length : 0;
+    const cNote = c && cn === 1 ? s.notes.find(x => x.id === c.ids[0]) : null;
+    const empties = {
+      all: ['No notes yet', 'Share a link and friends can write in your book.'],
+      pending: ["You're all caught up", 'New notes from friends land here first.'],
+      approved: ['Nothing approved yet', 'Approve a note and it goes into your book.'],
+      hidden: ['No hidden notes', "Notes you hide stay here, out of the book. You can bring them back any time."]
+    };
+    return {
+      tabs, shown, listEmpty: shown.length === 0,
+      emptyTitle: empties[s.filter][0], emptyText: empties[s.filter][1],
+      pendingCount: counts.pending,
+      summary: counts.pending ? `${counts.pending} waiting for you · ${counts.approved} in your book · only approved notes print` : `All caught up · ${counts.approved} notes in your book`,
+      summaryShort: counts.pending ? `${counts.pending} waiting for you · ${counts.approved} in your book` : `All caught up · ${counts.approved} in your book`,
+      selCount: s.sel.length, noneSelected: s.sel.length === 0, someSelected: s.sel.length > 0,
+      selectAll: () => this.setState({ sel: shownRaw.map(n => n.id) }),
+      clearSel: () => this.setState({ sel: [] }),
+      bulkApprove: () => s.sel.length && this.setStatus(s.sel, 'approved'),
+      bulkHide: () => s.sel.length && this.setStatus(s.sel, 'hidden'),
+      bulkDeleteD: () => s.sel.length && this.ask(s.sel, 'd'),
+      bulkDeleteM: () => s.sel.length && this.ask(s.sel, 'm'),
+      mSelect: s.mSelect, mNotSelect: !s.mSelect, mSelectLabel: s.mSelect ? 'Done' : 'Select',
+      toggleMSelect: () => this.setState(st => ({ mSelect: !st.mSelect, sel: [], menu: null })),
+      dragEnd: () => this.setState({ drag: null, over: null }),
+      toastD: !!s.toast && !s.mSelect, toastM: !!s.toast, toastText: s.toast ? s.toast.text : '',
+      undo: () => { clearTimeout(this.t); this.setState({ notes: s.toast.prev, toast: null }); },
+      confirmD: !!c && c.frame === 'd', confirmM: !!c && c.frame === 'm',
+      confirmTitle: cNote ? `Delete ${cNote.short}'s note?` : `Delete ${cn} notes?`,
+      confirmText: cNote ? `This removes the note${cNote.photos.length ? ` and its ${cNote.photos.length} photo${cNote.photos.length > 1 ? 's' : ''}` : ''} for good. If you might want it later, hide it instead.` : 'This removes them and their photos for good. If you might want them later, hide them instead.',
+      confirmBtn: cn > 1 ? `Delete ${cn} notes` : 'Delete note',
+      confirmDel: () => this.remove(c.ids),
+      hideInstead: () => { const ids = c.ids; this.setState({ confirm: null }); this.setStatus(ids, 'hidden'); },
+      cancelDel: () => this.setState({ confirm: null })
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -948,7 +948,7 @@ Spec: .team/epics/E09-customisation-editor/33-gestures-touch-test-flake.md (read
 - 2026-11-05 19:58Z · leader · Leader: merged PR #171 (squash) at head d3b7781554da0eed500c8a1b8faa556067f9f55e after QA_PASS (isolated 100/100 quiet and under load, full e2e 41/0 x3, touch 63/63, mutation checks fail as expected); go/web/security green.
 
 ### T-175 — [E09] Template gallery and apply, per section (web): shipped and own templates, preview, apply, delete own
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -956,16 +956,18 @@ Spec: .team/epics/E09-customisation-editor/33-gestures-touch-test-flake.md (read
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-175-e09-template-gallery-and-apply-per-secti
-- **PR:** —
-- **Updated:** 2026-11-06 02:51Z by dev
-- **Comments-seen:** 1
+- **PR:** 176
+- **Updated:** 2026-11-06 03:38Z by dev
+- **Comments-seen:** 3
 
 Spec: .team/epics/E09-customisation-editor/34-template-gallery-apply-ui.md (read it from the main checkout). Templates panel bound to the page kind (cover, profile, notes, back), cards with thumbnails drawn by the page renderer, read-only preview, apply with one confirmation (settle, apply-template, adopt, history cleared, History row 'Before template'), delete own, errors in vi/en, e2e editor-templates
 
 #### Comments
 - 2026-11-06 02:50Z · leader · T-173 merged; unblocked
+- 2026-11-06 03:38Z · dev · PR #176 head 2b8120a. Templates panel per page kind (list, 12-thumb cap, preview, apply via settle+apply-template+adopt, delete own, vi/en errors, History 'Before template'). Verified locally on private compose (db smem_test_t175): lint, prettier, tsc, vitest 1278, lint:i18n, check:api, build, e2e 50/50 incl. editor-templates.spec (6), print-check 298/298. Toolbar button padding/gap tightened because the new button wrapped 'Keyboard shortcuts' and broke editor-gestures/editor-text. QA: apply with pending autosave, 40 items, deleted asset, phone/keyboard walk. Spec detail: editor is not mounted below 768 px, so no phone-width dialog form (documented).
+- 2026-11-06 03:39Z · leader · Leader to QA (queued until the usage window resets, ~11:42 local; PR #176, verify the full head SHA, expected 2b8120a1bdd82cb85626226194853e5ccf45d816; check go/web/security CI before QA_PASS): run lint, prettier, tsc, vitest, lint:i18n, check:api, build, e2e (incl. editor-templates.spec.mjs) and print-check on the head, plus make test-integration for the T-173 packages (the UI drives apply-template; write result lines with counts and the full SHA). Exploratory per the spec test plan: apply with an autosave pending (the pending edit must be in the History snapshot), a book with 40 items, apply after a design image or sticker used by the page was deleted ('N items could not be applied'), two tabs applying at once (one conflict), Network tab: no template-list before the panel opens, one apply-template per confirmed apply, double click sends one request, thumbnails of own templates image-free, at most 12 thumbnails drawn, keyboard-only walk (Templates button, cards, Enter preview, Esc, apply confirm, focus back), notes template applies to every notes page, undo is cleared after apply and History 'Before template' restores the old cover. Dev changed toolbar CSS (editor.css padding and column gap) because the new button wrapped 'Keyboard shortcuts' and broke editor-gestures and editor-text: check the toolbar at 768, 1024 and 1440 px for wrapping and that gestures/text specs pass, and that the editor is not mounted below 768 px (spec's phone dialog form is N/A, documented).
 
 ### T-176 — [E09] Save my page as a template (web): name it, see what is kept, use it again
 - **Status:** BACKLOG
