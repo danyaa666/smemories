@@ -26,3 +26,7 @@ Owner request D-45: "or just can use that page and import to edit as a template"
 
 #### Test plan
 Dev: requirement 8 on a private compose stack. QA: runs everything on the PR head; saves a template from each page kind on Memory Book and Navy Classic; saves with 40 items; saves a page whose image was deleted meanwhile; two tabs (save in one while the other edits); checks the limit and the name boundary by hand with Vietnamese diacritics; confirms no `template-create` call is sent by anything but the confirmed dialog; phone width.
+
+#### Added 2026-11-06 (after T-175 QA)
+1. **The cap of 20 own templates is per user across all kinds, not per kind**, while the Templates panel lists one kind at a time. So "3 of 20" in the group header must be the user's **total** (use a total from `template-list` if the server returns one, check `docs/api-contract.md` and the T-173 code; if it does not, do not invent it: show "limit: 20 per account" and take the exact count from the 409 `data.limit` message), and the limit message must say "20 across all page types".
+2. **Fix the flaky vitest** from QA on T-175: under machine load `web/src/book/editor/TemplatePreview.test.tsx` prints "Unhandled Errors" and vitest exits 1 (develop does the same). Find the cause (an unmocked async update or timer after teardown) and fix it in this task; a loaded CI runner must not go red because of it. Show it passing 5 runs under `taskset`-style load or with `--poolOptions`/parallel stress (any reproducible load you can create).

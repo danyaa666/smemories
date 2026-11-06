@@ -948,7 +948,7 @@ Spec: .team/epics/E09-customisation-editor/33-gestures-touch-test-flake.md (read
 - 2026-11-05 19:58Z · leader · Leader: merged PR #171 (squash) at head d3b7781554da0eed500c8a1b8faa556067f9f55e after QA_PASS (isolated 100/100 quiet and under load, full e2e 41/0 x3, touch 63/63, mutation checks fail as expected); go/web/security green.
 
 ### T-175 — [E09] Template gallery and apply, per section (web): shipped and own templates, preview, apply, delete own
-- **Status:** IN_QA
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -956,11 +956,11 @@ Spec: .team/epics/E09-customisation-editor/33-gestures-touch-test-flake.md (read
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** —
 - **Branch:** task/t-175-e09-template-gallery-and-apply-per-secti
 - **PR:** 176
-- **Updated:** 2026-11-06 04:42Z by qa
-- **Comments-seen:** 3
+- **Updated:** 2026-11-06 05:18Z by leader
+- **Comments-seen:** 5
 
 Spec: .team/epics/E09-customisation-editor/34-template-gallery-apply-ui.md (read it from the main checkout). Templates panel bound to the page kind (cover, profile, notes, back), cards with thumbnails drawn by the page renderer, read-only preview, apply with one confirmation (settle, apply-template, adopt, history cleared, History row 'Before template'), delete own, errors in vi/en, e2e editor-templates
 
@@ -968,9 +968,20 @@ Spec: .team/epics/E09-customisation-editor/34-template-gallery-apply-ui.md (read
 - 2026-11-06 02:50Z · leader · T-173 merged; unblocked
 - 2026-11-06 03:38Z · dev · PR #176 head 2b8120a. Templates panel per page kind (list, 12-thumb cap, preview, apply via settle+apply-template+adopt, delete own, vi/en errors, History 'Before template'). Verified locally on private compose (db smem_test_t175): lint, prettier, tsc, vitest 1278, lint:i18n, check:api, build, e2e 50/50 incl. editor-templates.spec (6), print-check 298/298. Toolbar button padding/gap tightened because the new button wrapped 'Keyboard shortcuts' and broke editor-gestures/editor-text. QA: apply with pending autosave, 40 items, deleted asset, phone/keyboard walk. Spec detail: editor is not mounted below 768 px, so no phone-width dialog form (documented).
 - 2026-11-06 03:39Z · leader · Leader to QA (queued until the usage window resets, ~11:42 local; PR #176, verify the full head SHA, expected 2b8120a1bdd82cb85626226194853e5ccf45d816; check go/web/security CI before QA_PASS): run lint, prettier, tsc, vitest, lint:i18n, check:api, build, e2e (incl. editor-templates.spec.mjs) and print-check on the head, plus make test-integration for the T-173 packages (the UI drives apply-template; write result lines with counts and the full SHA). Exploratory per the spec test plan: apply with an autosave pending (the pending edit must be in the History snapshot), a book with 40 items, apply after a design image or sticker used by the page was deleted ('N items could not be applied'), two tabs applying at once (one conflict), Network tab: no template-list before the panel opens, one apply-template per confirmed apply, double click sends one request, thumbnails of own templates image-free, at most 12 thumbnails drawn, keyboard-only walk (Templates button, cards, Enter preview, Esc, apply confirm, focus back), notes template applies to every notes page, undo is cleared after apply and History 'Before template' restores the old cover. Dev changed toolbar CSS (editor.css padding and column gap) because the new button wrapped 'Keyboard shortcuts' and broke editor-gestures and editor-text: check the toolbar at 768, 1024 and 1440 px for wrapping and that gestures/text specs pass, and that the editor is not mounted below 768 px (spec's phone dialog form is N/A, documented).
+- 2026-11-06 05:17Z · qa · QA_PASS, PR #176, head 2b8120a1bdd82cb85626226194853e5ccf45d816 (checked before and after testing; origin branch equals it). CI: go, security, web pass; e2e/go-integration/image skipped (paused, D-37/D-38). Diff touches no .team/, no package.json/go.mod/go.sum (no new dependency).
+  RESULT LINES (private compose project qa175, ports mysql 33175/redis 36175/s3 39175, db smem_test_t175qa, API 18175, web 14175; stack removed afterwards):
+  - lint+prettier (eslint --max-warnings 0, prettier --check): clean; tsc --noEmit: clean; lint:i18n: ok; check:api: ok; build: ok.
+  - vitest: 67 files, 1278/1278 passed (develop: 65 files, 1226/1226).
+  - go test -race -tags integration ./internal/booklayout/... ./internal/templates/...: ok (booklayout 82.5 s, templates 15.3 s).
+  - e2e (scripts/e2e.sh direct): 50 passed, 0 failed (4.4 min), incl. editor-templates.spec.mjs 6/6 (setup, cover preview/apply/reload/History restore/Undo-in-History toast, keyboard-only, notes applies to both notes pages, two tabs 200+409, delete own), editor-gestures 100% and editor-text 15/15 (toolbar CSS change did not break them).
+  - print-check (tools/print-check npm test): 298 pass, 0 fail, 0 skipped.
+  AC EVIDENCE: AC1/AC2 e2e step 'cover' (preview and Back to current leave stored layout deep-equal; apply; reload persists; only cover changed; History first row 'Before template'; restore brings old cover). AC3 e2e 'notes' (line 'A notes template applies to every notes page.', page 4 of 5 shows it too). AC4 e2e conflict+delete, plus my exploratory spec with real routes: offline, 404, 409 TEMPLATE_MISMATCH, invalid layout, 429 (Retry-After 7) each show a different vi/en-keyed message ('You are offline...', 'no longer exists...', 'made for another design...', 'no longer fits...', 'Too many requests. Try again in 7 s.'), stored layout byte-identical after each failure, a real apply right afterwards still 200; double click: exactly 1 apply-template. AC5 Network: 0 template-list before open; opening cover=1 call, stepping to profile and notes=1 each, back to profile=cached (no call), back to cover=re-read (only 2 kinds kept), Refresh=1, 6 s idle=0 calls (no polling), no save/apply while only previewing. Thumbnails: 24 cards in a 6000 px tall window drew exactly 12 at once (normal window max 4); own-template list items carry no image, 0 <img> in own thumbnails, card says 'Images not included'. AC6 keyboard walk is e2e step 'keyboard only' (End/Home/arrows, Enter preview, Esc leaves preview, Esc closes panel, focus on Templates button, confirm focuses Cancel, apply, focus back).
+  EXPLORATORY (all pass): autosave pending at apply: an unsaved 'PENDING-EDIT' text was flushed first (1 save), the newest version-list row is kind 'apply' and its snapshot holds PENDING-EDIT; the stored page has the template and not the edit. 40-item page: own template with item_count 40 previewed, applied (68 ms), 40 items stored, one request on dblclick, Undo/Redo disabled and Ctrl+Z changes nothing, Undo in History opens the 'Before template' row and previewing it shows the old cover. Dropped: client hint '1 item will be left out because its image or sticker no longer exists' in the banner (unknown sticker injected through the list response), and apply answer dropped=2 gives live region 'Template applied to the cover. 2 items could not be applied because their image or sticker no longer exists.' plus the Undo in History toast action. Shipped templates: every shipped template of every kind on Memory Book (4 per kind, 16) and Navy Classic (4 per kind, 16) previewed and applied: all 200, only that kind changed, the other three kinds deep-equal before/after. Two tabs: A applies 200, stale B gets 409 and the conflict banner, nothing overwritten. Toolbar (button padding/gap change): 768 px and 1024 px = two rows ('Keyboard shortcuts' on row 2, plus 'Reset all layout' at 1024), 1440 px = one row; no horizontal overflow, every button visible and reachable; the editor does not mount at 700 px (message only).
+  NON-BLOCKING: (1) vitest prints 'Unhandled Errors' (EnvironmentTeardownError from the pre-existing src/book/layout/TemplatePreview.test.tsx loading sticker SVGs after teardown) and exits 1 when the machine is loaded (load average 12-75 here); it is not caused by this PR: develop alone gave 1416 and 474 such errors under the same load and 0 on a quiet machine, and the PR gave 0 on a quiet machine and CI web is green. Suggest a small follow-up so a loaded CI runner cannot go red. (2) The 20-own-templates cap is per user across all kinds (not per kind), so 20 on one kind blocks creating others; matches the server (MaxOwnTemplates) but T-176's UI should say so. (3) Rate limit: the layout routes share a 20-per-10-s burst, so a list call right after many saves can show 'Too many requests' with Try again; handled correctly. (4) The 12-thumb cap uses IntersectionObserver; under the normal window at most 4 are drawn. My exploratory spec is not committed (needs a config outside the default testMatch); it is at /private/tmp/claude-501/-Users-unisoft-GolandProjects-awesomeProject1/8f7da22d-14bb-4d31-8a40-3270ae13d6af/scratchpad/qaspec/editor-templates-qa.spec.mjs if the leader wants it.
+- 2026-11-06 05:18Z · leader · squash-merged PR #176 at 2b8120a1 (QA_PASS: e2e 50/50, print-check 298/298, vitest 1278, exploratory all passed). Follow-ups folded into T-176: own-template cap is per user not per kind; TemplatePreview.test.tsx unhandled errors under load.
 
 ### T-176 — [E09] Save my page as a template (web): name it, see what is kept, use it again
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -981,12 +992,13 @@ Spec: .team/epics/E09-customisation-editor/34-template-gallery-apply-ui.md (read
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-11-05 by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-11-06 05:18Z by leader
+- **Comments-seen:** 1
 
 Spec: .team/epics/E09-customisation-editor/35-save-page-as-template-ui.md (read it from the main checkout). Button in the Templates panel, dialog with name (60 code points) and a hint of how many images are not saved, template-create after settle, limit 20 message, own list refreshed, e2e editor-save-template
 
 #### Comments
+- 2026-11-06 05:18Z · leader · T-175 merged; spec 35 extended (per-user cap, flaky TemplatePreview test)
 
 ### T-177 — [E09] Shipped page templates for Memory Book: four or more looks per page kind, authored by us
 - **Status:** MERGED
