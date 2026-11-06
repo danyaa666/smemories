@@ -882,19 +882,19 @@ Spec: .team/epics/E09-customisation-editor/31-page-templates-model-and-shipped.m
 - 2026-11-05 10:03Z · leader · merged 44f339a; QA: integration 33 pkgs ok (-race, matrix incl template-list), postman 186/420/0 x2, e2e 38/0, print-check 193/193, vitest 1120; gate negative controls fail go test; non-blocking: comment in web/src/api/bookLayout.ts says save rate limit but layout read limit is used; prod skip path verified by code read only
 
 ### T-173 — [E09] Own page templates and the apply API (Go): save my page, apply a template per section
-- **Status:** CHANGES_REQUESTED
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
 - **Depends-on:** T-172
 - **Risk:** high
 - **Rework:** 2
-- **Owner-approved:** —
+- **Owner-approved:** yes
 - **Assignee:** —
 - **Branch:** task/t-173-e09-own-page-templates-and-the-apply-api
 - **PR:** https://github.com/danyaa666/smemories/pull/169
-- **Updated:** 2026-11-06 01:37Z by leader
-- **Comments-seen:** 14
+- **Updated:** 2026-11-06 02:50Z by leader
+- **Comments-seen:** 19
 
 Spec: .team/epics/E09-customisation-editor/32-own-templates-and-apply-api.md (read it from the main checkout). book_template_tab migration, template-create/delete/list, apply-template in one write with one apply snapshot, limits 20 and 64 KiB, concurrency tests. Risk high: owner approval before merge
 
@@ -913,6 +913,11 @@ Spec: .team/epics/E09-customisation-editor/32-own-templates-and-apply-api.md (re
 - 2026-11-05 20:51Z · qa · QA_PASS T-173 re-test, PR #169, head acbaa5daafdd94bf1cbe2ea3f4c1e071af412a26 (verified equal to PR head; CI go/web/security green, e2e/go-integration/image skipped per D-37/D-38). MERGEABLE/CLEAN; git merge-tree of the head with current origin/develop (after T-168) exit 0, no conflict. No test commits pushed by QA, nothing changed in the branch. Stack: own compose project qaretest173, ports mysql 13961 / redis 16961 / s3 19961, API 18961, e2e 18971/14971, SMEM_TEST_S3_ENDPOINT set; torn down without -v, my API stopped. RESULT LINES: (1) make -e test-integration (go test -race -count=1 -timeout 30m -tags integration ./...): 33 packages ok, 0 FAIL, exit 0 (booklayout 181 s, class 328 s, db 222 s, notes 302 s, media 162 s, yearbook 134 s). (2) go test -race -count=1 ./... (unit): 32 ok, 0 FAIL; go vet and go vet -tags integration exit 0; golangci-lint 0 issues; gofmt clean; web npm run check:api 'api schema ok'. (3) go test -race -count=20 -tags integration -run 'TestConcurrentAppliesExactlyOneWins|TestTemplateLimitTwenty' ./internal/booklayout/: ok (42 s). (4) Migration on a private DB (qa173mig_db): up applied 20261105120000_book_template_tab, down --allow-down removed the table (goose version back to 20261102120000), up again recreated it; SHOW CREATE TABLE as in spec (owner_id+public_id unique, (owner_id,created_at DESC) index, no FK). (5) newman 6.2.3 --working-dir postman, API in SMEM_ENV=dev, Setup run first, make verify-newman-users and make reset-limits before: folder T-173 (with Setup) run twice back to back: 39 requests, 90 assertions, 0 failed each (88 + 2 setup); whole customisation-editor collection: 223 requests, 508 assertions, 0 failed (matches dev). (6) Live two-client probe (my python script t173qa-r2-probe.py against the running API): 53 checks PASS, 0 FAIL. Covers: create strips image items and bg.media and reports stripped=2/item_count=2; 60-char name 200, 61 and empty 400; kind with no saved page 400; fill to exactly 20 and the 21st 409 ERROR_TEMPLATE_LIMIT data.limit 20; 6 parallel creates on the last free place = exactly one 200, five 409, total 20; over 64 KiB 413 ERROR_TOO_LARGE and no row stored; anonymous 401 and other user B 404 on template-create/delete/apply/list, A cannot apply or delete B's template (404), B cannot touch A's book (404); apply shipped to every kind (cover, profile, notes, back) replaces only that kind, version+1, newest snapshot kind apply; own template of one kind onto another 400; failed applies (unknown template 404, bad kind 400, stale base_version 409 with stored doc, negative version 400) leave layout and history byte-identical; 5 rounds of two parallel applies (shipped vs own) = one 200 and one 409, one new version, one snapshot per round; retention stays 30; restore of an apply snapshot returns the earlier document; template delete leaves the book unchanged; apply on a book with no layout creates v1. Logs and metrics: markers typed into the layout (COVER-ONE, COVER-TWO, PROFILE-KEEP, NOTES-KEEP, 'Lớp 12A1') occur 0 times in the API log and 0 times in /metrics; the apply log line has yearbook_id, kind, source, from/new version, dropped only; metrics smem_page_template_applies_total{result,source}, templates created/deleted/items_stripped, snapshots kind apply all present (created 36 = deleted 36). (7) Class matrix (AC4): go test -race -tags integration -v ./internal/class/ TestRosterHasCountsAndFlagsOnly (class admin hits template-create/delete/apply/list and the other book-layout routes), TestAdminStillHasNoRightsOverAStudentsBook, TestClassBookMatrix, TestPermissionMatrix, TestAdminRoutesAreAllInTheMatrix, plus the T-167 layout tests (TestClassBookCarriesEachMembersLayout, TestClassBookLayoutImageFollowsTheLayout, cap tests): all PASS; the full class package passed in the full run. (8) e2e (make -e e2e, run once): 41 passed, 0 failed, 0 flaky (the earlier head had a T-174 touch flake, not seen now). print-check (make -e print-check, once): 201 tests, 201 pass, 0 fail, 0 cancelled, 0 skipped (fixture layout difference 0.055 to 0.362 percent, under the 0.5 percent budget). (9) Diff check: git diff 4af81307 acbaa5da limited to the 25 files the PR changes against develop shows only 9 files changed: cmd/smemories-api/main.go (T-167 SetBookSources/SetBookObserver lines), internal/metrics/metrics.go (classLayoutsCut field, counter and MustRegister line with both sides kept, ClassLayoutsDropped method), api/openapi.yaml (class-book layout / truncated_layouts), web/src/api/schema.d.ts (same, regenerated), docs api-contract/class-permissions/class-privacy-review/observability/templates (T-167 text). All of it comes from develop (T-167); no change in internal/booklayout, internal/db, migrations, postman or any T-173 test. The PR diff against develop has 25 files and none under .team/. Non-blocking observations: dropped-asset count is only covered by the Go integration tests (as before); T-152/T-153 Postman folders need --working-dir postman for fixture upload (already known). Risk high: no merge before the owner's 'team approve T-173'.
 - 2026-11-05 20:52Z · leader · Leader: QA_PASS on the merged head acbaa5daafdd94bf1cbe2ea3f4c1e071af412a26 accepted (integration 33 pkg ok, race 32 ok, -race x20 ok, migration up/down/up ok, newman T-173 90/0 twice and full collection 223 req/508 assertions/0 failed, live probe 53/53, class matrix pass, e2e 41/0, print-check 201/201; diff vs 4af81307 only develop's T-167 files). Review of the code was done on the earlier head (comment #6); only the merge changed. Waiting for the owner: 'team approve T-173' (python3 /Users/unisoft/GolandProjects/claude-agent-team/scripts/board.py --as human approve T-173).
 - 2026-11-06 01:37Z · leader · Leader: conflict-only rework. PR #169 now conflicts with develop in docs/templates.md only (T-177 and T-178 each added a section). Merge origin/develop into the branch (no force-push), keep both sections plus your own T-173 section, run go test ./..., make lint, make test-integration for internal/booklayout and internal/templates, and the web checks if any web file changed (none expected). No other change. Report the new head SHA; QA will re-check head, docs and the touched suites only.
+- 2026-11-06 01:43Z · dev · Docs-conflict rework done. PR #169 head 8e1c974bd85e1ae079bcc2f3fc3f6bb246824cee = merge commit (parents acbaa5daafdd94bf1cbe2ea3f4c1e071af412a26 and develop 9b43fceec6510f91a6c7fd5890548f315fc123c2; normal merge, no force-push, nothing under .team in the PR diff). Only conflict: docs/templates.md, resolved keeping the T-173 section, the T-177 Memory Book section and the T-178 Navy Classic section (markers gone, headings in place). Changes vs old head acbaa5d: docs/templates.md (merge) plus develop's T-177/T-178 files (internal/booklayout shipped templates + tests, internal/booklayout/integration_test.go, pagetemplates json, docs/images contact sheets, tools/e2e and tools/print-check; no web/src file changed, so no print-check or web checks run). No T-173 code touched. RESULTS on private stack t173dev3 (ports 14031/16031/19031, SMEM_TEST_S3_ENDPOINT set, stopped without -v): go test ./... exit 0; make lint exit 0 (includes check:api ok); make -e test-integration scoped (-race -count=1 -tags integration) for internal/booklayout, templates, class, db, db/dbtest, metrics, notes, cmd/smemories-api: 7 ok, 0 FAIL (no test files in cmd); git merge-tree with origin/develop 9b43fce exit 0. Risk high: owner approve after QA re-check.
+- 2026-11-06 01:43Z · leader · Leader to QA (PR #169, verify full head SHA, expected 8e1c974bd85e1ae079bcc2f3fc3f6bb246824cee; go/web CI may still be pending, check before QA_PASS): docs-only conflict rework, merge of develop 9b43fce (T-177/T-178 shipped templates). High risk: write fresh result lines on this head: full make test-integration (counts), unit, e2e, print-check, T-173 concurrency x20, class matrix; read the three docs/templates.md sections (T-173, T-177, T-178: headings, no markers, nothing lost); confirm git diff vs old head acbaa5d shows only develop's changes plus the docs merge; no .team files.
+- 2026-11-06 02:14Z · qa · QA_PASS T-173 re-test after the docs-conflict merge, PR #169, head 8e1c974bd85e1ae079bcc2f3fc3f6bb246824cee (full SHA verified equal to PR head before and after testing; MERGEABLE; CI go pass, web pass, security pass; go-integration/e2e/image skipped per D-37/D-38). No test commits pushed by QA. DIFF CHECK: merge commit parents acbaa5d and develop 9b43fce. Whole diff vs acbaa5d outside docs/templates.md is byte-identical (ignoring blob hashes and one hunk line number) to develop's own change since the merge base (git diff merge-base..9b43fce); no T-173 file (ownpage*, pagetemplate.go, service.go, handler.go, versions.go, book_template_tab migration, openapi, metrics, schema.d.ts, postman, dbtest) changed; PR diff vs origin/develop touches 0 files under .team (the .team paths in git diff acbaa5d..HEAD are only develop's own board commits). docs/templates.md: no conflict markers; headings present: 'Own templates and applying a template (T-173, ADR 0005 Q3)', 'Shipped Memory Book templates (T-177)', 'Shipped Navy Classic templates (T-178)'; T-173 section intact, diff vs old head is only the T-177 section and develop's one-line example change. Stack: own compose project qa173c, ports mysql 13971 / redis 16971 / s3 19971, API 18971, e2e 18972/14972, SMEM_TEST_S3_ENDPOINT set; torn down without -v, my API stopped. RESULT LINES: (1) make -e test-integration (go test -race -count=1 -timeout 30m -tags integration ./...): 33 packages ok, 0 FAIL, exit 0 (booklayout 203 s, class 328 s incl. class matrix, db 241 s, notes 308 s, templates 7 s). (2) go test -race -count=1 ./... (unit): 32 ok, 0 FAIL; make -e lint exit 0 (gofmt, go vet, go vet -tags integration, golangci-lint 0 issues, web lint, check:api 'api schema ok', check-assets ok 53). (3) go test -race -count=20 -tags integration -run 'TestConcurrentAppliesExactlyOneWins|TestTemplateLimitTwenty' ./internal/booklayout/: ok (40.7 s). (4) Migration on private DB smem_test_qa173mig: up applied 20261105120000_book_template_tab (version 20261105120000), down --allow-down removed the table (version back to 20261102120000), up again recreated it; SHOW CREATE TABLE as in spec (owner_id+public_id unique, (owner_id,created_at DESC) index, no FK). (5) newman 6.2.3 --working-dir postman, API in SMEM_ENV=dev, Setup run first, make verify-newman-users and make reset-limits before: folder T-173 (with Setup) run twice back to back: 39 requests, 90 assertions, 0 failed each; whole customisation-editor collection: 223 requests, 508 assertions, 0 failed. (6) make -e e2e (E2E_DB=smem_test_e2eqa173): 44 passed, 0 failed (3.9 min). (7) make -e print-check: 298 tests, 298 pass, 0 fail (stage vs book screen on Letter cover 0.072 %, notes 0.000 %). Live probe skipped (optional; no code changed since the earlier PASS, which had 53/53). Non-blocking: smem_e2e* DB names are not covered by the smemories account grant (smem_test_%), so the docs/e2e.md example 'E2E_DB=smem_e2e_mine' fails on the dev stack with Access denied; use a smem_test_* name. HIGH RISK: owner approval after this QA_PASS; no merge requested.
+- 2026-11-06 02:50Z · human · owner approved merge
+- 2026-11-06 02:50Z · leader · squash-merged PR #169 at 8e1c974b after owner approve (QA_PASS re-test: integration 33 pkgs ok, e2e 44, print-check 298/298, newman 508/0, concurrency x20, migration up/down/up)
 
 ### T-174 — [E09] Stabilise the editor-gestures touch test (flake: 2 to 3 px against 0.5 allowed)
 - **Status:** MERGED
@@ -943,7 +948,7 @@ Spec: .team/epics/E09-customisation-editor/33-gestures-touch-test-flake.md (read
 - 2026-11-05 19:58Z · leader · Leader: merged PR #171 (squash) at head d3b7781554da0eed500c8a1b8faa556067f9f55e after QA_PASS (isolated 100/100 quiet and under load, full e2e 41/0 x3, touch 63/63, mutation checks fail as expected); go/web/security green.
 
 ### T-175 — [E09] Template gallery and apply, per section (web): shipped and own templates, preview, apply, delete own
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -954,12 +959,13 @@ Spec: .team/epics/E09-customisation-editor/33-gestures-touch-test-flake.md (read
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-11-05 by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-11-06 02:50Z by leader
+- **Comments-seen:** 1
 
 Spec: .team/epics/E09-customisation-editor/34-template-gallery-apply-ui.md (read it from the main checkout). Templates panel bound to the page kind (cover, profile, notes, back), cards with thumbnails drawn by the page renderer, read-only preview, apply with one confirmation (settle, apply-template, adopt, history cleared, History row 'Before template'), delete own, errors in vi/en, e2e editor-templates
 
 #### Comments
+- 2026-11-06 02:50Z · leader · T-173 merged; unblocked
 
 ### T-176 — [E09] Save my page as a template (web): name it, see what is kept, use it again
 - **Status:** BACKLOG
@@ -1044,7 +1050,7 @@ Spec: .team/epics/E09-customisation-editor/37-shipped-templates-navy-classic.md 
 - 2026-11-06 01:36Z · leader · squash-merged PR #174 at 15e66070 (QA_PASS: integration 33 pkgs ok, print-check 250/250, e2e 44/44). Profile and notes variants are close: T-180 widened to profile too.
 
 ### T-179 — [E09] Stage 2 hardening: fuzz the layout parsers, storage budget per user, abuse limits, no content in logs
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** test
 - **Milestone:** M4
@@ -1055,15 +1061,16 @@ Spec: .team/epics/E09-customisation-editor/37-shipped-templates-navy-classic.md 
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-11-05 by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-11-06 02:50Z by leader
+- **Comments-seen:** 1
 
 Spec: .team/epics/E09-customisation-editor/38-stage2-hardening-fuzz-storage-abuse.md (read it from the main checkout). Go fuzz targets with seeds in CI, depth/size limits before decode, docs/layout-storage-budget.md with measured numbers, rate-limit and body-cap test per layout route, sentinel test for logs and metrics, text safety, threat model note
 
 #### Comments
+- 2026-11-06 02:50Z · leader · T-173 merged; unblocked
 
 ### T-180 — [E09] Make the profile, notes and back template choices a real choice (Memory Book and Navy Classic)
-- **Status:** TODO
+- **Status:** IN_QA
 - **Priority:** P3
 - **Type:** feature
 - **Milestone:** M4
@@ -1071,15 +1078,18 @@ Spec: .team/epics/E09-customisation-editor/38-stage2-hardening-fuzz-storage-abus
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-11-06 01:37Z by leader
-- **Comments-seen:** 1
+- **Assignee:** qa
+- **Branch:** task/t-180-e09-make-the-profile-notes-and-back-temp
+- **PR:** https://github.com/danyaa666/smemories/pull/175
+- **Updated:** 2026-11-06 02:25Z by qa
+- **Comments-seen:** 4
 
 Spec: .team/epics/E09-customisation-editor/39-bolder-notes-back-variants.md (read it from the main checkout). QA on T-177 and T-178: profile-*, notes-* and back-* look alike (covers are fine) (same page, one or two corner stickers). Inventory what may be overridden, four looks that differ at a glance per kind and template, stronger distinctness gate (overlap and colour-only twins), no runtime or validator change; report if real variety needs movable content blocks
 
 #### Comments
 - 2026-11-06 01:37Z · leader · T-178 merged; scope widened to profile (spec 39)
+- 2026-11-06 02:24Z · dev · FINDING (req 4), PR #175. Inventory table is in the PR body. Memory Book notes/back cannot get layout-level variety today: the heading block cannot shift sideways (I tried x moved 110 px with a narrower box: the title wraps and overlaps its subtitle), the notes list, back table, autograph grid and profile letter are flow content, and the free room on the MB notes page is a 150 x 70 px corner. Shipped what fits: bigger corner clusters, tilts, paper/white page, MB notes/back 5 files redrawn; Navy (much more free room) 7 files redrawn, all profile/notes/back looks tell apart in the sheet. PROPOSED DESIGN (needs your decision, not built): (1) a manifest flag per editable flow element 'movable_in_flow' so a moved heading re-flows content: heading below the photo row or hidden-with-content-shifted; (2) notes 'columns': 1|2 page option read by the notes template (two-column answers); (3) 'back.table_height' override so the back text block (pact) can sit at top. Each needs the validator (new override keys), memory.tsx/navy.tsx and print-check changes; I would do (1) first. Gate: limit 0.8 not 0.6 (MB covers measure 0.63, unchanged by rule; MB corner puts notes at 0.76), numbers in the PR.
+- 2026-11-06 02:24Z · dev · PR #175 head 8b23f641edc0f1d4fce80ee1ed677c2ada013d86. 12 templates redrawn (MB notes-tape/doodle/stickers, back-pact/doodle; Navy notes-corners/tilted, back-seal/stars/rules, profile-tilted/crest), covers/profile-MB untouched byte for byte. New shipped_distinct_test.go (IoU>=0.8 on A5 box union; mutation test + hand twin). Dev ran: go test, -race integration booklayout+templates ok, vitest layout 151 ok, print-check full 298/298, e2e 44/44 on private stack (ports 13180/16180/19180, 18180/14180). QA: re-run make test-integration, e2e, print-check; look at A4 contact sheets (node tools/print-check/contact-sheet*.mjs --sizes A4 --out DIR); mutation-check the gate; diff covers. Finding + proposed design in comment.
+- 2026-11-06 02:24Z · leader · Leader to QA (PR #175, verify full head SHA, expected 8b23f641edc0f1d4fce80ee1ed677c2ada013d86; go/web CI may still be pending, check before QA_PASS): I viewed both contact sheets. Navy Classic is now a clear choice per kind (back rules/seal/stars/thanks, notes corners/cream/rules/tilted, profile crest/portrait/tilted). Memory Book notes and back are still the weakest (differences are sticker clusters and tilt); dev reports a hard limit (content blocks cannot move: heading wraps over its subtitle, about 150 x 70 px free beside it), accepted, a runtime change is an owner-level decision for later. Check: cover files byte for byte equal to develop, mutation-check shipped_distinct_test.go (colour-only copy, all items moved 5 px, empty pages, the 0.8 limit: judge whether it catches real twins), no prose/image items, contrast, margins and Navy inner rule on A5/A4/Letter, print-check full + e2e + make test-integration for booklayout/templates (write result lines + full SHA), look at A4 with a long-name, no-photo student; dev moved one star on profile-tilted that hit the caption on Letter: confirm no overlap on all papers.
 
 <!-- tasks:end -->
