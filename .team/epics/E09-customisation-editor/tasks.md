@@ -981,7 +981,7 @@ Spec: .team/epics/E09-customisation-editor/34-template-gallery-apply-ui.md (read
 - 2026-11-06 05:18Z · leader · squash-merged PR #176 at 2b8120a1 (QA_PASS: e2e 50/50, print-check 298/298, vitest 1278, exploratory all passed). Follow-ups folded into T-176: own-template cap is per user not per kind; TemplatePreview.test.tsx unhandled errors under load.
 
 ### T-176 — [E09] Save my page as a template (web): name it, see what is kept, use it again
-- **Status:** IN_PROGRESS
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -989,16 +989,25 @@ Spec: .team/epics/E09-customisation-editor/34-template-gallery-apply-ui.md (read
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-176-e09-save-my-page-as-a-template-web-name-
-- **PR:** —
-- **Updated:** 2026-11-06 05:19Z by dev
-- **Comments-seen:** 1
+- **PR:** https://github.com/danyaa666/smemories/pull/178
+- **Updated:** 2026-11-06 06:54Z by leader
+- **Comments-seen:** 6
 
 Spec: .team/epics/E09-customisation-editor/35-save-page-as-template-ui.md (read it from the main checkout). Button in the Templates panel, dialog with name (60 code points) and a hint of how many images are not saved, template-create after settle, limit 20 message, own list refreshed, e2e editor-save-template
 
 #### Comments
 - 2026-11-06 05:18Z · leader · T-175 merged; spec 35 extended (per-user cap, flaky TemplatePreview test)
+- 2026-11-06 06:16Z · dev · Dev: PR #178 head 28ae29a. Done: requirements 1-9 + flaky TemplatePreview.test fix (cause: AssetSvg import('./kind-frame') in an effect outlived the synchronous tests; beforeAll preloads the 3 kinds; 3/4 red before, 6/6 green after under 22 busy loops; whole vitest 5/5 green under 11 loops). Per-account cap: template-list has no total, so NO 'N of 20' is shown (own group: 'Up to 20 per account, across all page types'; 409 text says so; after a 409 the button explains until a delete/Refresh). A real total would need a server field. Local results (private compose dev176): lint/prettier/tsc/lint:i18n/check:api/build green; vitest 1311 pass; e2e 53/53 incl. editor-save-template; print-check 298/298. T-175 keyboard tests got one extra Tab (new button between Refresh and first card). Note: classBook.test 'shows the page count' times out at 5 s only under 2x oversubscribed CPU (22 loops/11 cores), pre-existing, not touched. No conflict with PR #177. Stack dev176 stopped (down without -v).
+- 2026-11-06 06:16Z · dev · PR #178 head 28ae29a. QA: run everything on the PR head; try the 40-item page, a page whose image was deleted, two tabs, name boundary with composed/decomposed diacritics, phone width; confirm template-create is sent only by the confirmed dialog.
+- 2026-11-06 06:17Z · leader · Leader to QA (PR #178, verify the full head SHA, expected value is the PR head at dispatch, report it; go/web/security CI must be green before QA_PASS): run lint, prettier, tsc, vitest, lint:i18n, check:api, build, e2e (incl. editor-save-template.spec.mjs and the T-175 editor-templates spec: dev added one Tab stop between Refresh and the first card), print-check; no Go change so full make test-integration is optional, run internal/booklayout once. Exploratory per spec 35: save from each page kind on Memory Book and Navy Classic, 40 items, a page whose image was deleted meanwhile, two tabs (save in one while the other edits), name boundary at 60 code points with Vietnamese composed and decomposed text, the 20 limit (own group says 'Up to 20 own templates per account, across all page types'; after a 409 Save explains until a template is deleted or Refresh), double click sends one request, no template-create call except from the confirmed dialog, editor document/undo/autosave untouched by a save, saved template appears in My templates and applies after a reset with no image, a book switched to another template does not list it; flaky-test fix: run vitest fully 3 times under CPU load (e.g. several busy loops) and confirm TemplatePreview.test.tsx no longer prints Unhandled Errors. Note dev's report: classBook.test.tsx 'shows the page count' times out at 5 s only when the CPU is heavily oversubscribed, untouched, not a blocker.
+- 2026-11-06 06:53Z · qa · QA_PASS T-176, PR #178, head 28ae29a080d791d009a2a8ec8ba27151b928a2bd (same SHA before and after testing). CI on that head: go pass, web pass, security pass (e2e/go-integration/image paused). No file under .team/, no new dependency (package.json, lock, go.mod untouched).
+  RESULT LINES (local, private compose project qa176 on ports 33176/36176/39176, DB smem_test_e2e, stack removed with down, no -v): lint (eslint --max-warnings 0 + prettier) green; tsc green; lint:i18n ok; check:api ok; build ok; vitest 68 files, 1311/1311 pass (0 fail); e2e scripts/e2e.sh 53 passed / 0 failed (incl. editor-save-template 3/3, editor-templates 6/6 with the extra Tab stop, editor-gestures, editor-text); print-check 298 pass / 0 fail; go test -race -count=1 -tags integration ./internal/booklayout/... ok (34 s).
+  AC EVIDENCE: AC1 e2e editor-save-template test 2 (moved+rotated title, Vietnamese text, image; dialog says 1 image not saved; reset; apply from My templates; title override and text equal to before, no image; History row Before template) pass. AC2 e2e test 3: 21st refused 409 with own message, name kept, delete one then save ok; other kind and a book on navy-classic do not list it, pass. AC3 e2e: stored layout deep-equal before/after save, no layout save sent, undo still enabled, double click = 1 template-create; my own run: A has an unsaved edit then Save sends save then template-create and the template has the edit (item_count 2). AC4 unit tests (templates.test.ts, EditorSaveTemplate.test.tsx) pass; by hand: 61 decomposed (e+U+0323+U+0302, 183 code points) rejected 'Use at most 60', 60 decomposed accepted (server 200), 60 mixed composed/decomposed accepted, blank rejected inline with nothing sent, control char rejected inline, spaces trimmed server side name. Errors forced by route interception, each own text and the typed name kept: 429 (Try again in 7 s), 404 (book no longer exists), 413 (page too big), 422 invalid layout (generic text, no problem list, Back), 400 name; offline: button explains 'You are offline...' and no request. AC5 all green above.
+  EXPLORATORY (my own Playwright run, Memory Book and Navy Classic, throwaway spec not committed): saved from cover, profile, notes, back on both templates: 8/8 returned 200 with the right kind; each shows only under its own kind. 40 items cover: saves (item_count 40), reset, apply restores 40. Image whose media was deleted meanwhile: stored layout still holds the image item; save returns 200 with item_count 0 and stripped 1, dialog said 'nothing yet. 1 image is not saved'. Two tabs: B moved the item and autosaved, A (no edits) saved: 200, template holds B's stored page, no conflict banner on A. template-create sent 0 times by open/Esc/Cancel/preview/panel open. Panel summary text per spec (no 'N of 20', group hint says up to 20 per account across all page types). Flaky fix: vitest 3 full runs under 22 busy loops on 11 cores (2x oversubscribed): 0 'Unhandled Errors' in all 3; the only reds were 5 s timeouts of classBook.test 'shows the page count' (runs 1-3) and book.test '300 notes' (run 3), the pre-existing oversubscription timeouts dev described, not TemplatePreview. Unloaded run is clean.
+  NON-BLOCKING OBSERVATIONS: (1) Spec requirement 7 says targets >= 44 px on touch widths: at 768x1024 with touch the save dialog's Cancel/Save buttons measure 36 px high (editor.css '.ed-panel button {min-height:36px}' beats .btn because the Dialog renders inside the aside; the @media (pointer: coarse) block only lists .ed-tpl-actions/.ed-tpl-buttons/.ed-tpl-pick). Name input 44, panel Save button 50. Same for T-175's delete/apply dialogs (pre-existing). Suggested fix: add '.ed-panel .dialog button' to that coarse block. Suggest a follow-up or a fix before merge at the leader's discretion; no AC covers it. (2) The editor is not available below 768 px (by design, T-181 later), so phone width was tested at 768 touch. (3) If the post-save template-list refresh is itself rate limited (shared 20/10 s layout burst) the panel shows 'Too many requests' with Try again and the save toast, new card is not focused until retry; only reachable after a burst of layout calls. (4) Stored layout keeps an image item whose media was deleted (pre-existing, not this task).
+- 2026-11-06 06:54Z · leader · squash-merged PR #178 at 28ae29a0 (QA_PASS: vitest 1311, e2e 53/53, print-check 298/298, booklayout integration ok, flaky TemplatePreview fixed). Non-blocking: save dialog Cancel/Save are 36 px high on touch (.ed-panel button min-height 36px beats .btn); same gap in T-175 delete/apply dialogs: fix in T-181/T-182.
 
 ### T-177 — [E09] Shipped page templates for Memory Book: four or more looks per page kind, authored by us
 - **Status:** MERGED
@@ -1151,11 +1160,12 @@ Spec: .team/epics/E09-customisation-editor/39-bolder-notes-back-variants.md (rea
 - **Branch:** —
 - **PR:** —
 - **Updated:** 2026-11-06 by leader
-- **Comments-seen:** 0
+- **Comments-seen:** 1
 
 Spec: .team/epics/E09-customisation-editor/40-phone-mode.md (read it from the main checkout). Phone shell over the same store (bottom sheet property panel, text edited in the sheet, pager, Templates/History as dialogs, undo/redo buttons), no drag handles, shell switch at 768 px keeps state, Playwright touch spec, docs/editor-phone.md, owner manual checks iOS Safari and Gboard
 
 #### Comments
+- 2026-11-06 06:54Z · leader · Leader: small fix to include (QA on T-176): in web/src/styles/editor.css '.ed-panel button {min-height:36px}' wins over .btn, so the Templates panel dialogs (save, delete, apply confirm) have 36 px Cancel/Save/Confirm buttons on touch at 768 px, below the 44 px rule. Add '.ed-panel .dialog button' (or the real selector) to the '@media (pointer: coarse)' 44 px block, with a test that measures the button heights on a touch viewport, as part of the phone-width dialogs.
 
 ### T-182 — [E09] Accessibility and i18n audit of the editor, with fixes
 - **Status:** BACKLOG
@@ -1170,11 +1180,12 @@ Spec: .team/epics/E09-customisation-editor/40-phone-mode.md (read it from the ma
 - **Branch:** —
 - **PR:** —
 - **Updated:** 2026-11-06 by leader
-- **Comments-seen:** 0
+- **Comments-seen:** 1
 
 Spec: .team/epics/E09-customisation-editor/41-editor-accessibility-i18n-audit.md (read it from the main checkout). Keyboard-only journey spec, aria snapshots, announcement bounds, contrast/zoom/target checks, hard-coded string check, vi text length, docs/editor-accessibility.md with findings table and owner screen-reader checklist; no new dependency
 
 #### Comments
+- 2026-11-06 06:54Z · leader · Leader: include the dialog buttons of the Templates/History panels (save, delete, apply confirm: 36 px high on touch, QA on T-176) in the target-size measurement; if T-181 has not already fixed them, fix them here.
 
 ### T-183 — [E09] Stage 2 exit check: one journey, performance budgets, parity, docs, report against the PRD exit criteria
 - **Status:** BACKLOG
