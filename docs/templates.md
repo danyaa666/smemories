@@ -239,7 +239,7 @@ A **page template** is the value of `pages.<kind>` of a layout document (`bg`, `
 
   ```json
   {"id": "cover-sunny", "label_en": "Sunny cover", "label_vi": "Bìa nắng", "kind": "cover", "source": "authored", "licence": "LICENCE.txt",
-   "page": {"bg": {"color": "soft"}, "items": [{"id": "s1a2b3", "t": "asset", "asset": "shape.star", "tint": "accent", "x": 800, "w": 150, "h": 110, "cy": 70, "r": 12}]}}
+   "page": {"bg": {"color": "paper"}, "items": [{"id": "cvsunny01", "t": "asset", "asset": "shape.star", "tint": "accent", "x": 846, "w": 103, "h": 103, "cy": 62, "r": 14}]}}
   ```
 
   `kind` is one of that template's page kinds. `source` is `authored` (we drew it; nothing derived from another project ships until the owner has chosen the licence route, ADR 0005 Q6). `licence` names a non-empty file in the same folder (`LICENCE.txt`, one per folder). Names are plain text of 1 to 60 characters. A file is at most 64 KiB and has no unknown member.
@@ -248,6 +248,39 @@ A **page template** is the value of `pages.<kind>` of a layout document (`bg`, `
 - **Read route.** `POST /api/book-layout/template-list` `{yearbook_id, kind?}` answers `{items: [{id, label_en, label_vi, kind, item_count, page}], next_id: ""}` for the shipped templates of the book's current template, sorted by English label (owner only, same limits as the other layout reads).
 - **Preview.** `web/src/book/layout/TemplatePreview.tsx` draws a template's `page` with the book's own runtime (`BookPages` and `LayoutProvider` over a one-page document of a sample book) at a given width and paper, read-only (`inert`), with no stored images. It is a text-and-shape page drawn by the same code the print uses, so what the preview shows is what applying it prints.
 - **Adding a template.** Draw the page in the layout editor of a test book, copy the page value from `book-layout/get`, remove any `image` item and media background, give the items new ids, and save it as `<id>.json` in the folder. Keep decoration in the free parts of the page (the template's own elements stay under the layer: it draws over them) or hide an element with an override. Run `go test ./internal/booklayout/` and `cd web && npx vitest run src/book/layout/TemplatePreview.test.tsx`; look at it on A5, A4 and Letter. Nothing from Doory goes in until the owner decides (Q-064).
+
+#### Shipped Memory Book templates (T-177)
+
+Sixteen templates, four per page kind, authored by us (nothing from Doory or any other source; provenance in `LICENCE.txt` of the folder). Memory Book is the playful template, so the looks run from calm and airy to busy and scrapbook-like. The contact sheet is [images/page-templates-memory-book.png](images/page-templates-memory-book.png) (A5; `node tools/print-check/contact-sheet.mjs` writes the A5, A4 and Letter sheets into `docs/images/`, `--sizes A4 --out DIR` for one other paper or folder).
+
+| Id | Kind | Look |
+|---|---|---|
+| `cover-sunny` | cover | calm: paper page, a star, a squiggle and a sparkle; everything of the book where it is |
+| `cover-polaroid` | cover | the template's lavender page kept; one big polaroid, the sticker over its corner, tape and a heart |
+| `cover-scrapbook` | cover | busy: white page, the photo tilted, the sticker beside it, six clip-art stickers, doodles and tape |
+| `cover-title-low` | cover | the title moved under the photo, the photo to the right, the sticker to the left; doodles fill the gap the title leaves |
+| `profile-calm` | profile | calm: paper page and two sparkles in the corner |
+| `profile-corners` | profile | white page, the photo bigger and tilted inside a rounded frame, a heart |
+| `profile-scrapbook` | profile | the photo tilted with a strip of tape, a flower badge and a heart in the corner |
+| `profile-tilted` | profile | white page, heading and photo tilted, a star and a sparkle |
+| `notes-airy` | notes | white page and two small sparkles beside the heading |
+| `notes-tape` | notes | heading tilted, a strip of tape beside it |
+| `notes-doodle` | notes | white page, a squiggle and a sparkle beside the heading |
+| `notes-stickers` | notes | heading tilted the other way, a smiling star and a gold star |
+| `back-thanks` | back | calm: paper page, three hearts under the pact, a sparkle |
+| `back-pact` | back | white page, the pact tilted, a heart, a star and a squiggle |
+| `back-stickers` | back | busy: cloud, smiling star, sun, red heart and a plane around the pact |
+| `back-doodle` | back | white page, the pact tilted the other way, loops, a zigzag, a burst and a sparkle |
+
+**Rules (the same file format as above, plus these; all in Go tests, `internal/booklayout/shipped_memory_book_test.go`):**
+- **Four or more per kind, unique ids and labels per kind** (case-insensitive, `label_en` and `label_vi`), labels at most 24 characters (the gallery card), no two templates of a kind with the same `page` bytes.
+- **No prose, no picture.** A text item may hold only digits, punctuation and symbols (none is used so far: a template must never put a sentence of any language into a student's book); no `image` item, no `bg.media`; at most 40 items.
+- **Colours.** The page colour is `paper` or `white`, or none (the template's own: lavender on the cover, paper elsewhere). The book draws its own text (`ink`, `soft`) straight on the page and a template cannot recolour it, so **the gate holds `ink` and `soft` to 4.5:1 against the page colour in all three themes** (WCAG formula, the token table of `memory.css`, which a test keeps in step with the file): `accent`, `soft` and `ink` pages fail it. A text item, if one is ever added, is held to the same ratio. Decoration (tints, tape, stickers) is not held to it.
+- **Boxes.** Every stored box is inside the 5 mm safe margin of the manifest on A5, A4 and Letter (the runtime also keeps every box inside the page, so nothing bleeds: a tilt may take a corner a few millimetres over the margin). No decoration may sit on a text element that the template gives a box of its own (`cover.title`, the headings, `back.pact`); for a moved text element the test uses the rotated outline of both boxes on each paper. For elements the template only tilts, and for the book's own text, `tools/print-check` does it on the real page (below).
+- **Where decoration goes.** The pages are nearly full: the cover has free room, the others only the corner of the heading row (profile and back: x from 650 of 816 px; notes: x 540 to 650, above the "No." tag, the title row ends at 520 whatever the text) and, on the back, the band under the pact. Put tilt, page colour and small stickers there; do not put anything over the fields, notes, signatures or photos' captions.
+- **Print-check** (`tools/print-check/check.test.mjs`, "page templates", one case per template on A5, A4 and Letter, 48 cases): the sample book has the name "Nguyễn Thị Phương Anh", three notes (the second 2000 characters) with signatures on every note and a photo on every page. Each case checks the page count and size, that all fonts are embedded and the name is in the PDF, print against screen below the standing threshold (the template may add 0.5 % to the plain page's noise), every item's box in print within 2 px of the screen at 192 dpi, **that no decoration covers any text of the page or a signature** (the painted shapes against the text lines in the DOM), and, with the stress book (60-character names everywhere), that the template adds no cut-off text and no text leaves its page. The notes templates leave the autograph alone because the signature is part of the book's own message box, never an editable element.
+
+**Adding one:** copy a file, change `id` (also the file name), the two labels (at most 24 characters, different from the other looks of the kind), the item ids (letters and digits, 6 to 26, unique) and the placement; keep decoration in the free places above; use only registry assets and add any new one to `LICENCE.txt`. Run `go test ./internal/booklayout/`, `node tools/print-check/contact-sheet.mjs --sizes A5 --out /tmp/sheet` and look at the PNG, then `cd tools/print-check && node --test --test-name-pattern="<id>" check.test.mjs`. If you add a look, regenerate the committed A5 sheet and keep it under 600 KB.
 
 ### Adding a theme, font set, section, text or picture to an html template (T-147)
 

@@ -7,23 +7,52 @@
  "licence": "LICENCE.txt",
  "page": {
   "bg": {
-   "color": "accent"
+   "color": "paper"
   },
   "items": [
    {
-    "id": "t1g2h3",
-    "t": "text",
-    "x": 100,
-    "w": 800,
-    "h": 70,
-    "cy": 905,
+    "id": "bkthank01",
+    "t": "asset",
+    "asset": "shape.heart",
+    "x": 441,
+    "w": 118,
+    "h": 118,
+    "cy": 896,
     "r": 0,
-    "text": "Cảm ơn các bạn",
-    "font": "display",
-    "size": 26,
-    "color": "white",
-    "align": "center",
-    "bold": true
+    "tint": "accent"
+   },
+   {
+    "id": "bkthank02",
+    "t": "asset",
+    "asset": "shape.heart",
+    "x": 331,
+    "w": 54,
+    "h": 54,
+    "cy": 900,
+    "r": -14,
+    "tint": "accent"
+   },
+   {
+    "id": "bkthank03",
+    "t": "asset",
+    "asset": "shape.heart",
+    "x": 613,
+    "w": 54,
+    "h": 54,
+    "cy": 902,
+    "r": 14,
+    "tint": "accent"
+   },
+   {
+    "id": "bkthank04",
+    "t": "asset",
+    "asset": "sticker.doodle-sparkle",
+    "x": 863,
+    "w": 66,
+    "h": 66,
+    "cy": 58,
+    "r": 0,
+    "tint": "accent"
    }
   ]
  }

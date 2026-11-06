@@ -1,0 +1,53 @@
+{
+ "id": "back-pact",
+ "label_en": "Tilted pact back",
+ "label_vi": "Bìa sau hẹn gặp",
+ "kind": "back",
+ "source": "authored",
+ "licence": "LICENCE.txt",
+ "page": {
+  "bg": {
+   "color": "white"
+  },
+  "overrides": {
+   "back.pact": {
+    "r": -2
+   }
+  },
+  "items": [
+   {
+    "id": "bkpact01",
+    "t": "asset",
+    "asset": "shape.heart",
+    "x": 368,
+    "w": 74,
+    "h": 74,
+    "cy": 898,
+    "r": -10,
+    "tint": "accent"
+   },
+   {
+    "id": "bkpact02",
+    "t": "asset",
+    "asset": "shape.star",
+    "x": 846,
+    "w": 74,
+    "h": 74,
+    "cy": 60,
+    "r": 14,
+    "tint": "accent"
+   },
+   {
+    "id": "bkpact03",
+    "t": "asset",
+    "asset": "sticker.doodle-squiggle",
+    "x": 59,
+    "w": 270,
+    "h": 86,
+    "cy": 902,
+    "r": 0,
+    "tint": "soft"
+   }
+  ]
+ }
+}

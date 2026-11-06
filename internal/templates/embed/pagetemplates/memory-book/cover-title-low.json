@@ -1,0 +1,79 @@
+{
+ "id": "cover-title-low",
+ "label_en": "Title below cover",
+ "label_vi": "Bìa tiêu đề dưới",
+ "kind": "cover",
+ "source": "authored",
+ "licence": "LICENCE.txt",
+ "page": {
+  "overrides": {
+   "cover.title": {
+    "x": 118,
+    "w": 765,
+    "h": 184,
+    "cy": 747,
+    "r": -2
+   },
+   "cover.photo": {
+    "x": 490,
+    "w": 404,
+    "h": 441,
+    "cy": 509,
+    "r": 6
+   },
+   "cover.sticker": {
+    "x": 135,
+    "w": 208,
+    "h": 208,
+    "cy": 557,
+    "r": -8
+   }
+  },
+  "items": [
+   {
+    "id": "cvtitle01",
+    "t": "asset",
+    "asset": "sticker.doodle-squiggle",
+    "x": 184,
+    "w": 368,
+    "h": 98,
+    "cy": 261,
+    "r": 0,
+    "tint": "accent"
+   },
+   {
+    "id": "cvtitle02",
+    "t": "asset",
+    "asset": "sticker.doodle-sparkle",
+    "x": 686,
+    "w": 74,
+    "h": 74,
+    "cy": 252,
+    "r": 0,
+    "tint": "accent"
+   },
+   {
+    "id": "cvtitle03",
+    "t": "asset",
+    "asset": "sticker.tape-plain",
+    "x": 588,
+    "w": 208,
+    "h": 208,
+    "cy": 406,
+    "r": -4,
+    "tint": "accent"
+   },
+   {
+    "id": "cvtitle04",
+    "t": "asset",
+    "asset": "shape.heart",
+    "x": 892,
+    "w": 71,
+    "h": 71,
+    "cy": 876,
+    "r": 12,
+    "tint": "accent"
+   }
+  ]
+ }
+}

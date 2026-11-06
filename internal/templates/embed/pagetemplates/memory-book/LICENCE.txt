@@ -1,7 +1,18 @@
 Page templates for Memory Book (internal/templates/embed/pagetemplates/memory-book)
 
-These page templates were authored by the SMemories team in task T-172 from our own text and our own registry assets (licence "authored", CC0 1.0
-Universal, see web/src/book/assets/licences/authored.txt). They contain no third-party artwork, no photo and nothing derived from another
-project. The team dedicates them to the public domain under CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/).
+These page templates are the project's own authoring: they were made by the SMemories team (task T-172 for the first four, task T-177 for the others) as
+placements of registry assets, colours and tilts on our own pages. Like the authored assets (licence "authored", see
+web/src/book/assets/licences/authored.txt and docs/assets.md) the team dedicates them to the public domain under CC0 1.0 Universal
+(https://creativecommons.org/publicdomain/zero/1.0/).
 
-Date: 2026-11-05
+Nothing is copied from Doory or from any other template source, image or text: no file, picture, wording or layout of another project is in these files. Other
+templates and designs were looked at only as inspiration for the kind of look (calm and airy to busy scrapbook), never traced or reused. The files hold no
+sentence in any language, no photo and no link.
+
+They use only assets of the registry (web/src/book/assets/registry.json), each under the licence the registry records:
+- authored by the team (CC0): shape.burst, shape.heart, shape.star, frame.rounded-border, sticker.doodle-loops, sticker.doodle-sparkle, sticker.doodle-squiggle,
+  sticker.doodle-zigzag, sticker.tape-dots, sticker.tape-plain, sticker.tape-stripes;
+- CC0 clip art from openclipart.org, licence file in web/src/book/assets/licences/: sticker.cool-sun and sticker.star-face (SunKing2), sticker.flower-badge-yellow
+  (yamachem), sticker.gold-star (mazeo), sticker.happy-cloud (Mahua_Sarkar), sticker.paper-plane (monsterbraingames), sticker.red-heart (nerdy).
+
+Date: 2026-11-06

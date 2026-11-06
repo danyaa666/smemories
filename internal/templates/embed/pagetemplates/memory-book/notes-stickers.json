@@ -1,0 +1,37 @@
+{
+ "id": "notes-stickers",
+ "label_en": "Sticker notes",
+ "label_vi": "Lời nhắn nhãn dán",
+ "kind": "notes",
+ "source": "authored",
+ "licence": "LICENCE.txt",
+ "page": {
+  "overrides": {
+   "notes.heading": {
+    "r": 2
+   }
+  },
+  "items": [
+   {
+    "id": "nostick01",
+    "t": "asset",
+    "asset": "sticker.star-face",
+    "x": 662,
+    "w": 78,
+    "h": 78,
+    "cy": 55,
+    "r": -10
+   },
+   {
+    "id": "nostick02",
+    "t": "asset",
+    "asset": "sticker.gold-star",
+    "x": 745,
+    "w": 54,
+    "h": 54,
+    "cy": 59,
+    "r": 12
+   }
+  ]
+ }
+}

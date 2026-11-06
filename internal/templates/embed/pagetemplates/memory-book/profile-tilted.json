@@ -1,0 +1,45 @@
+{
+ "id": "profile-tilted",
+ "label_en": "Tilted profile",
+ "label_vi": "Trang nghiêng",
+ "kind": "profile",
+ "source": "authored",
+ "licence": "LICENCE.txt",
+ "page": {
+  "bg": {
+   "color": "white"
+  },
+  "overrides": {
+   "profile.heading": {
+    "r": -2
+   },
+   "profile.photo": {
+    "r": 4
+   }
+  },
+  "items": [
+   {
+    "id": "prtilt01",
+    "t": "asset",
+    "asset": "shape.star",
+    "x": 846,
+    "w": 74,
+    "h": 74,
+    "cy": 60,
+    "r": 14,
+    "tint": "accent"
+   },
+   {
+    "id": "prtilt02",
+    "t": "asset",
+    "asset": "sticker.doodle-sparkle",
+    "x": 909,
+    "w": 37,
+    "h": 37,
+    "cy": 98,
+    "r": 0,
+    "tint": "soft"
+   }
+  ]
+ }
+}

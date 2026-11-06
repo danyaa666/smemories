@@ -9,6 +9,7 @@ import path from "node:path";
 import { after, before, describe, test } from "node:test";
 import { chromium } from "playwright";
 import { CLASS_BOOK_CASES, DESIGN_IMAGE, DESIGN_TITLE, HIDDEN_PHOTOS, LAYOUT_MARK, classBookPages, designOf, makeBook, makeClassBook, makeDesignClassBook, makeLayout, makeNavyLayout, photoId, SIGNATURES, studentName } from "./fixture.mjs";
+import { KINDS, layoutOf, sampleBook, shippedTemplates } from "./templates.mjs";
 import { BASE, fitBoxes, inkIn, inspect, open, openClassBook, openEditor, settleStage, raster, savePdf, serveBook, signatureBoxes, startServer, text, words } from "./lib.mjs";
 
 const squash = (x) => x.replace(/\s+/g, "");
@@ -1233,6 +1234,115 @@ describe("layout layer: the printed page is the page on screen (T-154)", () => {
       await r.page.close();
     });
   }
+
+  // T-177: every shipped page template of Memory Book, on every paper, with the sample book (photos, "Nguyễn Thị Phương Anh", three notes of which one has 2000 characters, signatures on the notes).
+  // Same parity method as above (print against screen below the standing threshold, each placed item within 2 px), and the two things a decoration must never do: cover a text of the page
+  // or a signature, and push a text of the page out of its box (the autographs and the long note flow as they do without the template).
+  const PDF_PAGE = { cover: [1], profile: [2], notes: [3, 4, 5], back: [6] }; // cover, profile, three notes (one per page), back
+  const memoryTemplates = shippedTemplates("memory-book");
+  assert.ok(KINDS.every((k) => memoryTemplates.filter((t) => t.kind === k).length >= 4), "four or more templates per page kind");
+  const plainCache = {};
+  /** The text of a sheet outside the layout layer (boxes of its glyph lines) and the signatures, then the layout items, all in CSS px of the sheet's page. */
+  const covers = (sheet) => {
+    const s = sheet.getBoundingClientRect();
+    const inset = (r, f) => ({ l: r.left + r.width * f, r: r.right - r.width * f, t: r.top + r.height * f, b: r.bottom - r.height * f });
+    const hit = (a, b) => a.l < b.r && b.l < a.r && a.t < b.b && b.t < a.b;
+    const texts = [];
+    const walker = document.createTreeWalker(sheet, NodeFilter.SHOW_TEXT);
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      if (!n.textContent.trim() || n.parentElement.closest(".mb-layer, [data-layout-item]")) continue;
+      const range = document.createRange();
+      range.selectNodeContents(n);
+      for (const r of range.getClientRects()) if (r.width > 1 && r.height > 1) texts.push({ what: n.textContent.trim().slice(0, 24), box: { l: r.left, r: r.right, t: r.top, b: r.bottom } });
+    }
+    for (const g of sheet.querySelectorAll("svg.bk-sig")) texts.push({ what: "signature", box: inset(g.getBoundingClientRect(), 0) });
+    const bad = [];
+    for (const it of sheet.querySelectorAll("[data-layout-item]")) {
+      // the painted part of the asset (the shapes inside its svg, rotated with the box), not the whole box: a tape fills 80 x 50 % of it
+      const parts = [...it.querySelectorAll("path, polygon, polyline, rect, circle, ellipse, line, image")].map((e) => e.getBoundingClientRect()).filter((r) => r.width > 0 && r.height > 0);
+      const a = parts.length ? { l: Math.min(...parts.map((r) => r.left)), r: Math.max(...parts.map((r) => r.right)), t: Math.min(...parts.map((r) => r.top)), b: Math.max(...parts.map((r) => r.bottom)) } : inset(it.getBoundingClientRect(), 0);
+      for (const t of texts) if (hit(a, t.box)) bad.push(`${it.dataset.layoutItem} covers "${t.what}"`);
+    }
+    return { bad, page: { w: s.width, h: s.height } };
+  };
+  for (const size of ["A5", "A4", "Letter"])
+    for (const tp of memoryTemplates) {
+      test(`${size} ${tp.id}: prints as drawn (difference < 0.5 %, each item within 2 px), covers no text or signature, long names and notes still fit`, async () => {
+        const mk = (stress = false) => {
+          const b = stress ? makeBook({ size, notes: 3, template: "memory-book", stress: true, signatures: true }) : sampleBook(makeBook, size, { signatures: true });
+          return b;
+        };
+        const book = mk();
+        book.layout = layoutOf({ [tp.kind]: tp.page });
+        const pdfPages = PDF_PAGE[tp.kind];
+        const plainKey = `${size}`;
+        if (!plainCache[plainKey]) {
+          const plain = await printAndShow(mk(), size, `tpl-base-${size}`);
+          const info = inspect(plain.file);
+          const diffs = {};
+          for (const k of KINDS) for (const [i, n] of PDF_PAGE[k].entries()) diffs[`${k}${i}`] = difference(raster(plain.file, n, DPI), await sheetPicture(plain.page, k, i));
+          const overflow = await plain.page.locator("[data-fit=overflow]").count();
+          await plain.page.close();
+          plainCache[plainKey] = { pages: info.pages, diffs, overflow };
+        }
+        const base = plainCache[plainKey];
+        const r = await printAndShow(book, size, `tpl-${tp.id}-${size}`);
+        const info = inspect(r.file);
+        assert.equal(info.pages, base.pages, "the same page count as the book without the template");
+        for (const [i, want] of PT[size].entries()) assert.ok(Math.abs(info.sizePt[i] - want) < 1, `${size} page size ${info.sizePt} vs ${PT[size]}`);
+        assert.ok(info.allFontsEmbedded, "every font is embedded");
+        assert.ok(squash(text(r.file)).includes(squash(sampleBook(makeBook, size).profile.full_name)), "the long Vietnamese name is in the PDF");
+        assert.equal(await r.page.locator("[data-fit=overflow]").count(), base.overflow, "the template cuts no text that the plain page does not cut");
+        const sheets = await r.page.locator(`.bk-sheet[data-page="${tp.kind}"]`).count();
+        assert.equal(sheets, pdfPages.length, `${tp.kind} pages`);
+        for (const [i, pdfPage] of pdfPages.entries()) {
+          const pdfPic = raster(r.file, pdfPage, DPI);
+          const scr = await sheetPicture(r.page, tp.kind, i);
+          assert.ok(Math.abs(pdfPic.w - scr.w) <= 2 && Math.abs(pdfPic.h - scr.h) <= 2, `${pdfPic.w}x${pdfPic.h} against ${scr.w}x${scr.h}`);
+          const diff = difference(pdfPic, scr);
+          const b0 = base.diffs[`${tp.kind}${i}`];
+          console.log(`# ${size} ${tp.id}#${i}: difference ${(diff * 100).toFixed(3)} % (the same page without the template: ${(b0 * 100).toFixed(3)} %)`);
+          assert.ok(diff - b0 < 0.005, `${size} ${tp.id}: ${(diff * 100).toFixed(3)} % of the pixels differ, ${(b0 * 100).toFixed(3)} % without the template (it may add 0.5 %)`);
+        }
+        // each placed item sits where it is on screen: its box as a fraction of its sheet in the print layout against the screen layout, within 2 px of the 192 dpi picture
+        const fractions = () => r.page.evaluate((kind) => [...document.querySelectorAll(`.bk-sheet[data-page="${kind}"]`)].map((sheet) => {
+          const s = sheet.getBoundingClientRect();
+          return [...sheet.querySelectorAll("[data-layout-item]")].map((e) => { const q = e.getBoundingClientRect(); return [e.dataset.layoutItem, (q.left - s.left) / s.width, (q.top - s.top) / s.height, (q.right - s.left) / s.width, (q.bottom - s.top) / s.height]; });
+        }), tp.kind);
+        const onScreen = await fractions();
+        await r.page.emulateMedia({ media: "print" });
+        const inPrint = await fractions();
+        const pxW = (PT[size][0] / 72) * DPI, pxH = (PT[size][1] / 72) * DPI;
+        assert.equal(inPrint[0].length, tp.page.items.length, "every item is drawn");
+        for (const [n, sheetItems] of onScreen.entries())
+          for (const [j, it] of sheetItems.entries()) {
+            const q = inPrint[n][j];
+            assert.equal(q[0], it[0]);
+            for (const [k, scale] of [[1, pxW], [2, pxH], [3, pxW], [4, pxH]]) assert.ok(Math.abs(q[k] - it[k]) * scale <= 2, `${size} ${tp.id} item ${it[0]}: edge ${k} moves ${(Math.abs(q[k] - it[k]) * scale).toFixed(1)} px between screen and print (192 dpi)`);
+          }
+        await r.page.emulateMedia({ media: null });
+        const hits = await r.page.locator(`.bk-sheet[data-page="${tp.kind}"]`).evaluateAll((els, src) => els.flatMap((e) => new Function(`return (${src})`)()(e).bad), covers.toString());
+        assert.deepEqual(hits, [], "no decoration covers a text of the page or a signature");
+        await r.page.close();
+
+        // long names and emoji everywhere (the stress book): the template adds no overflow and leaves no text outside its box
+        const sbook = mk(true);
+        sbook.layout = layoutOf({ [tp.kind]: tp.page });
+        const p2 = await browser.newPage({ viewport: { width: 1400, height: 1900 } });
+        await serveBook(p2, sbook);
+        await open(p2);
+        const withT = await p2.locator("[data-fit=overflow]").count();
+        const outside = await p2.evaluate(() => [...document.querySelectorAll(".bk-fit")].filter((e) => { const x = e.getBoundingClientRect(), s = e.closest(".bk-sheet").getBoundingClientRect(); return x.left < s.left - 1 || x.right > s.right + 1 || x.top < s.top - 1 || x.bottom > s.bottom + 1; }).length);
+        await p2.close();
+        const p3 = await browser.newPage({ viewport: { width: 1400, height: 1900 } });
+        await serveBook(p3, mk(true));
+        await open(p3);
+        const without = await p3.locator("[data-fit=overflow]").count();
+        await p3.close();
+        assert.equal(withT, without, "with the stress book the template cuts no more text than the plain page");
+        assert.equal(outside, 0, "no text box leaves its page");
+      });
+    }
 
   // T-159 rework 1 (R1): a moved template element is drawn where its stored box says. Every editable id gets an override equal to the box it already has; nothing may move,
   // wherever the template's own markup puts it (a positioned ancestor such as .mb-cover-head used to offset the box). Rects are read as fractions of the page.

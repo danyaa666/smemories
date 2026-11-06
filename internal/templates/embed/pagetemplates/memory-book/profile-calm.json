@@ -11,18 +11,26 @@
   },
   "items": [
    {
-    "id": "t1c2d3",
-    "t": "text",
-    "x": 100,
-    "w": 800,
-    "h": 70,
-    "cy": 870,
+    "id": "prcalm01",
+    "t": "asset",
+    "asset": "sticker.doodle-sparkle",
+    "x": 858,
+    "w": 66,
+    "h": 66,
+    "cy": 54,
     "r": 0,
-    "text": "Điều mình muốn nhớ mãi về lớp",
-    "font": "body",
-    "size": 20,
-    "color": "accent",
-    "align": "center"
+    "tint": "accent"
+   },
+   {
+    "id": "prcalm02",
+    "t": "asset",
+    "asset": "sticker.doodle-sparkle",
+    "x": 909,
+    "w": 37,
+    "h": 37,
+    "cy": 92,
+    "r": 0,
+    "tint": "soft"
    }
   ]
  }

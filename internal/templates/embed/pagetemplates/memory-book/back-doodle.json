@@ -1,0 +1,64 @@
+{
+ "id": "back-doodle",
+ "label_en": "Doodle back",
+ "label_vi": "Bìa sau nét vẽ",
+ "kind": "back",
+ "source": "authored",
+ "licence": "LICENCE.txt",
+ "page": {
+  "bg": {
+   "color": "white"
+  },
+  "overrides": {
+   "back.pact": {
+    "r": 2
+   }
+  },
+  "items": [
+   {
+    "id": "bkdood01",
+    "t": "asset",
+    "asset": "sticker.doodle-loops",
+    "x": 74,
+    "w": 368,
+    "h": 123,
+    "cy": 902,
+    "r": 0,
+    "tint": "accent"
+   },
+   {
+    "id": "bkdood02",
+    "t": "asset",
+    "asset": "sticker.doodle-zigzag",
+    "x": 539,
+    "w": 319,
+    "h": 98,
+    "cy": 907,
+    "r": 0,
+    "tint": "soft"
+   },
+   {
+    "id": "bkdood03",
+    "t": "asset",
+    "asset": "shape.burst",
+    "x": 846,
+    "w": 86,
+    "h": 86,
+    "cy": 61,
+    "r": 10,
+    "tint": "accent"
+   },
+   {
+    "id": "bkdood04",
+    "t": "asset",
+    "asset": "sticker.doodle-sparkle",
+    "x": 809,
+    "w": 37,
+    "h": 37,
+    "cy": 99,
+    "r": 0,
+    "tint": "soft"
+   }
+  ]
+ }
+}

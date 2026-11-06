@@ -1,0 +1,73 @@
+{
+ "id": "back-stickers",
+ "label_en": "Sticker back",
+ "label_vi": "Bìa sau nhãn dán",
+ "kind": "back",
+ "source": "authored",
+ "licence": "LICENCE.txt",
+ "page": {
+  "items": [
+   {
+    "id": "bkstick01",
+    "t": "asset",
+    "asset": "sticker.happy-cloud",
+    "x": 74,
+    "w": 123,
+    "h": 123,
+    "cy": 898,
+    "r": 0
+   },
+   {
+    "id": "bkstick02",
+    "t": "asset",
+    "asset": "sticker.star-face",
+    "x": 417,
+    "w": 110,
+    "h": 110,
+    "cy": 898,
+    "r": -8
+   },
+   {
+    "id": "bkstick03",
+    "t": "asset",
+    "asset": "sticker.cool-sun",
+    "x": 686,
+    "w": 123,
+    "h": 123,
+    "cy": 898,
+    "r": 8
+   },
+   {
+    "id": "bkstick04",
+    "t": "asset",
+    "asset": "sticker.paper-plane",
+    "x": 824,
+    "w": 123,
+    "h": 123,
+    "cy": 69,
+    "r": 10
+   },
+   {
+    "id": "bkstick05",
+    "t": "asset",
+    "asset": "sticker.red-heart",
+    "x": 245,
+    "w": 61,
+    "h": 61,
+    "cy": 911,
+    "r": -10
+   },
+   {
+    "id": "bkstick06",
+    "t": "asset",
+    "asset": "shape.heart",
+    "x": 588,
+    "w": 54,
+    "h": 54,
+    "cy": 917,
+    "r": 12,
+    "tint": "accent"
+   }
+  ]
+ }
+}

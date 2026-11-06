@@ -1,0 +1,37 @@
+{
+ "id": "notes-doodle",
+ "label_en": "Doodle notes",
+ "label_vi": "Lời nhắn nét vẽ",
+ "kind": "notes",
+ "source": "authored",
+ "licence": "LICENCE.txt",
+ "page": {
+  "bg": {
+   "color": "white"
+  },
+  "items": [
+   {
+    "id": "nodood01",
+    "t": "asset",
+    "asset": "sticker.doodle-squiggle",
+    "x": 656,
+    "w": 135,
+    "h": 49,
+    "cy": 47,
+    "r": 0,
+    "tint": "accent"
+   },
+   {
+    "id": "nodood02",
+    "t": "asset",
+    "asset": "sticker.doodle-sparkle",
+    "x": 750,
+    "w": 32,
+    "h": 32,
+    "cy": 72,
+    "r": 0,
+    "tint": "soft"
+   }
+  ]
+ }
+}
