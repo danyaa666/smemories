@@ -1,7 +1,7 @@
 {
  "id": "cover-gold",
- "label_en": "Gold cover",
- "label_vi": "Bìa vàng",
+ "label_en": "Gold star cover",
+ "label_vi": "Bìa ngôi sao vàng",
  "kind": "cover",
  "source": "authored",
  "licence": "LICENCE.txt",
@@ -11,29 +11,103 @@
   },
   "items": [
    {
-    "id": "n1a2b3",
+    "id": "nccgold01",
     "t": "asset",
-    "x": 455,
-    "w": 90,
-    "h": 70,
-    "cy": 690,
-    "r": 0,
     "asset": "shape.star",
+    "x": 461,
+    "w": 78,
+    "h": 78,
+    "cy": 700,
+    "r": 0,
     "tint": "gold"
    },
    {
-    "id": "n2a2b3",
-    "t": "text",
-    "x": 150,
-    "w": 700,
-    "h": 70,
-    "cy": 790,
-    "r": 0,
-    "text": "Những ngày không quên",
-    "font": "body",
-    "size": 18,
-    "color": "paper",
-    "align": "center"
+    "id": "nccgoldl01",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 263,
+    "w": 15,
+    "h": 15,
+    "cy": 700,
+    "r": 45,
+    "tint": "gold"
+   },
+   {
+    "id": "nccgoldl02",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 305,
+    "w": 15,
+    "h": 15,
+    "cy": 700,
+    "r": 45,
+    "tint": "gold"
+   },
+   {
+    "id": "nccgoldl03",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 347,
+    "w": 15,
+    "h": 15,
+    "cy": 700,
+    "r": 45,
+    "tint": "gold"
+   },
+   {
+    "id": "nccgoldl04",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 388,
+    "w": 15,
+    "h": 15,
+    "cy": 700,
+    "r": 45,
+    "tint": "gold"
+   },
+   {
+    "id": "nccgoldr01",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 597,
+    "w": 15,
+    "h": 15,
+    "cy": 700,
+    "r": 45,
+    "tint": "gold"
+   },
+   {
+    "id": "nccgoldr02",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 638,
+    "w": 15,
+    "h": 15,
+    "cy": 700,
+    "r": 45,
+    "tint": "gold"
+   },
+   {
+    "id": "nccgoldr03",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 680,
+    "w": 15,
+    "h": 15,
+    "cy": 700,
+    "r": 45,
+    "tint": "gold"
+   },
+   {
+    "id": "nccgoldr04",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 722,
+    "w": 15,
+    "h": 15,
+    "cy": 700,
+    "r": 45,
+    "tint": "gold"
    }
   ]
  }

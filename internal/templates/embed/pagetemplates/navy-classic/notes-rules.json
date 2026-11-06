@@ -1,0 +1,235 @@
+{
+ "id": "notes-rules",
+ "label_en": "Ruled notes",
+ "label_vi": "Lời nhắn kẻ viền",
+ "kind": "notes",
+ "source": "authored",
+ "licence": "LICENCE.txt",
+ "page": {
+  "bg": {
+   "color": "paper"
+  },
+  "items": [
+   {
+    "id": "ncnrul01",
+    "t": "asset",
+    "asset": "shape.star",
+    "x": 489,
+    "w": 22,
+    "h": 22,
+    "cy": 200,
+    "r": 0,
+    "tint": "bronze"
+   },
+   {
+    "id": "ncnrull01",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 163,
+    "w": 12,
+    "h": 12,
+    "cy": 200,
+    "r": 45,
+    "tint": "bronze"
+   },
+   {
+    "id": "ncnrull02",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 200,
+    "w": 12,
+    "h": 12,
+    "cy": 200,
+    "r": 45,
+    "tint": "bronze"
+   },
+   {
+    "id": "ncnrull03",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 237,
+    "w": 12,
+    "h": 12,
+    "cy": 200,
+    "r": 45,
+    "tint": "bronze"
+   },
+   {
+    "id": "ncnrull04",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 273,
+    "w": 12,
+    "h": 12,
+    "cy": 200,
+    "r": 45,
+    "tint": "bronze"
+   },
+   {
+    "id": "ncnrull05",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 310,
+    "w": 12,
+    "h": 12,
+    "cy": 200,
+    "r": 45,
+    "tint": "bronze"
+   },
+   {
+    "id": "ncnrull06",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 347,
+    "w": 12,
+    "h": 12,
+    "cy": 200,
+    "r": 45,
+    "tint": "bronze"
+   },
+   {
+    "id": "ncnrull07",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 384,
+    "w": 12,
+    "h": 12,
+    "cy": 200,
+    "r": 45,
+    "tint": "bronze"
+   },
+   {
+    "id": "ncnrull08",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 420,
+    "w": 12,
+    "h": 12,
+    "cy": 200,
+    "r": 45,
+    "tint": "bronze"
+   },
+   {
+    "id": "ncnrull09",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 457,
+    "w": 12,
+    "h": 12,
+    "cy": 200,
+    "r": 45,
+    "tint": "bronze"
+   },
+   {
+    "id": "ncnrulr01",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 531,
+    "w": 12,
+    "h": 12,
+    "cy": 200,
+    "r": 45,
+    "tint": "bronze"
+   },
+   {
+    "id": "ncnrulr02",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 567,
+    "w": 12,
+    "h": 12,
+    "cy": 200,
+    "r": 45,
+    "tint": "bronze"
+   },
+   {
+    "id": "ncnrulr03",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 604,
+    "w": 12,
+    "h": 12,
+    "cy": 200,
+    "r": 45,
+    "tint": "bronze"
+   },
+   {
+    "id": "ncnrulr04",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 641,
+    "w": 12,
+    "h": 12,
+    "cy": 200,
+    "r": 45,
+    "tint": "bronze"
+   },
+   {
+    "id": "ncnrulr05",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 678,
+    "w": 12,
+    "h": 12,
+    "cy": 200,
+    "r": 45,
+    "tint": "bronze"
+   },
+   {
+    "id": "ncnrulr06",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 714,
+    "w": 12,
+    "h": 12,
+    "cy": 200,
+    "r": 45,
+    "tint": "bronze"
+   },
+   {
+    "id": "ncnrulr07",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 751,
+    "w": 12,
+    "h": 12,
+    "cy": 200,
+    "r": 45,
+    "tint": "bronze"
+   },
+   {
+    "id": "ncnrulr08",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 788,
+    "w": 12,
+    "h": 12,
+    "cy": 200,
+    "r": 45,
+    "tint": "bronze"
+   },
+   {
+    "id": "ncnrulr09",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 825,
+    "w": 12,
+    "h": 12,
+    "cy": 200,
+    "r": 45,
+    "tint": "bronze"
+   },
+   {
+    "id": "ncnrul02",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 316,
+    "w": 368,
+    "h": 12,
+    "cy": 810,
+    "r": 0,
+    "tint": "bronze"
+   }
+  ]
+ }
+}

@@ -1,0 +1,53 @@
+{
+ "id": "notes-tilted",
+ "label_en": "Tilted heading",
+ "label_vi": "Tiêu đề nghiêng",
+ "kind": "notes",
+ "source": "authored",
+ "licence": "LICENCE.txt",
+ "page": {
+  "bg": {
+   "color": "paper"
+  },
+  "overrides": {
+   "notes.heading": {
+    "r": -6
+   }
+  },
+  "items": [
+   {
+    "id": "ncntilt01",
+    "t": "asset",
+    "asset": "shape.star",
+    "x": 787,
+    "w": 44,
+    "h": 44,
+    "cy": 105,
+    "r": 14,
+    "tint": "gold"
+   },
+   {
+    "id": "ncntilt02",
+    "t": "asset",
+    "asset": "shape.star",
+    "x": 846,
+    "w": 25,
+    "h": 25,
+    "cy": 145,
+    "r": -8,
+    "tint": "bronze"
+   },
+   {
+    "id": "ncntilt03",
+    "t": "asset",
+    "asset": "sticker.doodle-sparkle",
+    "x": 165,
+    "w": 37,
+    "h": 37,
+    "cy": 140,
+    "r": 0,
+    "tint": "bronze"
+   }
+  ]
+ }
+}

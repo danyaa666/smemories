@@ -1,0 +1,70 @@
+{
+ "id": "back-rules",
+ "label_en": "Banded back",
+ "label_vi": "Bìa sau dải viền",
+ "kind": "back",
+ "source": "authored",
+ "licence": "LICENCE.txt",
+ "page": {
+  "bg": {
+   "color": "ink"
+  },
+  "items": [
+   {
+    "id": "ncbrul01",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 230,
+    "w": 539,
+    "h": 12,
+    "cy": 200,
+    "r": 0,
+    "tint": "gold"
+   },
+   {
+    "id": "ncbrul02",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 230,
+    "w": 539,
+    "h": 12,
+    "cy": 214,
+    "r": 0,
+    "tint": "gold"
+   },
+   {
+    "id": "ncbrul03",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 132,
+    "w": 319,
+    "h": 12,
+    "cy": 775,
+    "r": 0,
+    "tint": "gold"
+   },
+   {
+    "id": "ncbrul04",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 549,
+    "w": 319,
+    "h": 12,
+    "cy": 775,
+    "r": 0,
+    "tint": "gold"
+   },
+   {
+    "id": "ncbrul05",
+    "t": "asset",
+    "asset": "sticker.doodle-sparkle",
+    "x": 468,
+    "w": 64,
+    "h": 64,
+    "cy": 775,
+    "r": 0,
+    "tint": "gold"
+   }
+  ]
+ }
+}

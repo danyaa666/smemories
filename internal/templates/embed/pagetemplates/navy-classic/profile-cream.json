@@ -11,18 +11,147 @@
   },
   "items": [
    {
-    "id": "n1c2d3",
-    "t": "text",
-    "x": 70,
-    "w": 860,
-    "h": 70,
-    "cy": 600,
+    "id": "ncpcrm01",
+    "t": "asset",
+    "asset": "shape.star",
+    "x": 487,
+    "w": 27,
+    "h": 27,
+    "cy": 192,
     "r": 0,
-    "text": "Điều mình muốn nhớ mãi về lớp",
-    "font": "body",
-    "size": 18,
-    "color": "bronze",
-    "align": "left"
+    "tint": "bronze"
+   },
+   {
+    "id": "ncpcrml01",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 271,
+    "w": 12,
+    "h": 12,
+    "cy": 192,
+    "r": 45,
+    "tint": "bronze"
+   },
+   {
+    "id": "ncpcrml02",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 305,
+    "w": 12,
+    "h": 12,
+    "cy": 192,
+    "r": 45,
+    "tint": "bronze"
+   },
+   {
+    "id": "ncpcrml03",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 339,
+    "w": 12,
+    "h": 12,
+    "cy": 192,
+    "r": 45,
+    "tint": "bronze"
+   },
+   {
+    "id": "ncpcrml04",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 374,
+    "w": 12,
+    "h": 12,
+    "cy": 192,
+    "r": 45,
+    "tint": "bronze"
+   },
+   {
+    "id": "ncpcrml05",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 408,
+    "w": 12,
+    "h": 12,
+    "cy": 192,
+    "r": 45,
+    "tint": "bronze"
+   },
+   {
+    "id": "ncpcrml06",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 442,
+    "w": 12,
+    "h": 12,
+    "cy": 192,
+    "r": 45,
+    "tint": "bronze"
+   },
+   {
+    "id": "ncpcrmr01",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 545,
+    "w": 12,
+    "h": 12,
+    "cy": 192,
+    "r": 45,
+    "tint": "bronze"
+   },
+   {
+    "id": "ncpcrmr02",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 580,
+    "w": 12,
+    "h": 12,
+    "cy": 192,
+    "r": 45,
+    "tint": "bronze"
+   },
+   {
+    "id": "ncpcrmr03",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 614,
+    "w": 12,
+    "h": 12,
+    "cy": 192,
+    "r": 45,
+    "tint": "bronze"
+   },
+   {
+    "id": "ncpcrmr04",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 648,
+    "w": 12,
+    "h": 12,
+    "cy": 192,
+    "r": 45,
+    "tint": "bronze"
+   },
+   {
+    "id": "ncpcrmr05",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 683,
+    "w": 12,
+    "h": 12,
+    "cy": 192,
+    "r": 45,
+    "tint": "bronze"
+   },
+   {
+    "id": "ncpcrmr06",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 717,
+    "w": 12,
+    "h": 12,
+    "cy": 192,
+    "r": 45,
+    "tint": "bronze"
    }
   ]
  }

@@ -1,0 +1,147 @@
+{
+ "id": "cover-stars",
+ "label_en": "Starry cover",
+ "label_vi": "Bìa đêm sao",
+ "kind": "cover",
+ "source": "authored",
+ "licence": "LICENCE.txt",
+ "page": {
+  "bg": {
+   "color": "ink"
+  },
+  "items": [
+   {
+    "id": "nccstar01",
+    "t": "asset",
+    "asset": "shape.star",
+    "x": 118,
+    "w": 64,
+    "h": 64,
+    "cy": 300,
+    "r": -12,
+    "tint": "gold"
+   },
+   {
+    "id": "nccstar02",
+    "t": "asset",
+    "asset": "sticker.doodle-sparkle",
+    "x": 169,
+    "w": 44,
+    "h": 44,
+    "cy": 400,
+    "r": 0,
+    "tint": "gold"
+   },
+   {
+    "id": "nccstar03",
+    "t": "asset",
+    "asset": "sticker.doodle-sparkle",
+    "x": 98,
+    "w": 78,
+    "h": 78,
+    "cy": 500,
+    "r": 0,
+    "tint": "gold"
+   },
+   {
+    "id": "nccstar04",
+    "t": "asset",
+    "asset": "shape.star",
+    "x": 165,
+    "w": 37,
+    "h": 37,
+    "cy": 570,
+    "r": 10,
+    "tint": "gold"
+   },
+   {
+    "id": "nccstar05",
+    "t": "asset",
+    "asset": "shape.star",
+    "x": 830,
+    "w": 42,
+    "h": 42,
+    "cy": 300,
+    "r": 14,
+    "tint": "gold"
+   },
+   {
+    "id": "nccstar06",
+    "t": "asset",
+    "asset": "sticker.doodle-sparkle",
+    "x": 771,
+    "w": 76,
+    "h": 76,
+    "cy": 410,
+    "r": 0,
+    "tint": "gold"
+   },
+   {
+    "id": "nccstar07",
+    "t": "asset",
+    "asset": "shape.star",
+    "x": 830,
+    "w": 66,
+    "h": 66,
+    "cy": 500,
+    "r": -8,
+    "tint": "gold"
+   },
+   {
+    "id": "nccstar08",
+    "t": "asset",
+    "asset": "sticker.doodle-sparkle",
+    "x": 793,
+    "w": 42,
+    "h": 42,
+    "cy": 580,
+    "r": 0,
+    "tint": "gold"
+   },
+   {
+    "id": "nccstar09",
+    "t": "asset",
+    "asset": "sticker.doodle-sparkle",
+    "x": 479,
+    "w": 42,
+    "h": 42,
+    "cy": 75,
+    "r": 0,
+    "tint": "gold"
+   },
+   {
+    "id": "nccstar10",
+    "t": "asset",
+    "asset": "shape.star",
+    "x": 412,
+    "w": 34,
+    "h": 34,
+    "cy": 700,
+    "r": 0,
+    "tint": "gold"
+   },
+   {
+    "id": "nccstar11",
+    "t": "asset",
+    "asset": "shape.star",
+    "x": 473,
+    "w": 54,
+    "h": 54,
+    "cy": 700,
+    "r": 0,
+    "tint": "gold"
+   },
+   {
+    "id": "nccstar12",
+    "t": "asset",
+    "asset": "shape.star",
+    "x": 554,
+    "w": 34,
+    "h": 34,
+    "cy": 700,
+    "r": 0,
+    "tint": "gold"
+   }
+  ]
+ }
+}

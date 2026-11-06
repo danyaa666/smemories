@@ -1,0 +1,114 @@
+{
+ "id": "cover-seal",
+ "label_en": "Gold seal cover",
+ "label_vi": "Bìa con dấu vàng",
+ "kind": "cover",
+ "source": "authored",
+ "licence": "LICENCE.txt",
+ "page": {
+  "bg": {
+   "color": "ink"
+  },
+  "items": [
+   {
+    "id": "nccseal0a",
+    "t": "asset",
+    "asset": "shape.burst",
+    "x": 431,
+    "w": 137,
+    "h": 137,
+    "cy": 700,
+    "r": 8,
+    "tint": "gold"
+   },
+   {
+    "id": "nccseal0b",
+    "t": "asset",
+    "asset": "shape.circle",
+    "x": 449,
+    "w": 102,
+    "h": 102,
+    "cy": 700,
+    "r": 0,
+    "tint": "ink"
+   },
+   {
+    "id": "nccseal0c",
+    "t": "asset",
+    "asset": "shape.star",
+    "x": 473,
+    "w": 55,
+    "h": 55,
+    "cy": 700,
+    "r": 0,
+    "tint": "gold"
+   },
+   {
+    "id": "nccseall01",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 267,
+    "w": 15,
+    "h": 15,
+    "cy": 700,
+    "r": 45,
+    "tint": "gold"
+   },
+   {
+    "id": "nccseall02",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 309,
+    "w": 15,
+    "h": 15,
+    "cy": 700,
+    "r": 45,
+    "tint": "gold"
+   },
+   {
+    "id": "nccseall03",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 350,
+    "w": 15,
+    "h": 15,
+    "cy": 700,
+    "r": 45,
+    "tint": "gold"
+   },
+   {
+    "id": "nccsealr01",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 635,
+    "w": 15,
+    "h": 15,
+    "cy": 700,
+    "r": 45,
+    "tint": "gold"
+   },
+   {
+    "id": "nccsealr02",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 676,
+    "w": 15,
+    "h": 15,
+    "cy": 700,
+    "r": 45,
+    "tint": "gold"
+   },
+   {
+    "id": "nccsealr03",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 718,
+    "w": 15,
+    "h": 15,
+    "cy": 700,
+    "r": 45,
+    "tint": "gold"
+   }
+  ]
+ }
+}

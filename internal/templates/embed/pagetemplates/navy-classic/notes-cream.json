@@ -11,29 +11,26 @@
   },
   "items": [
    {
-    "id": "n1e2f3",
+    "id": "ncncrm01",
     "t": "asset",
-    "x": 470,
-    "w": 60,
-    "h": 50,
-    "cy": 580,
+    "asset": "sticker.doodle-sparkle",
+    "x": 257,
+    "w": 49,
+    "h": 49,
+    "cy": 115,
     "r": 0,
-    "asset": "shape.triangle",
-    "tint": "gold"
+    "tint": "bronze"
    },
    {
-    "id": "n2e2f3",
-    "t": "text",
-    "x": 150,
-    "w": 700,
-    "h": 70,
-    "cy": 640,
+    "id": "ncncrm02",
+    "t": "asset",
+    "asset": "sticker.doodle-sparkle",
+    "x": 694,
+    "w": 49,
+    "h": 49,
+    "cy": 115,
     "r": 0,
-    "text": "Những lời nhắn đáng nhớ",
-    "font": "body",
-    "size": 16,
-    "color": "bronze",
-    "align": "center"
+    "tint": "bronze"
    }
   ]
  }
