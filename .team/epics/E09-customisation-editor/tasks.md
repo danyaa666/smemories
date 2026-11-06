@@ -980,7 +980,7 @@ Spec: .team/epics/E09-customisation-editor/35-save-page-as-template-ui.md (read 
 #### Comments
 
 ### T-177 — [E09] Shipped page templates for Memory Book: four or more looks per page kind, authored by us
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -991,17 +991,30 @@ Spec: .team/epics/E09-customisation-editor/35-save-page-as-template-ui.md (read 
 - **Assignee:** —
 - **Branch:** task/t-177-e09-shipped-page-templates-for-memory-bo
 - **PR:** 173
-- **Updated:** 2026-11-05 20:53Z by dev
-- **Comments-seen:** 2
+- **Updated:** 2026-11-06 00:35Z by leader
+- **Comments-seen:** 4
 
 Spec: .team/epics/E09-customisation-editor/36-shipped-templates-memory-book.md (read it from the main checkout). Content files only (our own authoring, no Doory material; route B), contrast and distinctness gates in Go tests, print-check case per template on A5/A4/Letter, contact sheet, docs
 
 #### Comments
 - 2026-11-05 20:53Z · dev · PR #173 head 7c56fde: 16 Memory Book templates (4 per kind), Go gates (contrast, distinct, margin, no prose/image) with bad-page proof, print-check 16x3 = 48/48, contact sheet docs/images, docs/templates.md, LICENCE. QA: run make test-integration + print-check + e2e on head; look at 3 templates per kind on A4 with long-name and no-photo student. Known: pages nearly full so decoration sits in few free spots (runtime clamps boxes inside the page, no bleed); page colour limited to paper/white/none by 4.5:1 of the book's own ink/soft text; pre-existing print-check case 'a layout adds no request except its images' failed once on an unexpected be-vietnam-pro request (not templates).
 - 2026-11-05 20:54Z · leader · Leader to QA (queued; PR #173 head 7c56fdef42bbdaa147ddec4715dfc800dfc313a2, verify the full SHA): I looked at the contact sheet. Covers (polaroid, scrapbook, sunny, title-low) and profiles are clearly different; notes and back variants differ mostly in decoration and sticker placement because their content flows (the editable list is only heading and decoration): accepted, but QA please judge whether notes-* and back-* are different enough to be a real choice and say so. Dev reports: page colour limited to paper/white/none because ink and soft text need 4.5:1 (the T-172 soft/accent page colours failed contrast and were replaced by paper); T-172 prose text items removed (ids kept); 'navy token' check in internal/booklayout/integration_test.go changed to match the quoted token (it matched 'gold' inside sticker.gold-star): check that edit does not weaken the test. Dev results: new shipped_memory_book_test.go gates (4+ per kind, unique ids/labels <= 24 chars, distinct pages, no prose/image items, 4.5:1 in all 3 themes, boxes inside the 5 mm margin on A5/A4/Letter), TestMemoryBookGatesCatchBadPages proves gates fail on mutated copies, print-check 48/48 for the templates; e2e not run by dev. QA must run: full make test-integration, go test -race for templates/booklayout, the full e2e (twice) and the full make print-check on the PR head. Dev saw one print-check case fail in an earlier full run ('a layout adds no request except its images': unexpected be-vietnam-pro font request) and did not check it against develop: reproduce on develop and on the PR head; if it fails only on the PR head it is a QA_FAIL (a template must not cause a font request). Also look at three templates per kind on A4 with a long-name student and one with no photo, apply a few through book-layout/save (T-173 apply is not merged yet unless the owner approved it) and check the print route, run the contrast and duplicate-page gates on a mutated copy of your own, and confirm no prose text or image item in any template. Counts + full SHA in your comment.
+- 2026-11-06 00:35Z · qa · QA_PASS on head 7c56fdef42bbdaa147ddec4715dfc800dfc313a2 (PR #173 head verified, CI go/web/security green, MERGEABLE).
+  RESULT LINES (local, private stack smemqa177, ports 14301-14303, SMEM_TEST_S3_ENDPOINT set):
+  - make test-integration (go test -race -count=1 -tags integration ./...): 33 packages ok, 0 FAIL, exit 0 (includes -race for internal/templates and internal/booklayout).
+  - print-check full (make print-check equivalent, npm test in tools/print-check), twice: 249 tests, 249 pass, 0 fail each (run 1 under load, run 2 alone). 48/48 template cases (16 templates x A5/A4/Letter, diff <0.5%, items within 2 px, long names fit).
+  - e2e scripts/e2e.sh twice back to back on private stack: 41 passed, 0 failed each.
+  - go vet + gofmt clean on booklayout/templates; diff vs develop has 0 files under .team/ (content json, tests, docs, contact sheet, print-check tools, LICENCE only).
+  EVIDENCE per check:
+  1 Gates bite: on a scratch copy (removed) I mutated one template at a time and ran TestMemoryBookTemplateGates: accent page colour on notes-airy -> FAIL 'ink on accent 3.68:1 ... soft 2.16:1'; profile-tilted page = profile-calm page -> FAIL 'same page'; prose text item 'Thank you all' in back-doodle -> FAIL 'holds words'; 33-char label -> FAIL (24-char gate); image item -> FAIL (validator not_own_media); sticker box x=0 -> FAIL 'leaves the 5 mm margin' on A5/A4/Letter. Unmutated: pass. Independent scan of all 16 files: 4 per kind, only asset items, no text items, no media/http, unique labels EN+VI. The integration_test.go edit (gold -> quoted "gold") still catches a gold token in tint/color and no longer false-hits sticker.gold-star: not weakened.
+  2 be-vietnam-pro font request: NOT reproduced anywhere. Case 'a layout adds no request except its images' run alone 6/6 pass on PR head and 6/6 pass on develop be600c8; also pass in both full print-check runs. Treat as an intermittent pre-existing flake of that test (it does not involve the templates: it renders the fixture layout, no shipped template); not a QA_FAIL. If it recurs, capture the URL to see whether a font-display swap races page.pdf().
+  3 Visual (A4 contact sheet regenerated by me with contact-sheet.mjs, long name 'Nguyễn Thị Phương Anh' plus 33-char class title; and a second sheet with no cover/profile/note photos): no clipping or overflow, long names wrap, photo-less covers/profile show the frame/placeholder cleanly, notes flow and fill the page on all variants. Covers (polaroid big tilt on lavender, scrapbook with stickers, sunny on paper, title-low with title under the photo) and profiles (flat photo, thick pink frame, taped photo, tilted small card) are clearly different: real choice.
+  OPINION notes-* and back-* (non-blocking, honest): NOT a real choice yet. The four notes pages are the same page; they differ only by 1-2 small stickers/tape in the heading corner and notes-airy/doodle differ mostly in white vs paper page colour. Same for back-*: identical table and pact block, only 3-6 stickers at the bottom/corner (back-stickers and back-thanks are the most distinct; back-doodle vs back-pact are near twins). A student would see this as one design with different corner decoration. It meets the letter of the gates (distinct bytes) but only weakly the spec wording 'clearly different, not recolours'. Suggest a follow-up task: let notes/back templates move or resize the heading and shift the flowing block (needs the editable list to include those elements or a heading layout option), or add a bolder decoration (large band/frame shapes, heading below), else the gallery for notes and back should be treated as 'decoration picker'.
+  Other non-blocking: decoration sits in few free spots (pages nearly full, accepted); page colour limited to paper/white/none (contrast gate). Not exercised: apply via T-173 (not merged) and manual book-layout/save click-through; the contact sheet and print-check render through the same print route and layout document, covering the print path.
+- 2026-11-06 00:35Z · leader · squash-merged PR #173 at 7c56fdef (QA_PASS: integration 33 pkgs ok, print-check 249/249, e2e 41/41; be-vietnam-pro flake not reproduced). Follow-up: notes-* and back-* variants are too alike (QA view); see leader comment.
 
 ### T-178 — [E09] Shipped page templates for Navy Classic: four or more looks per page kind, authored by us
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -1009,10 +1022,10 @@ Spec: .team/epics/E09-customisation-editor/36-shipped-templates-memory-book.md (
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-178-e09-shipped-page-templates-for-navy-clas
 - **PR:** —
-- **Updated:** 2026-11-05 by leader
+- **Updated:** 2026-11-05 23:43Z by dev
 - **Comments-seen:** 0
 
 Spec: .team/epics/E09-customisation-editor/37-shipped-templates-navy-classic.md (read it from the main checkout). Same as T-177 for the formal template: keep the frame and tone, stay inside the frame's inner rule
@@ -1035,6 +1048,25 @@ Spec: .team/epics/E09-customisation-editor/37-shipped-templates-navy-classic.md 
 - **Comments-seen:** 0
 
 Spec: .team/epics/E09-customisation-editor/38-stage2-hardening-fuzz-storage-abuse.md (read it from the main checkout). Go fuzz targets with seeds in CI, depth/size limits before decode, docs/layout-storage-budget.md with measured numbers, rate-limit and body-cap test per layout route, sentinel test for logs and metrics, text safety, threat model note
+
+#### Comments
+
+### T-180 — [E09] Make the notes and back template choices a real choice (Memory Book and Navy Classic)
+- **Status:** BACKLOG
+- **Priority:** P3
+- **Type:** feature
+- **Milestone:** M4
+- **Depends-on:** T-178
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-11-06 by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E09-customisation-editor/39-bolder-notes-back-variants.md (read it from the main checkout). QA on T-177: notes-* and back-* look alike (same page, one or two corner stickers). Inventory what may be overridden, four looks that differ at a glance per kind and template, stronger distinctness gate (overlap and colour-only twins), no runtime or validator change; report if real variety needs movable content blocks
 
 #### Comments
 
