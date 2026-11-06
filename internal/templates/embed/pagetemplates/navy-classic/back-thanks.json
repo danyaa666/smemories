@@ -11,14 +11,102 @@
   },
   "items": [
    {
-    "id": "n1g2h3",
+    "id": "ncbthx01",
     "t": "asset",
-    "x": 440,
-    "w": 120,
-    "h": 90,
-    "cy": 330,
-    "r": 0,
     "asset": "shape.heart",
+    "x": 461,
+    "w": 78,
+    "h": 78,
+    "cy": 250,
+    "r": 0,
+    "tint": "gold"
+   },
+   {
+    "id": "ncbthxl01",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 283,
+    "w": 15,
+    "h": 15,
+    "cy": 250,
+    "r": 45,
+    "tint": "gold"
+   },
+   {
+    "id": "ncbthxl02",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 325,
+    "w": 15,
+    "h": 15,
+    "cy": 250,
+    "r": 45,
+    "tint": "gold"
+   },
+   {
+    "id": "ncbthxl03",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 366,
+    "w": 15,
+    "h": 15,
+    "cy": 250,
+    "r": 45,
+    "tint": "gold"
+   },
+   {
+    "id": "ncbthxl04",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 408,
+    "w": 15,
+    "h": 15,
+    "cy": 250,
+    "r": 45,
+    "tint": "gold"
+   },
+   {
+    "id": "ncbthxr01",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 577,
+    "w": 15,
+    "h": 15,
+    "cy": 250,
+    "r": 45,
+    "tint": "gold"
+   },
+   {
+    "id": "ncbthxr02",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 619,
+    "w": 15,
+    "h": 15,
+    "cy": 250,
+    "r": 45,
+    "tint": "gold"
+   },
+   {
+    "id": "ncbthxr03",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 661,
+    "w": 15,
+    "h": 15,
+    "cy": 250,
+    "r": 45,
+    "tint": "gold"
+   },
+   {
+    "id": "ncbthxr04",
+    "t": "asset",
+    "asset": "shape.rect",
+    "x": 702,
+    "w": 15,
+    "h": 15,
+    "cy": 250,
+    "r": 45,
     "tint": "gold"
    }
   ]

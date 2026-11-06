@@ -1,0 +1,48 @@
+{
+ "id": "back-seal",
+ "label_en": "Gold seal back",
+ "label_vi": "Bìa sau con dấu vàng",
+ "kind": "back",
+ "source": "authored",
+ "licence": "LICENCE.txt",
+ "page": {
+  "bg": {
+   "color": "ink"
+  },
+  "items": [
+   {
+    "id": "ncbsea0a",
+    "t": "asset",
+    "asset": "shape.burst",
+    "x": 433,
+    "w": 135,
+    "h": 135,
+    "cy": 775,
+    "r": -8,
+    "tint": "gold"
+   },
+   {
+    "id": "ncbsea0b",
+    "t": "asset",
+    "asset": "shape.circle",
+    "x": 450,
+    "w": 100,
+    "h": 100,
+    "cy": 775,
+    "r": 0,
+    "tint": "ink"
+   },
+   {
+    "id": "ncbsea0c",
+    "t": "asset",
+    "asset": "shape.star",
+    "x": 473,
+    "w": 54,
+    "h": 54,
+    "cy": 775,
+    "r": 0,
+    "tint": "gold"
+   }
+  ]
+ }
+}

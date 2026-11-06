@@ -535,3 +535,47 @@ year and is not replaceable. The template's wording keeps its plain markup; a re
 variables to show and the class that sets a sample word); everything else is the template's `customise.tpl.navy-classic.*` locale keys.
 Print check (`tools/print-check`, "navy-classic themes x font sets, sections and texts"): every theme x font set on A5 and A4 (9 pages, none blank, that set's fonts only, long names and emoji not cut off, signatures keep the page count
 and never meet a text), hidden and reordered sections on A5 and A4, every text at its maximum length in both font sets, and an unknown design drawing the defaults.
+
+### Shipped Navy Classic templates (T-178)
+
+Sixteen templates, four per page kind, authored by us (nothing from Doory or any other source; provenance in `LICENCE.txt` of `internal/templates/embed/pagetemplates/navy-classic/`). Navy Classic is the formal template, so every look keeps the
+gold frame, the navy and cream pages and the serif letter, and stays **inside the frame's inner rule** (44 px of the 816 px page on the cover and the back, 34 px on the notes page, the 8 mm safe margin on the profile). Ornaments are restrained: gold or
+bronze stars, sparkles, rows of small diamonds, bars, a seal, and a few tilts of the template's own heading, year and portrait. The looks run from stately (a star and two dotted rules) to modern-classic (banded, tilted). The contact sheet is
+[images/page-templates-navy-classic.png](images/page-templates-navy-classic.png) (A5; `node tools/print-check/contact-sheet-navy.mjs` writes the A5, A4 and Letter sheets into `docs/images/`, `--sizes A4 --out DIR` for one other paper or folder).
+
+| Id | Kind | Look |
+|---|---|---|
+| `cover-gold` | cover | stately: one gold star under the title, a dotted rule of four diamonds on each side |
+| `cover-seal` | cover | a gold seal (burst, ring and star) under the title between short dotted rules |
+| `cover-stars` | cover | starry: stars and sparkles in both side columns, one above the cap, three small stars under the title |
+| `cover-banded` | cover | two gold bars above the cap, a bar either side of a sparkle under the title, the year tilted 5 degrees |
+| `profile-cream` | profile | a bronze star between two dotted rules of diamonds, under the heading |
+| `profile-portrait` | profile | the portrait larger (240 x 330 px) and a sparkle pair and a bronze swash under it |
+| `profile-tilted` | profile | the portrait tilted 8 degrees, a gold star on its corner, a sparkle and a small star below |
+| `profile-crest` | profile | a gold seal under the portrait and a dotted column of bronze diamonds between letter and portrait |
+| `notes-cream` | notes | a bronze sparkle each side of the heading |
+| `notes-rules` | notes | a dotted rule with a star under the heading and a bronze bar above the farewell |
+| `notes-corners` | notes | a gold sparkle in each corner inside the frame |
+| `notes-tilted` | notes | the heading tilted 6 degrees, two stars and a sparkle around it |
+| `back-thanks` | back | a gold heart over the cap between dotted rules |
+| `back-seal` | back | a gold seal under the thanks |
+| `back-stars` | back | a row of five graded stars over the cap, a sparkle, a star and a sparkle under the thanks |
+| `back-rules` | back | two gold bars over the cap, a bar either side of a sparkle under the thanks |
+
+**Rules (the file format above, plus these; all in Go tests, `internal/booklayout/shipped_navy_classic_test.go`):**
+- **Four or more per kind, unique ids and labels per kind** (case-insensitive, both languages), labels at most 24 characters (the gallery card), no two templates of a kind with the same `page` bytes.
+- **No prose, no picture.** A text item may hold only digits, punctuation and symbols (none is used: a template must never put a sentence of any language into a student's book; the four T-172 files had one each and were rewritten); no `image` item, no `bg.media`; at most 40 items.
+- **Colours.** The page colour is the template's own (`ink` on the cover and the back, `paper` on the profile and the notes) or set to the same value. The book draws its own text straight on the page and a template cannot recolour it (light and gold on the dark pages, dark and bronze on the cream ones),
+  so **the gate holds those two colours to 4.5:1 against the page colour in all three themes** (WCAG formula, the token table of `navy.css`, which a test keeps in step with the file): a `paper` cover, a `gold` page or an `ink` profile fail it. A text item, if one is ever added, is held to the same ratio. Decoration (tints) is not held to it; tints are the theme's tokens, so a theme change recolours the ornaments with the page.
+- **Boxes.** Every stored box, rotated as drawn, is inside the 8 mm safe margin of the manifest on A5, A4 and Letter and, on a page with a frame, 4 px inside its inner rule (the runtime keeps every box inside the page, so nothing bleeds). No decoration may sit on a text element that the template gives a box of its own;
+  for elements the template only tilts, and for the book's own text, the signatures, the dividers and cap, the autograph grid, the profile letter and the footer, `tools/print-check` does it on the real page (below).
+- **Where decoration goes.** The pages are nearly full. Cover: above the cap (y up to 140 px), the side columns between the school line and the title (y 270 to 620) and the band between the title and the motto (y 690 to 880, which fits A5, A4 and Letter). Profile: the band under the heading divider (y 200 to 255) and the column right of the letter below the portrait.
+  Notes: beside the heading (the default heading is 212 px wide: a long custom heading runs under such ornaments, so move them), the band between the heading divider and the grid (y 205 to 240), the band above the farewell, and the corners. Back: the bands above the cap and under the thanks.
+  The pages are laid out in design px from the top (cover, profile, notes) or centred (back), and a decoration's `cy` is a fraction of the page's height, so a band is placed where it clears on A5, A4 and Letter alike (the print check proves it on all three).
+- **Element tilts.** A moved element is drawn at its A5 place whatever the paper (`LAYOUT.natural`), so a template only tilts elements that sit at the same place on every paper (`cover.year`, `notes.heading`, `profile.photo`), never the bottom-anchored or centred ones (`back.thanks`, `cover.motto`).
+- **Bars and rules.** The smallest box the validator accepts is 10 permille of the page width, so a `shape.rect` bar is 8 px thick, not a hairline. Dotted rules are `shape.rect` boxes rotated 45 degrees (diamonds).
+- **Print-check** (`tools/print-check/templates-navy.test.mjs`, one case per template on A5, A4 and Letter, 48 cases): the sample book has the name "Nguyễn Thị Phương Anh", nine notes (the second 2000 characters, four to a page: three notes pages) with signatures and a photo on the profile. Each case checks the page count and size, that all fonts are embedded and the name is in the PDF,
+  print against screen below the standing threshold (the template may add 0.5 % to the plain page's noise), every item's box in print within 2 px of the screen at 192 dpi, **that no decoration covers a text, a signature or an ornament of the page and none crosses the frame's inner rule** (the painted shapes against the DOM), and, with the stress book (60-character names everywhere), that the template adds no cut-off text and no text leaves its page.
+  The notes templates leave the autograph alone: the editable list never includes it.
+
+**Adding one:** copy a file, change `id` (also the file name), the two labels (at most 24 characters, different from the other looks of the kind), the item ids (letters and digits, 6 to 26, unique) and the placement; keep decoration in the free places above; use only registry assets and add any new one to `LICENCE.txt`. Run `go test ./internal/booklayout/`, `node tools/print-check/contact-sheet-navy.mjs --sizes A5 --out /tmp/sheet` and look at the PNG, then `cd tools/print-check && node --test --test-name-pattern="<id>" templates-navy.test.mjs`. If you add a look, regenerate the committed A5 sheet and keep it under 600 KB.

@@ -1,0 +1,53 @@
+{
+ "id": "profile-tilted",
+ "label_en": "Tilted portrait",
+ "label_vi": "Chân dung nghiêng",
+ "kind": "profile",
+ "source": "authored",
+ "licence": "LICENCE.txt",
+ "page": {
+  "bg": {
+   "color": "paper"
+  },
+  "overrides": {
+   "profile.photo": {
+    "r": -8
+   }
+  },
+  "items": [
+   {
+    "id": "ncptilt01",
+    "t": "asset",
+    "asset": "shape.star",
+    "x": 833,
+    "w": 49,
+    "h": 49,
+    "cy": 255,
+    "r": 12,
+    "tint": "gold"
+   },
+   {
+    "id": "ncptilt02",
+    "t": "asset",
+    "asset": "sticker.doodle-sparkle",
+    "x": 672,
+    "w": 54,
+    "h": 54,
+    "cy": 700,
+    "r": 0,
+    "tint": "bronze"
+   },
+   {
+    "id": "ncptilt03",
+    "t": "asset",
+    "asset": "shape.star",
+    "x": 782,
+    "w": 29,
+    "h": 29,
+    "cy": 740,
+    "r": -10,
+    "tint": "gold"
+   }
+  ]
+ }
+}
