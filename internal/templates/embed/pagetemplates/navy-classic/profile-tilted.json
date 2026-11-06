@@ -10,6 +10,12 @@
    "color": "paper"
   },
   "overrides": {
+   "profile.eyebrow": {
+    "r": -3
+   },
+   "profile.heading": {
+    "r": -3
+   },
    "profile.photo": {
     "r": -8
    }
@@ -18,34 +24,89 @@
    {
     "id": "ncptilt01",
     "t": "asset",
-    "asset": "shape.star",
-    "x": 833,
-    "w": 49,
-    "h": 49,
-    "cy": 255,
-    "r": 12,
+    "asset": "shape.burst",
+    "x": 828,
+    "w": 98,
+    "h": 98,
+    "cy": 95,
+    "r": 10,
     "tint": "gold"
    },
    {
     "id": "ncptilt02",
     "t": "asset",
-    "asset": "sticker.doodle-sparkle",
-    "x": 672,
-    "w": 54,
-    "h": 54,
-    "cy": 700,
-    "r": 0,
-    "tint": "bronze"
+    "asset": "shape.star",
+    "x": 855,
+    "w": 44,
+    "h": 44,
+    "cy": 95,
+    "r": -8,
+    "tint": "paper"
    },
    {
     "id": "ncptilt03",
     "t": "asset",
+    "asset": "sticker.doodle-sparkle",
+    "x": 76,
+    "w": 76,
+    "h": 76,
+    "cy": 99,
+    "r": 0,
+    "tint": "bronze"
+   },
+   {
+    "id": "ncptilt10",
+    "t": "asset",
     "asset": "shape.star",
-    "x": 782,
-    "w": 29,
-    "h": 29,
-    "cy": 740,
+    "x": 762,
+    "w": 69,
+    "h": 69,
+    "cy": 596,
+    "r": -12,
+    "tint": "gold"
+   },
+   {
+    "id": "ncptilt11",
+    "t": "asset",
+    "asset": "shape.star",
+    "x": 835,
+    "w": 51,
+    "h": 51,
+    "cy": 648,
+    "r": 1,
+    "tint": "bronze"
+   },
+   {
+    "id": "ncptilt12",
+    "t": "asset",
+    "asset": "shape.star",
+    "x": 721,
+    "w": 44,
+    "h": 44,
+    "cy": 687,
     "r": -10,
+    "tint": "gold"
+   },
+   {
+    "id": "ncptilt13",
+    "t": "asset",
+    "asset": "shape.star",
+    "x": 811,
+    "w": 34,
+    "h": 34,
+    "cy": 736,
+    "r": 3,
+    "tint": "bronze"
+   },
+   {
+    "id": "ncptilt14",
+    "t": "asset",
+    "asset": "shape.star",
+    "x": 761,
+    "w": 27,
+    "h": 27,
+    "cy": 781,
+    "r": -8,
     "tint": "gold"
    }
   ]

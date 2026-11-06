@@ -10,43 +10,101 @@
    "color": "paper"
   },
   "overrides": {
+   "notes.eyebrow": {
+    "r": -6
+   },
    "notes.heading": {
     "r": -6
    }
   },
   "items": [
    {
-    "id": "ncntilt01",
+    "id": "ncntilt0a",
+    "t": "asset",
+    "asset": "shape.burst",
+    "x": 733,
+    "w": 127,
+    "h": 127,
+    "cy": 105,
+    "r": -6,
+    "tint": "gold"
+   },
+   {
+    "id": "ncntilt0b",
+    "t": "asset",
+    "asset": "shape.circle",
+    "x": 753,
+    "w": 87,
+    "h": 87,
+    "cy": 105,
+    "r": 0,
+    "tint": "paper"
+   },
+   {
+    "id": "ncntilt0c",
     "t": "asset",
     "asset": "shape.star",
-    "x": 787,
-    "w": 44,
-    "h": 44,
+    "x": 773,
+    "w": 47,
+    "h": 47,
     "cy": 105,
+    "r": 0,
+    "tint": "gold"
+   },
+   {
+    "id": "ncntilt10",
+    "t": "asset",
+    "asset": "shape.star",
+    "x": 885,
+    "w": 37,
+    "h": 37,
+    "cy": 70,
     "r": 14,
     "tint": "gold"
    },
    {
-    "id": "ncntilt02",
+    "id": "ncntilt11",
     "t": "asset",
-    "asset": "shape.star",
-    "x": 846,
-    "w": 25,
-    "h": 25,
-    "cy": 145,
-    "r": -8,
+    "asset": "sticker.doodle-sparkle",
+    "x": 145,
+    "w": 74,
+    "h": 74,
+    "cy": 102,
+    "r": 0,
     "tint": "bronze"
    },
    {
-    "id": "ncntilt03",
+    "id": "ncntilt12",
+    "t": "asset",
+    "asset": "shape.star",
+    "x": 223,
+    "w": 32,
+    "h": 32,
+    "cy": 134,
+    "r": -8,
+    "tint": "gold"
+   },
+   {
+    "id": "ncntilt13",
+    "t": "asset",
+    "asset": "shape.star",
+    "x": 113,
+    "w": 25,
+    "h": 25,
+    "cy": 138,
+    "r": 10,
+    "tint": "bronze"
+   },
+   {
+    "id": "ncntilt14",
     "t": "asset",
     "asset": "sticker.doodle-sparkle",
-    "x": 165,
-    "w": 37,
-    "h": 37,
-    "cy": 140,
+    "x": 216,
+    "w": 44,
+    "h": 44,
+    "cy": 67,
     "r": 0,
-    "tint": "bronze"
+    "tint": "gold"
    }
   ]
  }

@@ -6,31 +6,54 @@
  "source": "authored",
  "licence": "LICENCE.txt",
  "page": {
+  "bg": {
+   "color": "paper"
+  },
   "overrides": {
    "notes.heading": {
-    "r": 2
+    "r": -3
    }
   },
   "items": [
    {
     "id": "nostick01",
     "t": "asset",
-    "asset": "sticker.star-face",
-    "x": 662,
-    "w": 78,
-    "h": 78,
-    "cy": 55,
-    "r": -10
+    "asset": "sticker.happy-cloud",
+    "x": 632,
+    "w": 91,
+    "h": 91,
+    "cy": 61,
+    "r": 0
    },
    {
     "id": "nostick02",
     "t": "asset",
+    "asset": "sticker.star-face",
+    "x": 716,
+    "w": 78,
+    "h": 78,
+    "cy": 67,
+    "r": -10
+   },
+   {
+    "id": "nostick03",
+    "t": "asset",
     "asset": "sticker.gold-star",
-    "x": 745,
-    "w": 54,
-    "h": 54,
-    "cy": 59,
+    "x": 676,
+    "w": 47,
+    "h": 47,
+    "cy": 96,
     "r": 12
+   },
+   {
+    "id": "nostick04",
+    "t": "asset",
+    "asset": "sticker.paper-plane",
+    "x": 740,
+    "w": 49,
+    "h": 49,
+    "cy": 102,
+    "r": 10
    }
   ]
  }

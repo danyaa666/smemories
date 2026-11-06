@@ -1,7 +1,7 @@
 {
  "id": "profile-crest",
  "label_en": "Crest profile",
- "label_vi": "Trang cá nhân huy hiệu",
+ "label_vi": "Chân dung ấn vàng",
  "kind": "profile",
  "source": "authored",
  "licence": "LICENCE.txt",
@@ -11,43 +11,43 @@
   },
   "items": [
    {
-    "id": "ncpcrst0a",
+    "id": "ncpcrs0a",
     "t": "asset",
     "asset": "shape.burst",
-    "x": 703,
-    "w": 147,
-    "h": 147,
-    "cy": 680,
+    "x": 674,
+    "w": 225,
+    "h": 225,
+    "cy": 691,
     "r": -6,
     "tint": "gold"
    },
    {
-    "id": "ncpcrst0b",
+    "id": "ncpcrs0b",
     "t": "asset",
     "asset": "shape.circle",
-    "x": 723,
-    "w": 109,
-    "h": 109,
-    "cy": 680,
+    "x": 710,
+    "w": 153,
+    "h": 153,
+    "cy": 691,
     "r": 0,
     "tint": "paper"
    },
    {
-    "id": "ncpcrst0c",
+    "id": "ncpcrs0c",
     "t": "asset",
     "asset": "shape.star",
-    "x": 748,
-    "w": 59,
-    "h": 59,
-    "cy": 680,
+    "x": 745,
+    "w": 83,
+    "h": 83,
+    "cy": 691,
     "r": 0,
     "tint": "bronze"
    },
    {
-    "id": "ncpcrsd01",
+    "id": "ncpcrd01",
     "t": "asset",
     "asset": "shape.rect",
-    "x": 613,
+    "x": 607,
     "w": 12,
     "h": 12,
     "cy": 259,
@@ -55,10 +55,10 @@
     "tint": "bronze"
    },
    {
-    "id": "ncpcrsd02",
+    "id": "ncpcrd02",
     "t": "asset",
     "asset": "shape.rect",
-    "x": 613,
+    "x": 607,
     "w": 12,
     "h": 12,
     "cy": 306,
@@ -66,10 +66,10 @@
     "tint": "bronze"
    },
    {
-    "id": "ncpcrsd03",
+    "id": "ncpcrd03",
     "t": "asset",
     "asset": "shape.rect",
-    "x": 613,
+    "x": 607,
     "w": 12,
     "h": 12,
     "cy": 353,
@@ -77,10 +77,10 @@
     "tint": "bronze"
    },
    {
-    "id": "ncpcrsd04",
+    "id": "ncpcrd04",
     "t": "asset",
     "asset": "shape.rect",
-    "x": 613,
+    "x": 607,
     "w": 12,
     "h": 12,
     "cy": 400,
@@ -88,10 +88,10 @@
     "tint": "bronze"
    },
    {
-    "id": "ncpcrsd05",
+    "id": "ncpcrd05",
     "t": "asset",
     "asset": "shape.rect",
-    "x": 613,
+    "x": 607,
     "w": 12,
     "h": 12,
     "cy": 447,
@@ -99,10 +99,10 @@
     "tint": "bronze"
    },
    {
-    "id": "ncpcrsd06",
+    "id": "ncpcrd06",
     "t": "asset",
     "asset": "shape.rect",
-    "x": 613,
+    "x": 607,
     "w": 12,
     "h": 12,
     "cy": 495,
@@ -110,10 +110,10 @@
     "tint": "bronze"
    },
    {
-    "id": "ncpcrsd07",
+    "id": "ncpcrd07",
     "t": "asset",
     "asset": "shape.rect",
-    "x": 613,
+    "x": 607,
     "w": 12,
     "h": 12,
     "cy": 542,
@@ -121,10 +121,10 @@
     "tint": "bronze"
    },
    {
-    "id": "ncpcrsd08",
+    "id": "ncpcrd08",
     "t": "asset",
     "asset": "shape.rect",
-    "x": 613,
+    "x": 607,
     "w": 12,
     "h": 12,
     "cy": 589,
@@ -132,10 +132,10 @@
     "tint": "bronze"
    },
    {
-    "id": "ncpcrsd09",
+    "id": "ncpcrd09",
     "t": "asset",
     "asset": "shape.rect",
-    "x": 613,
+    "x": 607,
     "w": 12,
     "h": 12,
     "cy": 636,
@@ -143,10 +143,10 @@
     "tint": "bronze"
    },
    {
-    "id": "ncpcrsd10",
+    "id": "ncpcrd10",
     "t": "asset",
     "asset": "shape.rect",
-    "x": 613,
+    "x": 607,
     "w": 12,
     "h": 12,
     "cy": 683,
@@ -154,10 +154,10 @@
     "tint": "bronze"
    },
    {
-    "id": "ncpcrsd11",
+    "id": "ncpcrd11",
     "t": "asset",
     "asset": "shape.rect",
-    "x": 613,
+    "x": 607,
     "w": 12,
     "h": 12,
     "cy": 730,
@@ -165,10 +165,10 @@
     "tint": "bronze"
    },
    {
-    "id": "ncpcrsd12",
+    "id": "ncpcrd12",
     "t": "asset",
     "asset": "shape.rect",
-    "x": 613,
+    "x": 607,
     "w": 12,
     "h": 12,
     "cy": 777,
