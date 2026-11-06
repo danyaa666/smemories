@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { render } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import type { PageTemplate } from "../../api/bookLayout";
 import type { PageSize } from "../sizes";
 import { TemplatePreview } from "./TemplatePreview";
@@ -23,6 +23,18 @@ const shipped = readdirSync(ROOT, { withFileTypes: true })
       })),
   );
 const SIZES: PageSize[] = ["A5", "A4", "Letter"];
+
+// A sticker, shape or frame is drawn after its kind's chunk has loaded (`AssetSvg` calls `import("./kind-frame")` in an effect). These tests are
+// synchronous, so on a loaded machine the file could finish and the environment be torn down while that import was still running, and vitest
+// reported "EnvironmentTeardownError" as an unhandled rejection and exited 1 (T-175 QA). Loading the three kinds first makes every later import
+// resolve from the module cache, within the test.
+beforeAll(async () => {
+  await Promise.all([
+    import("../assets/kind-sticker"),
+    import("../assets/kind-shape"),
+    import("../assets/kind-frame"),
+  ]);
+});
 
 describe("TemplatePreview", () => {
   it("finds the shipped templates of both layout templates, all four kinds", () => {
