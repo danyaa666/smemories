@@ -3,6 +3,9 @@
 **Epic:** E09-customisation-editor · **Milestone:** M4 · **Risk:** low (content, manifest ids and tests; no runtime or server change allowed here) · **Priority:** P3 · **Type:** feature
 **Depends on:** T-177 (merged), T-178 (Navy Classic templates, same limitation). **Read first:** specs 36 and 37, `internal/templates/embed/pagetemplates/*/`, `internal/booklayout` (what a page template may override), `docs/templates.md` ("Layout block and layout document"), `docs/images/page-templates-memory-book.png`, QA's T-177 comment.
 
+#### Scope widened 2026-11-06 (after T-178 QA)
+QA on T-178 says the same for Navy Classic and adds that **profile-\*** are close too (crest and portrait differ a little, cream and tilted are nearly the same). So the work covers **profile, notes and back** in both templates (covers are fine and stay untouched, byte for byte). Read "notes and back" below as "profile, notes and back".
+
 #### Why
 QA on T-177 (2026-11-06): covers and profiles are a real choice, but **notes-\* and back-\* are the same page with one or two corner stickers**; notes-airy vs notes-doodle differ mainly in white vs paper colour, and back-doodle and back-pact are near twins. The notes and back pages flow their content (the notes list, the back text block), so only the heading and decoration can differ today. A student who opens the Templates panel on a notes page sees four cards that look alike. The leader accepted this for the first merge; this task fixes it without touching the runtime.
 

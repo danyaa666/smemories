@@ -882,19 +882,19 @@ Spec: .team/epics/E09-customisation-editor/31-page-templates-model-and-shipped.m
 - 2026-11-05 10:03Z · leader · merged 44f339a; QA: integration 33 pkgs ok (-race, matrix incl template-list), postman 186/420/0 x2, e2e 38/0, print-check 193/193, vitest 1120; gate negative controls fail go test; non-blocking: comment in web/src/api/bookLayout.ts says save rate limit but layout read limit is used; prod skip path verified by code read only
 
 ### T-173 — [E09] Own page templates and the apply API (Go): save my page, apply a template per section
-- **Status:** QA_PASS
+- **Status:** CHANGES_REQUESTED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
 - **Depends-on:** T-172
 - **Risk:** high
-- **Rework:** 1
+- **Rework:** 2
 - **Owner-approved:** —
-- **Assignee:** leader
+- **Assignee:** —
 - **Branch:** task/t-173-e09-own-page-templates-and-the-apply-api
 - **PR:** https://github.com/danyaa666/smemories/pull/169
-- **Updated:** 2026-11-05 20:51Z by qa
-- **Comments-seen:** 13
+- **Updated:** 2026-11-06 01:37Z by leader
+- **Comments-seen:** 14
 
 Spec: .team/epics/E09-customisation-editor/32-own-templates-and-apply-api.md (read it from the main checkout). book_template_tab migration, template-create/delete/list, apply-template in one write with one apply snapshot, limits 20 and 64 KiB, concurrency tests. Risk high: owner approval before merge
 
@@ -912,6 +912,7 @@ Spec: .team/epics/E09-customisation-editor/32-own-templates-and-apply-api.md (re
 - 2026-11-05 20:08Z · leader · Leader to QA (queued after T-168): PR #169 head acbaa5daafdd94bf1cbe2ea3f4c1e071af412a26 (verify the full SHA). Re-test of the merge with develop only (T-167). Previous QA_PASS was on 4af81307; behaviour is unchanged, the only conflict was the MustRegister line in internal/metrics/metrics.go (both sides kept). HIGH RISK, mandatory result lines on this head: full make test-integration, go test -race ./..., migration up/down/up, newman T-173 folder (--working-dir postman; whole customisation-editor collection 223 requests/508 assertions/0 failed per dev), the two-parallel-applies probe (-race -count=20 plus your live two-client probe), a quick re-run of your 401/404 cells for the new routes, the class matrix, check:api (schema.d.ts regenerated), full e2e once and print-check once (T-167 landed class-book changes in between). Diff against the earlier head: confirm nothing but the merge and the schema regeneration changed in T-173 files (git diff 4af81307 acbaa5da -- on the T-173 paths). Counts + full SHA in your comment.
 - 2026-11-05 20:51Z · qa · QA_PASS T-173 re-test, PR #169, head acbaa5daafdd94bf1cbe2ea3f4c1e071af412a26 (verified equal to PR head; CI go/web/security green, e2e/go-integration/image skipped per D-37/D-38). MERGEABLE/CLEAN; git merge-tree of the head with current origin/develop (after T-168) exit 0, no conflict. No test commits pushed by QA, nothing changed in the branch. Stack: own compose project qaretest173, ports mysql 13961 / redis 16961 / s3 19961, API 18961, e2e 18971/14971, SMEM_TEST_S3_ENDPOINT set; torn down without -v, my API stopped. RESULT LINES: (1) make -e test-integration (go test -race -count=1 -timeout 30m -tags integration ./...): 33 packages ok, 0 FAIL, exit 0 (booklayout 181 s, class 328 s, db 222 s, notes 302 s, media 162 s, yearbook 134 s). (2) go test -race -count=1 ./... (unit): 32 ok, 0 FAIL; go vet and go vet -tags integration exit 0; golangci-lint 0 issues; gofmt clean; web npm run check:api 'api schema ok'. (3) go test -race -count=20 -tags integration -run 'TestConcurrentAppliesExactlyOneWins|TestTemplateLimitTwenty' ./internal/booklayout/: ok (42 s). (4) Migration on a private DB (qa173mig_db): up applied 20261105120000_book_template_tab, down --allow-down removed the table (goose version back to 20261102120000), up again recreated it; SHOW CREATE TABLE as in spec (owner_id+public_id unique, (owner_id,created_at DESC) index, no FK). (5) newman 6.2.3 --working-dir postman, API in SMEM_ENV=dev, Setup run first, make verify-newman-users and make reset-limits before: folder T-173 (with Setup) run twice back to back: 39 requests, 90 assertions, 0 failed each (88 + 2 setup); whole customisation-editor collection: 223 requests, 508 assertions, 0 failed (matches dev). (6) Live two-client probe (my python script t173qa-r2-probe.py against the running API): 53 checks PASS, 0 FAIL. Covers: create strips image items and bg.media and reports stripped=2/item_count=2; 60-char name 200, 61 and empty 400; kind with no saved page 400; fill to exactly 20 and the 21st 409 ERROR_TEMPLATE_LIMIT data.limit 20; 6 parallel creates on the last free place = exactly one 200, five 409, total 20; over 64 KiB 413 ERROR_TOO_LARGE and no row stored; anonymous 401 and other user B 404 on template-create/delete/apply/list, A cannot apply or delete B's template (404), B cannot touch A's book (404); apply shipped to every kind (cover, profile, notes, back) replaces only that kind, version+1, newest snapshot kind apply; own template of one kind onto another 400; failed applies (unknown template 404, bad kind 400, stale base_version 409 with stored doc, negative version 400) leave layout and history byte-identical; 5 rounds of two parallel applies (shipped vs own) = one 200 and one 409, one new version, one snapshot per round; retention stays 30; restore of an apply snapshot returns the earlier document; template delete leaves the book unchanged; apply on a book with no layout creates v1. Logs and metrics: markers typed into the layout (COVER-ONE, COVER-TWO, PROFILE-KEEP, NOTES-KEEP, 'Lớp 12A1') occur 0 times in the API log and 0 times in /metrics; the apply log line has yearbook_id, kind, source, from/new version, dropped only; metrics smem_page_template_applies_total{result,source}, templates created/deleted/items_stripped, snapshots kind apply all present (created 36 = deleted 36). (7) Class matrix (AC4): go test -race -tags integration -v ./internal/class/ TestRosterHasCountsAndFlagsOnly (class admin hits template-create/delete/apply/list and the other book-layout routes), TestAdminStillHasNoRightsOverAStudentsBook, TestClassBookMatrix, TestPermissionMatrix, TestAdminRoutesAreAllInTheMatrix, plus the T-167 layout tests (TestClassBookCarriesEachMembersLayout, TestClassBookLayoutImageFollowsTheLayout, cap tests): all PASS; the full class package passed in the full run. (8) e2e (make -e e2e, run once): 41 passed, 0 failed, 0 flaky (the earlier head had a T-174 touch flake, not seen now). print-check (make -e print-check, once): 201 tests, 201 pass, 0 fail, 0 cancelled, 0 skipped (fixture layout difference 0.055 to 0.362 percent, under the 0.5 percent budget). (9) Diff check: git diff 4af81307 acbaa5da limited to the 25 files the PR changes against develop shows only 9 files changed: cmd/smemories-api/main.go (T-167 SetBookSources/SetBookObserver lines), internal/metrics/metrics.go (classLayoutsCut field, counter and MustRegister line with both sides kept, ClassLayoutsDropped method), api/openapi.yaml (class-book layout / truncated_layouts), web/src/api/schema.d.ts (same, regenerated), docs api-contract/class-permissions/class-privacy-review/observability/templates (T-167 text). All of it comes from develop (T-167); no change in internal/booklayout, internal/db, migrations, postman or any T-173 test. The PR diff against develop has 25 files and none under .team/. Non-blocking observations: dropped-asset count is only covered by the Go integration tests (as before); T-152/T-153 Postman folders need --working-dir postman for fixture upload (already known). Risk high: no merge before the owner's 'team approve T-173'.
 - 2026-11-05 20:52Z · leader · Leader: QA_PASS on the merged head acbaa5daafdd94bf1cbe2ea3f4c1e071af412a26 accepted (integration 33 pkg ok, race 32 ok, -race x20 ok, migration up/down/up ok, newman T-173 90/0 twice and full collection 223 req/508 assertions/0 failed, live probe 53/53, class matrix pass, e2e 41/0, print-check 201/201; diff vs 4af81307 only develop's T-167 files). Review of the code was done on the earlier head (comment #6); only the merge changed. Waiting for the owner: 'team approve T-173' (python3 /Users/unisoft/GolandProjects/claude-agent-team/scripts/board.py --as human approve T-173).
+- 2026-11-06 01:37Z · leader · Leader: conflict-only rework. PR #169 now conflicts with develop in docs/templates.md only (T-177 and T-178 each added a section). Merge origin/develop into the branch (no force-push), keep both sections plus your own T-173 section, run go test ./..., make lint, make test-integration for internal/booklayout and internal/templates, and the web checks if any web file changed (none expected). No other change. Report the new head SHA; QA will re-check head, docs and the touched suites only.
 
 ### T-174 — [E09] Stabilise the editor-gestures touch test (flake: 2 to 3 px against 0.5 allowed)
 - **Status:** MERGED
@@ -1014,7 +1015,7 @@ Spec: .team/epics/E09-customisation-editor/36-shipped-templates-memory-book.md (
 - 2026-11-06 00:35Z · leader · squash-merged PR #173 at 7c56fdef (QA_PASS: integration 33 pkgs ok, print-check 249/249, e2e 41/41; be-vietnam-pro flake not reproduced). Follow-up: notes-* and back-* variants are too alike (QA view); see leader comment.
 
 ### T-178 — [E09] Shipped page templates for Navy Classic: four or more looks per page kind, authored by us
-- **Status:** IN_PROGRESS
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -1022,15 +1023,25 @@ Spec: .team/epics/E09-customisation-editor/36-shipped-templates-memory-book.md (
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-178-e09-shipped-page-templates-for-navy-clas
-- **PR:** —
-- **Updated:** 2026-11-05 23:43Z by dev
-- **Comments-seen:** 0
+- **PR:** https://github.com/danyaa666/smemories/pull/174
+- **Updated:** 2026-11-06 01:36Z by leader
+- **Comments-seen:** 4
 
 Spec: .team/epics/E09-customisation-editor/37-shipped-templates-navy-classic.md (read it from the main checkout). Same as T-177 for the formal template: keep the frame and tone, stay inside the frame's inner rule
 
 #### Comments
+- 2026-11-06 00:44Z · dev · PR #174 head 15e6607. 16 Navy templates (4/kind), gates in internal/booklayout/shipped_navy_classic_test.go (independent of T-177's file: nc* names, helpers duplicated), print-check templates-navy.test.mjs 49/49, full npm test 250/250, e2e 44/44 on private stack, integration booklayout+templates ok, lint ok. Verify: contact sheet docs/images/page-templates-navy-classic.png; mutated-template demo in PR body; the four T-172 files lost their prose text items. Overlap with PR #173: only docs/templates.md (different hunks) and tools/print-check/package.json untouched by #173. Pre-existing flaky: full print-check on develop be600c8 failed 6 'memory-book themes x font sets' cases under load; a stray be-vietnam-pro request failed one T-154 test once on this branch's full run but passes alone.
+- 2026-11-06 00:45Z · leader · Leader to QA (PR #174, verify the full head SHA, expected 15e66070107c9f34257189b296a78a557be7796f): same checks as T-177 (full make test-integration, print-check, e2e, result lines with counts and full SHA); CI go/web may still be pending when you start, check it before QA_PASS. I viewed the contact sheet: covers (banded, gold, seal, stars) are a real choice; profiles and notes are close (same page, decoration differs), back pages differ by emblem; accepted as for T-177, T-180 will make notes/back bolder: give your honest view of profile-* too. Check: the four T-172 files lost their prose items (ids kept), inside the frame's inner rule on A5/A4/Letter, the print-check flake (T-154 'a layout adds no request...' be-vietnam-pro) on both this head and develop. Gates are duplicated per template (nc* helpers), fine for now.
+- 2026-11-06 01:36Z · qa · QA_PASS, PR #174 head 15e66070107c9f34257189b296a78a557be7796f (verified with gh before and after testing). CI: go, web, security pass (e2e, go-integration, image skipped by D-37/D-38).
+  RESULT LINES (local, private compose project qa178, ports 13306/16379/19000, torn down): make test-integration (go test -race -tags integration ./...) EXIT 0, 33 packages ok, 0 fail. go build + go vet clean; go test ./internal/templates/... ./internal/booklayout/... ok. print-check (cd tools/print-check && npm test) on head: 250 tests, 250 pass, 0 fail (includes 48 template cases A5/A4/Letter and the T-154 'a layout adds no request except its images' case: ok). Same command on develop 0be4dfd (clean copy): 249/249 pass, T-154 case ok. I did not reproduce the flake on either; one early develop run failed only because I had symlinked node_modules (font fallback, artefact of my setup, passes with real node_modules). Dev's 'themes x font sets' load flake not seen. e2e (scripts/e2e.sh on private stack, DB smem_test_e2e): 44 passed, 0 failed, EXIT 0.
+  AC EVIDENCE: AC1 16 files, 4 per kind, ids equal file names, both labels, unique (gate + listed test pass). AC2 mutation-checked one at a time on a scratch copy of the head, each makes go test fail: low contrast (cover-gold bg paper: 'paper on paper is 1.00:1'), duplicate page ('cover-gold and cover-seal have the same page'), prose text item (holds words), 49-char label (longer than 24), box outside inner rule (nccgold01 on A5/A4/Letter leaves the 48 px inner margin); image item is stopped by the Validate step first (not_own_media) and by the gate's own 'image item' case in TestNavyGatesCatchBadPages. AC3 print-check 48 template cases pass (stress book with 60-char names, long name 'Nguyễn Thị Phương Anh', signatures, 3 notes pages). AC4 contact sheet committed (424 KB < 600 KB) shows distinct covers; docs/templates.md updated; python scan of all 16 files: 0 text items, 0 image items, bg colour tokens only. AC5 above.
+  SCOPE: diff is 24 files: 16 template json + LICENCE.txt in navy-classic folder, shipped_navy_classic_test.go, tools/print-check (contact-sheet-navy.mjs, navy-templates.mjs, templates-navy.test.mjs, package.json test-script line), docs/templates.md (one appended section), the contact-sheet PNG. Nothing under .team/, no web/src, no Go model change. T-172 files: cover-gold, notes-cream, back-thanks, profile-cream lost their text items (prose gone); template ids and labels kept, but the item ids inside were renamed to the nc* scheme (old ids n1a2b3 etc. are referenced nowhere; non-blocking).
+  LOOKS (A4, long name 'Nguyễn Thị Phương Anh Thư Ngọc Bảo', student with no photo, rendered with a scratch copy of contact-sheet-navy.mjs, not committed): the grey portrait placeholder shows, the long name fits on one line, no ornament touches text, signature or frame on any of the 16 pages.
+  HONEST VIEW: covers are a real choice (banded, seal, stars, gold). back-* differ only by emblem and top/bottom bands, about as close as T-177. profile-* are close: all four keep the same letter/portrait layout; portrait is 15 % bigger and crest adds a diamond column plus seal, but cream vs tilted (8 degrees) read as nearly the same page at thumbnail size. notes-* are the weakest: cream, corners, rules, tilted are one page with a few ornaments, tilted heading is barely visible. Accepted as same-page limitation; T-180 should bolden notes and profile as well as back (e.g. move the portrait to the left or centre, change the heading position, a dark notes page).
+  Non-blocking: gates and nc* helpers duplicate T-177's (leader accepted); the print-check test script line differs in PR vs develop (develop's script still lists only two files), merge is clean per gh (MERGEABLE).
+- 2026-11-06 01:36Z · leader · squash-merged PR #174 at 15e66070 (QA_PASS: integration 33 pkgs ok, print-check 250/250, e2e 44/44). Profile and notes variants are close: T-180 widened to profile too.
 
 ### T-179 — [E09] Stage 2 hardening: fuzz the layout parsers, storage budget per user, abuse limits, no content in logs
 - **Status:** BACKLOG
@@ -1051,8 +1062,8 @@ Spec: .team/epics/E09-customisation-editor/38-stage2-hardening-fuzz-storage-abus
 
 #### Comments
 
-### T-180 — [E09] Make the notes and back template choices a real choice (Memory Book and Navy Classic)
-- **Status:** BACKLOG
+### T-180 — [E09] Make the profile, notes and back template choices a real choice (Memory Book and Navy Classic)
+- **Status:** TODO
 - **Priority:** P3
 - **Type:** feature
 - **Milestone:** M4
@@ -1063,11 +1074,12 @@ Spec: .team/epics/E09-customisation-editor/38-stage2-hardening-fuzz-storage-abus
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-11-06 by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-11-06 01:37Z by leader
+- **Comments-seen:** 1
 
-Spec: .team/epics/E09-customisation-editor/39-bolder-notes-back-variants.md (read it from the main checkout). QA on T-177: notes-* and back-* look alike (same page, one or two corner stickers). Inventory what may be overridden, four looks that differ at a glance per kind and template, stronger distinctness gate (overlap and colour-only twins), no runtime or validator change; report if real variety needs movable content blocks
+Spec: .team/epics/E09-customisation-editor/39-bolder-notes-back-variants.md (read it from the main checkout). QA on T-177 and T-178: profile-*, notes-* and back-* look alike (covers are fine) (same page, one or two corner stickers). Inventory what may be overridden, four looks that differ at a glance per kind and template, stronger distinctness gate (overlap and colour-only twins), no runtime or validator change; report if real variety needs movable content blocks
 
 #### Comments
+- 2026-11-06 01:37Z · leader · T-178 merged; scope widened to profile (spec 39)
 
 <!-- tasks:end -->
