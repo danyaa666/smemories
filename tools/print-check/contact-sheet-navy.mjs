@@ -14,7 +14,7 @@ const arg = (name, def) => {
 };
 const sizes = arg("sizes", "A5,A4,Letter").split(",");
 const out = arg("out", path.join(ROOT, "docs/images"));
-const cardWidth = Number(arg("width", 200)); // the width of one page in the sheet
+const cardWidth = Number(arg("width", 280)); // the width of one page in the sheet
 const all = shippedTemplates();
 const rows = Math.max(...KINDS.map((k) => all.filter((t) => t.kind === k).length));
 
