@@ -120,7 +120,7 @@ make up              # MySQL, Valkey, S3 store (once)
 make e2e             # about 20 s of set-up, then the journey in about 10 s
 ```
 
-`make e2e` creates and uses its own database `smem_test_e2e` (`make e2e E2E_DB=smem_e2e_mine` for another), never the `smemories` dev database.
+`make e2e` creates and uses its own database `smem_test_e2e` (`make e2e E2E_DB=smem_test_mine` for another; the name must match `smem_test_%`, the only grant the `smemories` account has), never the `smemories` dev database.
 
 Needs Go, Node 22, Docker for the stack, and poppler (`pdfinfo`, `pdffonts`, `pdftotext`, `pdfimages`; `brew install poppler`),
 like `make print-check`. `scripts/e2e.sh` builds and starts the API on `127.0.0.1:18080` and the built web app on `127.0.0.1:14173`
