@@ -2,7 +2,7 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } f
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import type { BookData } from "../../api/book";
-import { restoreLayoutVersion, type LayoutVersion } from "../../api/bookLayout";
+import { applyPageTemplate, restoreLayoutVersion, type LayoutVersion } from "../../api/bookLayout";
 import { deleteMedia, uploadMedia, type Media } from "../../api/yearbooks";
 import { getAsset } from "../assets";
 import { errorText } from "../../auth/errors";
@@ -25,11 +25,14 @@ import {
   newItemId,
   removeBlankText,
   removeProblems,
+  withPage,
   type LayoutItem,
 } from "./document";
 import { HistoryPanel, PreviewBanner, useErrorText } from "./HistoryPanel";
 import { pageName, targetName } from "./names";
 import { missingCount, restoreVersion } from "./versions";
+import { applyTemplate, hasWork, type TemplateCard } from "./templates";
+import { cardKey, TemplateBanner, TemplatesPanel, useTemplateErrorText } from "./TemplatesPanel";
 import { HelpSheet } from "./gestures/HelpSheet";
 import { deleteDesignImage } from "./palette/deleteImage";
 import { DesignImages } from "./palette/DesignImages";
@@ -100,9 +103,28 @@ export function EditorShell({
   const restoreOnce = useRef(false);
   const historyButton = useRef<HTMLButtonElement>(null);
   const historyText = useErrorText();
+  // templates (T-175): the panel is bound to the kind of the page being edited, and a previewed template is drawn read-only instead of that page
+  const [tplOpen, setTplOpen] = useState(false);
+  const [tplView, setTplView] = useState<{ kind: string; card: TemplateCard } | null>(null);
+  const [tplKey, setTplKey] = useState(0);
+  const [applying, setApplying] = useState(false);
+  const [confirmApply, setConfirmApply] = useState<TemplateCard | null>(null);
+  const [applyError, setApplyError] = useState("");
+  const [toastHistory, setToastHistory] = useState(false);
+  const applyOnce = useRef(false);
+  const templatesButton = useRef<HTMLButtonElement>(null);
+  const templateText = useTemplateErrorText();
+  const tplPreview = tplOpen && tplView?.kind === kind ? tplView.card : null;
   const shown = useMemo(
-    () => ({ ...data, layout: viewed ? viewed.layout : ed.doc }),
-    [data, ed.doc, viewed],
+    () => ({
+      ...data,
+      layout: viewed
+        ? viewed.layout
+        : tplPreview
+          ? withPage(ed.doc, kind, tplPreview.page)
+          : ed.doc,
+    }),
+    [data, ed.doc, viewed, tplPreview, kind],
   );
   const [said, say] = useState("");
   const [asking, setAsking] = useState(false);
@@ -123,7 +145,8 @@ export function EditorShell({
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const { states: fits, Provider: Fit } = useFitReport();
-  const readOnly = ed.saveState === "conflict" || viewed !== null;
+  const readOnly =
+    ed.saveState === "conflict" || viewed !== null || tplPreview !== null || applying;
 
   const pb = useMemo(() => pageBox(size), [size]);
   // the stage reports where it measured the template's own elements, so the panel shows the numbers of what is drawn
@@ -290,6 +313,10 @@ export function EditorShell({
     setNotice("");
     select([]);
     const to = pages[i]!;
+    if (to.section !== kind) {
+      setTplView(null); // another kind leaves the preview; the panel follows the new kind
+      setApplyError("");
+    }
     const arrived = t("editor.pageOf", { n: i + 1, total: pages.length, name: pageName(t, to) });
     say(to.section === "notes" ? `${arrived}. ${t("editor.notesShared")}` : arrived);
   };
@@ -386,12 +413,93 @@ export function EditorShell({
       setViewed(null);
       setHistoryKey((k) => k + 1); // the replaced document is a new "Before restore" row
       setToast(msg);
+      setToastHistory(false);
       say(msg);
       return;
     }
     setRestoreError(historyText(r.error, r.retryAfter));
     if (r.error === "conflict") setViewed(null); // the conflict banner takes over with the stored document
     if (r.error === "gone") setHistoryKey((k) => k + 1);
+  };
+
+  // --- page templates (T-175) ---
+  const closeTemplates = useCallback(() => {
+    setTplView(null);
+    setApplyError("");
+    setTplOpen(false);
+    setTimeout(() => templatesButton.current?.focus(), 0);
+  }, [setTplView, setApplyError, setTplOpen]);
+  const openTemplates = () => {
+    setViewed(null); // one side panel at a time
+    setRestoreError("");
+    setHistoryOpen(false);
+    setApplyError("");
+    setTplOpen(true);
+  };
+  const openHistory = () => {
+    setTplView(null);
+    setApplyError("");
+    setTplOpen(false);
+    setHistoryOpen(true);
+  };
+  const backToCurrentTemplate = useCallback(() => {
+    setTplView(null);
+    setApplyError("");
+    say(t("editor.templates.backDone"));
+  }, [t, say, setTplView, setApplyError]);
+  const previewTemplate = (card: TemplateCard) => {
+    select([]);
+    setEditing(null);
+    setNotice("");
+    setApplyError("");
+    setTplView({ kind, card });
+    say(t("editor.templates.previewingShort"));
+  };
+  const what = t(`editor.templates.what.${kind}`);
+  const leaving = tplPreview
+    ? missingCount({ v: 1, pages: { [kind]: tplPreview.page } }, (id) => !!getAsset(id), null)
+    : 0;
+  const doApply = async (card: TemplateCard) => {
+    if (applyOnce.current) return; // a double click sends one request
+    applyOnce.current = true;
+    const k = kind;
+    const name = t(`editor.templates.what.${k}`);
+    setApplying(true);
+    setApplyError("");
+    const r = await applyTemplate(card, {
+      settle: ed.settle,
+      version: ed.currentVersion,
+      apply: (source, id, base) => applyPageTemplate(bookId, base, k, source, id),
+      adopt: ed.adopt,
+      enterConflict: ed.enterConflict,
+    });
+    applyOnce.current = false;
+    setApplying(false);
+    setConfirmApply(null);
+    if (r.ok) {
+      const msg =
+        t("editor.templates.applied", { what: name }) +
+        (r.dropped > 0 ? ` ${t("editor.templates.droppedMsg", { count: r.dropped })}` : "");
+      setTplView(null);
+      setTplOpen(false);
+      setToast(msg);
+      setToastHistory(true);
+      say(msg);
+      setTimeout(() => templatesButton.current?.focus(), 0);
+      return;
+    }
+    setApplyError(templateText(r.error, r.retryAfter));
+    if (r.error === "conflict") setTplView(null); // the conflict banner takes over with the stored document
+    if (r.error === "gone" || r.error === "mismatch") {
+      setTplView(null);
+      setTplKey((n) => n + 1); // read the list again
+    }
+  };
+  const askApply = (card: TemplateCard) => {
+    if (applyOnce.current) return;
+    setApplyError("");
+    if (hasWork(ed.doc, kind)) setConfirmApply(card);
+    else void doApply(card); // nothing to lose
   };
 
   // undo and redo from the keyboard (not while a text area has the keys, T-161)
@@ -414,6 +522,7 @@ export function EditorShell({
         el?.tagName !== "SELECT" &&
         !asking &&
         !confirmRestore &&
+        !confirmApply &&
         !deleting
       ) {
         e.preventDefault();
@@ -424,6 +533,10 @@ export function EditorShell({
       if (e.key === "Escape" && historyOpen && !asking && !confirmRestore && !deleting) {
         e.preventDefault();
         return viewed ? backToCurrent() : closeHistory();
+      }
+      if (e.key === "Escape" && tplOpen && !asking && !confirmApply && !deleting) {
+        e.preventDefault();
+        return tplPreview ? backToCurrentTemplate() : closeTemplates();
       }
       if (e.key === "Escape" && !asking) return choose([]);
       if (!mod || readOnly) return;
@@ -449,6 +562,11 @@ export function EditorShell({
     deleting,
     backToCurrent,
     closeHistory,
+    tplOpen,
+    tplPreview,
+    confirmApply,
+    backToCurrentTemplate,
+    closeTemplates,
   ]);
 
   if (ed.saveState === "gone")
@@ -500,7 +618,7 @@ export function EditorShell({
           type="button"
           ref={historyButton}
           aria-expanded={historyOpen}
-          onClick={() => (historyOpen ? closeHistory() : setHistoryOpen(true))}
+          onClick={() => (historyOpen ? closeHistory() : openHistory())}
         >
           <svg
             aria-hidden="true"
@@ -516,6 +634,28 @@ export function EditorShell({
           </svg>{" "}
           {t("editor.history.button")}
         </button>
+        {spec && (
+          <button
+            type="button"
+            ref={templatesButton}
+            aria-expanded={tplOpen}
+            onClick={() => (tplOpen ? closeTemplates() : openTemplates())}
+          >
+            <svg
+              aria-hidden="true"
+              width="14"
+              height="14"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+            >
+              <rect x="2" y="2" width="12" height="12" rx="1.5" />
+              <path d="M2 6.5h12M6.5 6.5V14" />
+            </svg>{" "}
+            {t("editor.templates.button")}
+          </button>
+        )}
         <SaveStatus state={ed.saveState} dirty={ed.dirty} />
         <button
           type="button"
@@ -636,13 +776,27 @@ export function EditorShell({
       {toast && (
         <Banner
           variant="warning"
-          action={<Button onClick={() => setToast("")}>{t("editor.history.dismiss")}</Button>}
+          action={
+            <>
+              {toastHistory && (
+                <Button
+                  onClick={() => {
+                    setToast("");
+                    openHistory();
+                  }}
+                >
+                  {t("editor.templates.undoInHistory")}
+                </Button>
+              )}
+              <Button onClick={() => setToast("")}>{t("editor.history.dismiss")}</Button>
+            </>
+          }
         >
           {toast}
         </Banner>
       )}
       <div
-        className={`ed-grid${paletteOpen ? " has-palette" : ""}${viewed ? " is-previewing" : ""}`}
+        className={`ed-grid${paletteOpen ? " has-palette" : ""}${viewed || tplPreview ? " is-previewing" : ""}`}
       >
         <PageStrip
           data={stripData}
@@ -696,6 +850,38 @@ export function EditorShell({
               </p>
             )}
           </HistoryPanel>
+        ) : tplOpen ? (
+          <TemplatesPanel
+            key={tplKey}
+            bookId={bookId}
+            kind={kind}
+            data={data}
+            doc={ed.doc}
+            size={size}
+            bookT={bookT}
+            previewId={tplPreview ? cardKey(tplPreview) : null}
+            busy={applying || ed.saveState === "conflict"}
+            announce={say}
+            onPreview={previewTemplate}
+            onApply={askApply}
+            onDeleted={(c) => setTplView((v) => (v && cardKey(v.card) === cardKey(c) ? null : v))}
+          >
+            {tplPreview && (
+              <TemplateBanner
+                name={tplPreview.name}
+                what={what}
+                leaving={leaving}
+                busy={applying}
+                onApply={() => askApply(tplPreview)}
+                onBack={backToCurrentTemplate}
+              />
+            )}
+            {applyError && (
+              <p role="alert" className="error">
+                {applyError}
+              </p>
+            )}
+          </TemplatesPanel>
         ) : (
           <PropertyPanel
             doc={ed.doc}
@@ -761,6 +947,19 @@ export function EditorShell({
           onCancel={() => !restoring && setConfirmRestore(false)}
         >
           <p>{t("editor.history.confirmBody")}</p>
+        </Dialog>
+      )}
+      {confirmApply && (
+        <Dialog
+          title={t("editor.templates.confirmTitle")}
+          confirmLabel={t("editor.templates.confirmApply")}
+          cancelLabel={t("editor.templates.cancel")}
+          danger
+          busy={applying}
+          onConfirm={() => void doApply(confirmApply)}
+          onCancel={() => !applying && setConfirmApply(null)}
+        >
+          <p>{t("editor.templates.confirmBody", { what })}</p>
         </Dialog>
       )}
       {asking && (

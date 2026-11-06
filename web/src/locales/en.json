@@ -948,7 +948,9 @@
       "kind": {
         "auto": "Autosave",
         "reset": "Before reset",
-        "restore": "Before restore"
+        "restore": "Before restore",
+        "apply": "Before template",
+        "other": "Earlier version"
       },
       "previewing": "Previewing a version from {{time}}. Your current work is unchanged.",
       "previewingShort": "Previewing an earlier version. Your current work is unchanged.",
@@ -1285,6 +1287,67 @@
       "saveFailed": "Your pages could not be saved, so the image was not deleted. Try again when the layout is saved.",
       "deleteFailed": "The pages are saved without the image, but it could not be deleted."
     },
-    "delete": "Delete"
+    "delete": "Delete",
+    "templates": {
+      "button": "Templates",
+      "title": {
+        "cover": "Templates for the cover",
+        "profile": "Templates for the profile page",
+        "notes": "Templates for the notes pages",
+        "back": "Templates for the back cover"
+      },
+      "what": {
+        "cover": "the cover",
+        "profile": "the profile page",
+        "notes": "every notes page",
+        "back": "the back cover"
+      },
+      "notesShared": "A notes template applies to every notes page.",
+      "refresh": "Refresh",
+      "loading": "Loading templates...",
+      "list": "Templates",
+      "shipped": "Shipped",
+      "own": "My templates",
+      "empty": "No templates for this page yet.",
+      "items_one": "{{count}} item",
+      "items_other": "{{count}} items",
+      "source": {
+        "shipped": "shipped",
+        "own": "my template"
+      },
+      "cardLabel": "Template {{name}}, {{items}}, {{source}}",
+      "noImages": "Images not included",
+      "preview": "Preview",
+      "apply": "Apply",
+      "delete": "Delete",
+      "previewing": "Previewing the template '{{name}}' on {{what}}. Your page is unchanged.",
+      "previewingShort": "Previewing a template. Your page is unchanged.",
+      "willLeaveOut_one": "1 item will be left out because its image or sticker no longer exists.",
+      "willLeaveOut_other": "{{count}} items will be left out because their image or sticker no longer exists.",
+      "applyTo": "Apply to {{what}}",
+      "back": "Back to current",
+      "backDone": "Back to your current page.",
+      "confirmTitle": "Apply this template?",
+      "confirmBody": "This replaces the layout of {{what}}: moved elements, added text, stickers and background. Your current version is kept in the history. Undo and redo start again, because they cannot go back across a template.",
+      "confirmApply": "Apply template",
+      "cancel": "Cancel",
+      "applied": "Template applied to {{what}}.",
+      "droppedMsg_one": "1 item could not be applied because its image or sticker no longer exists.",
+      "droppedMsg_other": "{{count}} items could not be applied because their image or sticker no longer exists.",
+      "undoInHistory": "Undo in History",
+      "deleteTitle": "Delete this template?",
+      "deleteBody": "Delete the template '{{name}}'? Books that already used it are not changed.",
+      "deleted": "Template '{{name}}' deleted.",
+      "err": {
+        "conflict": "This book was changed in another tab or device, so no template was applied. Choose which version to keep above.",
+        "invalid": "This template no longer fits the book's design, so it was not applied. Go back to your current page or refresh the list.",
+        "mismatch": "This template was made for another design of the book and cannot be applied. The list was refreshed.",
+        "gone": "This template no longer exists. The list was refreshed.",
+        "busy": "Too many requests. Try again in {{seconds}} s.",
+        "offline": "You are offline. Check your connection and try again.",
+        "unsaved": "Your latest changes could not be saved yet, so no template was applied. Try again in a moment.",
+        "other": "Something went wrong. Nothing was changed."
+      }
+    }
   }
 }

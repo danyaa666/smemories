@@ -57,3 +57,26 @@ export const listPageTemplates = (yearbookId: string, kind?: string) =>
     yearbook_id: yearbookId,
     ...(kind === undefined ? {} : { kind }),
   });
+
+// Own templates and apply (T-173, screen T-175). `apply-template` is the only one of them that writes the layout; all share the save rate limit.
+export type TemplateSource = PageTemplate["source"];
+
+/** Deletes one of the caller's own templates (404 for an unknown or foreign id); books that used it do not change. */
+export const deleteOwnTemplate = (id: string) =>
+  postJson<void>("/book-layout/template-delete", { id });
+
+/** Replaces `pages.<kind>` with the template's page in one write; the answer is the whole new document, like `restore`. */
+export const applyPageTemplate = (
+  yearbookId: string,
+  baseVersion: number,
+  kind: string,
+  source: TemplateSource,
+  templateId: string,
+) =>
+  postJson<LayoutRestored>("/book-layout/apply-template", {
+    yearbook_id: yearbookId,
+    base_version: baseVersion,
+    kind,
+    source,
+    template_id: templateId,
+  });

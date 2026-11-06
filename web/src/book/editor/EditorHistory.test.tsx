@@ -124,6 +124,24 @@ describe("opening", () => {
     );
   });
 
+  it("labels a snapshot made by applying a template, and an unknown future kind neutrally (T-175)", async () => {
+    const v: MockVersion[] = [
+      { id: id(9), version: 9, kind: "apply", created_at: NOW - 60_000, layout: cover("a") },
+      { id: id(8), version: 8, kind: "future-kind", created_at: NOW - 120_000, layout: cover("b") },
+    ];
+    await mount(v);
+    const rows = await open();
+    expect(rows.map((r) => r.getAttribute("aria-label"))).toEqual([
+      "1 minute ago, Before template, 1 item",
+      "2 minutes ago, Earlier version, 1 item",
+    ]);
+    cleanup();
+    await i18n.changeLanguage("vi");
+    await mount(v);
+    await userEvent.click(screen.getByRole("button", { name: /Lịch sử/ }));
+    expect((await screen.findAllByRole("radio"))[0]).toHaveAccessibleName(/Trước khi áp dụng mẫu/);
+  });
+
   it("shows at most 30 rows", async () => {
     const many: MockVersion[] = Array.from({ length: 35 }, (_, i) => ({
       id: id(100 + i),
