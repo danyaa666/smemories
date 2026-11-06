@@ -948,7 +948,9 @@
       "kind": {
         "auto": "Tự động lưu",
         "reset": "Trước khi đặt lại",
-        "restore": "Trước khi khôi phục"
+        "restore": "Trước khi khôi phục",
+        "apply": "Trước khi áp dụng mẫu",
+        "other": "Phiên bản trước"
       },
       "previewing": "Đang xem trước phiên bản lúc {{time}}. Bản hiện tại của bạn không thay đổi.",
       "previewingShort": "Đang xem trước một phiên bản cũ. Bản hiện tại của bạn không thay đổi.",
@@ -1285,6 +1287,67 @@
       "saveFailed": "Không lưu được các trang nên ảnh chưa bị xoá. Hãy thử lại khi bố cục đã lưu.",
       "deleteFailed": "Các trang đã lưu không còn ảnh, nhưng không xoá được ảnh."
     },
-    "delete": "Xoá"
+    "delete": "Xoá",
+    "templates": {
+      "button": "Mẫu trang",
+      "title": {
+        "cover": "Mẫu cho bìa",
+        "profile": "Mẫu cho trang giới thiệu",
+        "notes": "Mẫu cho các trang lưu bút",
+        "back": "Mẫu cho bìa sau"
+      },
+      "what": {
+        "cover": "bìa",
+        "profile": "trang giới thiệu",
+        "notes": "mọi trang lưu bút",
+        "back": "bìa sau"
+      },
+      "notesShared": "Mẫu cho trang lưu bút áp dụng cho mọi trang lưu bút.",
+      "refresh": "Làm mới",
+      "loading": "Đang tải các mẫu...",
+      "list": "Các mẫu",
+      "shipped": "Có sẵn",
+      "own": "Mẫu của tôi",
+      "empty": "Chưa có mẫu nào cho trang này.",
+      "items_one": "{{count}} mục",
+      "items_other": "{{count}} mục",
+      "source": {
+        "shipped": "có sẵn",
+        "own": "mẫu của tôi"
+      },
+      "cardLabel": "Mẫu {{name}}, {{items}}, {{source}}",
+      "noImages": "Không kèm ảnh",
+      "preview": "Xem trước",
+      "apply": "Áp dụng",
+      "delete": "Xóa",
+      "previewing": "Đang xem trước mẫu '{{name}}' trên {{what}}. Trang của bạn không thay đổi.",
+      "previewingShort": "Đang xem trước một mẫu. Trang của bạn không thay đổi.",
+      "willLeaveOut_one": "1 mục sẽ bị bỏ vì ảnh hoặc hình dán của nó không còn.",
+      "willLeaveOut_other": "{{count}} mục sẽ bị bỏ vì ảnh hoặc hình dán của chúng không còn.",
+      "applyTo": "Áp dụng cho {{what}}",
+      "back": "Quay lại bản hiện tại",
+      "backDone": "Đã quay lại trang hiện tại của bạn.",
+      "confirmTitle": "Áp dụng mẫu này?",
+      "confirmBody": "Việc này thay bố cục của {{what}}: các phần tử đã di chuyển, chữ đã thêm, hình dán và nền. Bản hiện tại của bạn được giữ trong lịch sử. Hoàn tác và làm lại bắt đầu lại, vì không thể quay ngược qua một lần áp dụng mẫu.",
+      "confirmApply": "Áp dụng mẫu",
+      "cancel": "Hủy",
+      "applied": "Đã áp dụng mẫu cho {{what}}.",
+      "droppedMsg_one": "1 mục không áp dụng được vì ảnh hoặc hình dán của nó không còn.",
+      "droppedMsg_other": "{{count}} mục không áp dụng được vì ảnh hoặc hình dán của chúng không còn.",
+      "undoInHistory": "Hoàn tác trong Lịch sử",
+      "deleteTitle": "Xóa mẫu này?",
+      "deleteBody": "Xóa mẫu '{{name}}'? Các cuốn sách đã dùng mẫu này không thay đổi.",
+      "deleted": "Đã xóa mẫu '{{name}}'.",
+      "err": {
+        "conflict": "Cuốn sách đã được sửa ở tab hoặc thiết bị khác nên chưa áp dụng mẫu nào. Hãy chọn giữ phiên bản nào ở phía trên.",
+        "invalid": "Mẫu này không còn khớp với thiết kế của cuốn sách nên chưa được áp dụng. Hãy quay lại trang hiện tại hoặc làm mới danh sách.",
+        "mismatch": "Mẫu này được làm cho một thiết kế khác của cuốn sách nên không áp dụng được. Danh sách đã được làm mới.",
+        "gone": "Mẫu này không còn nữa. Danh sách đã được làm mới.",
+        "busy": "Quá nhiều yêu cầu. Thử lại sau {{seconds}} giây.",
+        "offline": "Bạn đang ngoại tuyến. Kiểm tra kết nối rồi thử lại.",
+        "unsaved": "Các thay đổi mới nhất chưa lưu được nên chưa áp dụng mẫu nào. Hãy thử lại sau giây lát.",
+        "other": "Có lỗi xảy ra. Không có gì bị thay đổi."
+      }
+    }
   }
 }

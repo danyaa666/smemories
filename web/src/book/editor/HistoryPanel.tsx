@@ -159,7 +159,9 @@ export function HistoryPanel({
         <div role="radiogroup" aria-label={t("editor.history.list")} className="ed-history-list">
           {list.rows.map((r, i) => {
             const when = relativeTime(r.created_at, list.at, loc);
-            const kind = t(`editor.history.kind.${r.kind}`);
+            const kind = t(`editor.history.kind.${r.kind}`, {
+              defaultValue: t("editor.history.kind.other"), // a kind a newer server adds
+            });
             const items = t("editor.history.items", { count: r.item_count });
             return (
               <button

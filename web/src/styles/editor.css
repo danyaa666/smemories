@@ -22,6 +22,13 @@
   font: inherit;
   cursor: pointer;
 }
+/* tighter than a panel button: the Templates button (T-175) must not push "Keyboard shortcuts" onto a second row of the first toolbar */
+.ed-toolbar button {
+  padding-inline: var(--space-2);
+}
+.ed-toolbar {
+  column-gap: var(--space-2);
+}
 .ed-toolbar .btn-primary {
   background: var(--color-primary);
   border-color: var(--color-primary);
@@ -625,4 +632,53 @@
 .ed-grid.is-previewing .ed-stage {
   outline: 3px dashed var(--color-primary);
   outline-offset: -3px;
+}
+
+/* templates panel (T-175): it takes the property panel's place; each card is a radio (thumbnail, name, count) with its buttons under it */
+.ed-templates:focus {
+  outline: none;
+}
+.ed-tpl-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.ed-tpl-list {
+  margin-top: var(--space-3);
+}
+.ed-tpl-card {
+  display: grid;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
+}
+.ed-panel .ed-tpl-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: var(--space-2);
+  text-align: left;
+}
+.ed-panel .ed-tpl-pick[aria-checked="true"] {
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary);
+}
+.ed-tpl-thumb {
+  overflow: hidden;
+  border: 1px solid var(--color-line);
+  background: #f2f2f2; /* the neutral placeholder of a thumbnail that is not drawn (yet) */
+}
+.ed-tpl-name {
+  font-weight: 600;
+}
+.ed-tpl-buttons {
+  display: flex;
+  gap: var(--space-2);
+}
+@media (pointer: coarse) {
+  .ed-panel .ed-tpl-pick,
+  .ed-tpl-buttons button,
+  .ed-tpl-actions button {
+    min-height: 44px;
+  }
 }

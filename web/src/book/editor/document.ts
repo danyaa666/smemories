@@ -37,7 +37,8 @@ export const emptyDoc = (): LayoutDoc => ({ v: 1, pages: {} });
 const refuse = (doc: LayoutDoc, refused: Refusal): OpResult => ({ doc, refused });
 const ok = (doc: LayoutDoc): OpResult => ({ doc });
 const page = (doc: LayoutDoc, kind: string): Page => doc.pages[kind] ?? {};
-const withPage = (doc: LayoutDoc, kind: string, p: Page): LayoutDoc => ({
+/** The document with `pages.<kind>` replaced by `p`; nothing else changes and `doc` is not touched (also used to preview a template, T-175). */
+export const withPage = (doc: LayoutDoc, kind: string, p: Page): LayoutDoc => ({
   ...doc,
   pages: { ...doc.pages, [kind]: p },
 });

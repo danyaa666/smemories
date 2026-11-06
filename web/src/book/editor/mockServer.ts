@@ -10,9 +10,21 @@ export type MockMedia = { id: string; width: number; height: number };
 export type MockVersion = {
   id: string;
   version: number;
-  kind: "auto" | "reset" | "restore";
+  kind: "auto" | "reset" | "restore" | "apply" | (string & {});
   created_at: number;
   layout: LayoutDoc;
+};
+
+/** A page template as `template-list` answers it (T-173); `kind` filters the list. */
+export type MockTemplate = {
+  id: string;
+  source: "shipped" | "own";
+  label_en: string;
+  label_vi: string;
+  kind: string;
+  item_count: number;
+  created_at?: number;
+  page: LayoutDoc["pages"][string];
 };
 
 export function mockServer(init: {
@@ -22,6 +34,8 @@ export function mockServer(init: {
   media?: MockMedia[];
   /** The book's history, newest first (version-list / version-get / restore). */
   versions?: MockVersion[];
+  /** The page templates (template-list / template-delete / apply-template, T-175). */
+  templates?: MockTemplate[];
 }) {
   const s = {
     version: init.version,
@@ -41,6 +55,19 @@ export function mockServer(init: {
     /** Answers for the next restore calls (consumed one per call); `dropped` is what the next successful restore reports. */
     restoreScript: [] as Step[],
     dropped: 0,
+    templates: [...(init.templates ?? [])],
+    /** Calls of the template routes, in order: "list:<kind>", "delete:<id>", "apply:<source>:<id>@<base_version>". */
+    tcalls: [] as string[],
+    applies: [] as {
+      kind: string;
+      source: string;
+      template_id: string;
+      base_version: number;
+    }[],
+    /** Answers for the next list, delete and apply calls (consumed one per call). */
+    listScript: [] as Step[],
+    deleteScript: [] as Step[],
+    applyScript: [] as Step[],
     /** A second client saved: moves the stored version on. */
     otherTab(layout: LayoutDoc | null) {
       s.version++;
@@ -146,6 +173,50 @@ export function mockServer(init: {
         s.version++;
         s.layout = v.layout;
         return body({ version: s.version, updated_at: 1, layout: v.layout, dropped: s.dropped });
+      }
+      if (url === "/api/book-layout/template-list") {
+        const b = JSON.parse(String(req?.body)) as { kind?: string };
+        s.tcalls.push(`list:${b.kind}`);
+        const step = s.listScript.shift();
+        if (step) return step();
+        return body({ next_id: "", items: s.templates.filter((x) => x.kind === b.kind) });
+      }
+      if (url === "/api/book-layout/template-delete") {
+        const b = JSON.parse(String(req?.body)) as { id: string };
+        s.tcalls.push(`delete:${b.id}`);
+        const step = s.deleteScript.shift();
+        if (step) return step();
+        if (!s.templates.some((x) => x.id === b.id && x.source === "own"))
+          return fail(404, "ERROR_NOT_FOUND");
+        s.templates = s.templates.filter((x) => x.id !== b.id);
+        return body({});
+      }
+      if (url === "/api/book-layout/apply-template") {
+        const b = JSON.parse(String(req?.body)) as {
+          kind: string;
+          source: string;
+          template_id: string;
+          base_version: number;
+        };
+        s.tcalls.push(`apply:${b.source}:${b.template_id}@${b.base_version}`);
+        s.applies.push(b);
+        const step = s.applyScript.shift();
+        if (step) return step();
+        const x = s.templates.find((y) => y.id === b.template_id && y.source === b.source);
+        if (!x) return fail(404, "ERROR_NOT_FOUND");
+        if (b.base_version !== s.version)
+          return fail(409, "ERROR_VERSION_CONFLICT", { version: s.version, layout: s.layout });
+        const before = s.layout ?? { v: 1 as const, pages: {} };
+        s.versions.unshift({
+          id: `A${s.version}`.padEnd(26, "0"),
+          version: s.version,
+          kind: "apply",
+          created_at: Date.now(),
+          layout: before,
+        });
+        s.version++;
+        s.layout = { ...before, pages: { ...before.pages, [b.kind]: x.page } };
+        return body({ version: s.version, updated_at: 1, layout: s.layout, dropped: s.dropped });
       }
       throw new Error(`unexpected ${url}`);
     }),
