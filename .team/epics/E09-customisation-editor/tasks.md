@@ -1064,7 +1064,7 @@ Spec: .team/epics/E09-customisation-editor/37-shipped-templates-navy-classic.md 
 - 2026-11-06 01:36Z · leader · squash-merged PR #174 at 15e66070 (QA_PASS: integration 33 pkgs ok, print-check 250/250, e2e 44/44). Profile and notes variants are close: T-180 widened to profile too.
 
 ### T-179 — [E09] Stage 2 hardening: fuzz the layout parsers, storage budget per user, abuse limits, no content in logs
-- **Status:** IN_QA
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** test
 - **Milestone:** M4
@@ -1072,11 +1072,11 @@ Spec: .team/epics/E09-customisation-editor/37-shipped-templates-navy-classic.md 
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** —
 - **Branch:** task/t-179-e09-stage-2-hardening-fuzz-the-layout-pa
 - **PR:** https://github.com/danyaa666/smemories/pull/177
-- **Updated:** 2026-11-06 05:19Z by qa
-- **Comments-seen:** 5
+- **Updated:** 2026-11-06 06:05Z by leader
+- **Comments-seen:** 7
 
 Spec: .team/epics/E09-customisation-editor/38-stage2-hardening-fuzz-storage-abuse.md (read it from the main checkout). Go fuzz targets with seeds in CI, depth/size limits before decode, docs/layout-storage-budget.md with measured numbers, rate-limit and body-cap test per layout route, sentinel test for logs and metrics, text safety, threat model note
 
@@ -1086,6 +1086,18 @@ Spec: .team/epics/E09-customisation-editor/38-stage2-hardening-fuzz-storage-abus
 - 2026-11-06 05:15Z · dev · QUESTION for the leader (spec req 3): worst case per user is 78.75 MiB of payload (107 MB on disk): 20 books (maxBooksOwned) x (1 layout + 30 snapshots x 128 KiB) + 20 templates x 64 KiB; measured on a real table in docs/layout-storage-budget.md. That is above the 30 MB threshold, and apply-template/restore/reset snapshot on every call so one account can fill a book in about a minute. Behaviour NOT changed. Recommend (section 5 of the doc): a total cap of 60 snapshots per user across books (worst case about 11.3 MiB), or only 5 books may hold a layout (about 20 MiB), or watch the operator query and act at 25 MB. Also: get and reset take no per-user limit (T-153 design, existing tests assert it); get is a bounded 128 KiB DB read repeatable without limit. A separate read bucket would be needed, not a small fix: decide whether to add one. Typical cost per 1000 students about 0.02 USD/month, worst case about 15 USD/month single-AZ.
 - 2026-11-06 05:15Z · dev · PR #177 head fcf90cf. Six fuzz targets (seeds in go test), each ran 5 min on final code, no crash; findings fixed with seeds: withPage null panic, pageOf case-insensitive key. Behaviour changes listed in the PR: nesting 16 and 128 KiB (as sent and stored) inside Validate, 8 KiB cap on the 8 non-save write routes, problem paths show only short plain names. Verify: make lint; go test -race ./...; make test-integration for booklayout/textx/bookdata/class/yearbook (green on my stack); TestHostileBodiesFailFast, TestRoutesRefuse..., TestNoLayoutContent..., TestMaximalUserStorage -v (numbers in docs/layout-storage-budget.md); re-run two fuzz targets 5 min. Postman customisation-editor: new 13b/13c pass; the T-173 edge folder 429s in a full run (shared burst, passes alone, not new). Optional QA add-on TestDistinctLimitBoundary done. Open question on the board comment (cap recommendation, get/reset unlimited). e2e not run (no web flow changed).
 - 2026-11-06 05:16Z · leader · Leader decision: storage cap not changed in this PR (owner question filed, recommendation: watch the operator query and decide at the go-live review). get/reset unlimited stays (T-153 design). QA: PR #177 head must be fcf90cfc47ca79d6a162090f12638bf03bdc6f62 (verify the full SHA). This PR changes behaviour in Validate (nesting 16, 128 KiB as sent and stored), an 8 KiB body cap on 8 write routes, problem paths without content, apply-template over 128 KiB now 400: QA run the full make test-integration, unit -race, make lint, e2e and print-check once (a stored layout that was valid before must still load), the dev checklist (two fuzz targets 5 min each, -v on TestHostileBodiesFailFast, TestRoutesRefuseAnonymousOversizeAndTooMany, TestNoLayoutContentInLogsMetricsOrProblemLists, TestMaximalUserStorage), newman customisation-editor (the T-173 edge folder 429s in a full run are the shared burst limit: run folders separately with make reset-limits between), try real edge cases by hand (body 8 KiB+1 on a write route, nested 17 levels, 128 KiB+1), logs contain no layout text, and read docs/layout-storage-budget.md and docs/stage2-threat-model.md for accuracy. Queue after T-175 (one QA at a time).
+- 2026-11-06 06:04Z · qa · QA_PASS T-179, PR #177, head fcf90cfc47ca79d6a162090f12638bf03bdc6f62 (verified before and after testing; worktree clean, no test files added by QA). Merge: git merge-tree --write-tree origin/develop <head> is CLEAN (rc 0, tree b25c10a...); gh pr view mergeable MERGEABLE. gh pr checks 177: go pass, web pass, security pass (e2e, go-integration, image skipped by D-37/D-38). Nothing under .team/, no go.mod/go.sum/package change.
+  RESULT LINES (own private stack qa179, ports 43179/46179/49179, SMEM_TEST_S3_ENDPOINT set):
+  - make test-integration equivalent (go test -race -count=1 -timeout 30m -tags integration ./...): EXIT 0, 33 packages ok, 0 FAIL (booklayout 253.7s, class 422s, auth 555s).
+  - go test -race ./...: exit 0, 32 packages ok, 0 FAIL. make lint (gofmt, vet, vet -tags integration, golangci-lint, web eslint/tsc/i18n/api/assets): exit 0.
+  - e2e (scripts/e2e.sh direct, db smem_test_e2e, api 18279/web 14279): 44 passed, 0 failed (4.0m). print-check: 298 tests, 298 pass, 0 fail.
+  - web: vitest 65 files, 1226 tests passed, 0 failed; npm run lint (prettier) clean. New eslint rule probed with a temporary file under web/src/book (removed): errors on innerHTML, insertAdjacentHTML, document.write and dangerouslySetInnerHTML (4 of 4).
+  - Fuzz 5 min each on the head: FuzzValidate 20,719,995 execs PASS (301.6s); FuzzWithPage 33,626,569 execs PASS (300.6s); no crash, no new testdata/fuzz files.
+  - -v: TestHostileBodiesFailFast PASS (2 MB 413 1.7ms/0.64 MB; 100 000 levels 400 1.2ms/0.46 MB; 200 000 items 413 1.2ms; 43 000 items 400 93ms/12.5 MB), TestRoutesRefuseAnonymousOversizeAndTooMany PASS, TestNoLayoutContentInLogsMetricsOrProblemLists PASS, TestMaximalUserStorage PASS (payload 123098 / 3691440 / 1254620 bytes, data_length 4669440 / 1589248; matches docs/layout-storage-budget.md), TestDistinctLimitBoundary PASS.
+  - newman customisation-editor, each folder alone with reset-limits between, run from postman/ (uploads need cwd postman): book-design 60 req/130 assert 0 failed; design-images 33/59 0; book-layout T-153 42/109 0; history T-163 31/79 0; page templates T-172 20/46 0; own templates and apply T-173 37/88 0 (twice, second run also 0 failed).
+  HAND CASES (live API, SMEM_ENV=dev, debug logs): body 8 KiB+1 on all 8 non-save write routes -> 413 ERROR_TOO_LARGE (4-6 ms); 8 KiB exactly passes the cap (then 400 unknown field). Layout sent as exactly 131072 bytes -> 200; 131073 -> 413 ERROR_TOO_LARGE. Document stored >128 KiB after NFC growth (U+0958 text, 77 KB sent) -> 400 too_long at path ''. Nesting: depth 15 passes the depth check, depth 17 -> 400 too_deep. A layout of 146 618 bytes (NFC-grown, inserted by SQL, i.e. valid before this PR) still loads via book-layout/get (200, 148 items). Template name with NUL, U+202E, newline or 61 chars -> 400; NFD Vietnamese name stored NFC. Sentinel string in item text, names and a hostile key: 0 hits in API log and /metrics; problem path shows '?' for the hostile key. Docs: limits (maxBooksOwned 20, Burst 20, SnapshotGap 10 min, MaxTemplateBytes 64 KiB, class MaxBookBytes 8 MiB) match the code; cost and storage numbers match the test output; operator query is run by the test.
+  NON-BLOCKING: (1) A save with a layout nested exactly 16 levels is refused (too_deep) because the request body adds one level, while Validate (restore/apply) accepts 16; docs say 'layout nesting 16'. Effective save limit is 15; real max is 5, so harmless, but align the doc or the check. (2) docs/layout-storage-budget.md section 5 says reset stores a snapshot on every call, section 7 says reset cannot amplify; consistent only with the explanation that reset needs a prior limited save: worth one clarifying sentence. (3) vitest prints 'Unhandled Errors' (EnvironmentTeardownError loading sticker svg after teardown, count varies 14 to 1416 per run) while all 1226 tests pass; web/src is untouched by this PR so it is not new, but it can make npm test exit non-zero. (4) Storage worst case 78.75 MiB/user is above the 30 MB threshold; leader already decided not to cap in this PR.
+- 2026-11-06 06:05Z · leader · squash-merged PR #177 at fcf90cfc (QA_PASS: integration 33 pkgs ok, unit 32 ok, e2e 44, print-check 298/298, fuzz 5 min x2 clean, hostile-body hand cases ok). Notes for T-183 docs pass: nested exactly 16 levels refused on save because the request body wraps one level while Validate accepts 16; layout-storage-budget.md should say reset needs a prior limited save to amplify.
 
 ### T-180 — [E09] Make the profile, notes and back template choices a real choice (Memory Book and Navy Classic)
 - **Status:** MERGED
@@ -1177,10 +1189,11 @@ Spec: .team/epics/E09-customisation-editor/41-editor-accessibility-i18n-audit.md
 - **Branch:** —
 - **PR:** —
 - **Updated:** 2026-11-06 by leader
-- **Comments-seen:** 0
+- **Comments-seen:** 1
 
 Spec: .team/epics/E09-customisation-editor/42-stage2-exit-check.md (read it from the main checkout). stage2-journey spec (desktop and tablet), parity for every shipped template on A5/A4/Letter, measured budgets (100 items 30 fps at 4x throttle, print time within 10%, bundle, p95s, memory), API coverage table, docs completeness, docs/stage2-exit-report.md with the owner manual checklist
 
 #### Comments
+- 2026-11-06 06:05Z · leader · Leader: docs pass (req 5) also fixes two notes from QA on T-179: docs/layout-storage-budget.md must say that reset only amplifies after a prior limited save; docs must state that a save with a layout nested exactly 16 levels is refused because the request body adds one level (Validate itself accepts 16); decide whether to align the two.
 
 <!-- tasks:end -->
