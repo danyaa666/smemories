@@ -264,13 +264,13 @@ Sixteen templates, four per page kind, authored by us (nothing from Doory or any
 | `profile-scrapbook` | profile | the photo tilted with a strip of tape, a flower badge and a heart in the corner |
 | `profile-tilted` | profile | white page, heading and photo tilted, a star and a sparkle |
 | `notes-airy` | notes | white page and two small sparkles beside the heading |
-| `notes-tape` | notes | heading tilted, a strip of tape beside it |
-| `notes-doodle` | notes | white page, a squiggle and a sparkle beside the heading |
-| `notes-stickers` | notes | heading tilted the other way, a smiling star and a gold star |
+| `notes-tape` | notes | heading tilted, two crossed strips of tape, a heart, a star and a sparkle in the corner beside it |
+| `notes-doodle` | notes | white page, heading tilted the other way, a burst, a squiggle, a sparkle and a heart beside it |
+| `notes-stickers` | notes | heading tilted 3 degrees, a cloud, a smiling star, a gold star and a paper plane beside it |
 | `back-thanks` | back | calm: paper page, three hearts under the pact, a sparkle |
-| `back-pact` | back | white page, the pact tilted, a heart, a star and a squiggle |
+| `back-pact` | back | paper page, the pact tilted, tape, a star, a sparkle, a squiggle and a heart beside the heading, a heart cluster and a zigzag under the pact |
 | `back-stickers` | back | busy: cloud, smiling star, sun, red heart and a plane around the pact |
-| `back-doodle` | back | white page, the pact tilted the other way, loops, a zigzag, a burst and a sparkle |
+| `back-doodle` | back | white page, the pact tilted the other way, a band of loops, a zigzag, a burst, a squiggle and a sparkle, a burst by the heading |
 
 **Rules (the same file format as above, plus these; all in Go tests, `internal/booklayout/shipped_memory_book_test.go`):**
 - **Four or more per kind, unique ids and labels per kind** (case-insensitive, `label_en` and `label_vi`), labels at most 24 characters (the gallery card), no two templates of a kind with the same `page` bytes.
@@ -584,16 +584,16 @@ bronze stars, sparkles, rows of small diamonds, bars, a seal, and a few tilts of
 | `cover-banded` | cover | two gold bars above the cap, a bar either side of a sparkle under the title, the year tilted 5 degrees |
 | `profile-cream` | profile | a bronze star between two dotted rules of diamonds, under the heading |
 | `profile-portrait` | profile | the portrait larger (240 x 330 px) and a sparkle pair and a bronze swash under it |
-| `profile-tilted` | profile | the portrait tilted 8 degrees, a gold star on its corner, a sparkle and a small star below |
-| `profile-crest` | profile | a gold seal under the portrait and a dotted column of bronze diamonds between letter and portrait |
+| `profile-tilted` | profile | heading tilted 3 and portrait tilted 8 degrees, a gold seal and a sparkle beside the heading, five falling stars in the right column |
+| `profile-crest` | profile | a large gold seal under the portrait and a dotted column of bronze diamonds between letter and portrait |
 | `notes-cream` | notes | a bronze sparkle each side of the heading |
 | `notes-rules` | notes | a dotted rule with a star under the heading and a bronze bar above the farewell |
-| `notes-corners` | notes | a gold sparkle in each corner inside the frame |
-| `notes-tilted` | notes | the heading tilted 6 degrees, two stars and a sparkle around it |
+| `notes-corners` | notes | a cluster of a sparkle and three stars in each of the four corners inside the frame |
+| `notes-tilted` | notes | the eyebrow and heading tilted 6 degrees, a gold seal to the right, stars and sparkles around it |
 | `back-thanks` | back | a gold heart over the cap between dotted rules |
-| `back-seal` | back | a gold seal under the thanks |
-| `back-stars` | back | a row of five graded stars over the cap, a sparkle, a star and a sparkle under the thanks |
-| `back-rules` | back | two gold bars over the cap, a bar either side of a sparkle under the thanks |
+| `back-seal` | back | a large gold seal under the thanks, a sparkle and a star on each side |
+| `back-stars` | back | a fan of graded stars and sparkles over the cap, a smaller fan under the thanks |
+| `back-rules` | back | three stepped gold bars over the cap and three under the thanks, a sparkle at each end |
 
 **Rules (the file format above, plus these; all in Go tests, `internal/booklayout/shipped_navy_classic_test.go`):**
 - **Four or more per kind, unique ids and labels per kind** (case-insensitive, both languages), labels at most 24 characters (the gallery card), no two templates of a kind with the same `page` bytes.
@@ -612,3 +612,9 @@ bronze stars, sparkles, rows of small diamonds, bars, a seal, and a few tilts of
   The notes templates leave the autograph alone: the editable list never includes it.
 
 **Adding one:** copy a file, change `id` (also the file name), the two labels (at most 24 characters, different from the other looks of the kind), the item ids (letters and digits, 6 to 26, unique) and the placement; keep decoration in the free places above; use only registry assets and add any new one to `LICENCE.txt`. Run `go test ./internal/booklayout/`, `node tools/print-check/contact-sheet-navy.mjs --sizes A5 --out /tmp/sheet` and look at the PNG, then `cd tools/print-check && node --test --test-name-pattern="<id>" templates-navy.test.mjs`. If you add a look, regenerate the committed A5 sheet and keep it under 600 KB.
+
+### Bolder looks and the distinctness gate (T-180)
+
+The notes, back and (Navy Classic) profile looks were made bolder with the page templates' own rules, and a gate now rejects two templates of a kind that are the same look. **What may change** (the inventory is in the T-180 pull request): a template may move, resize, tilt or hide an `editable` element (`notes.heading`, `back.pact`, the Navy eyebrows, headings and portrait), add up to 40 assets, and set a page colour from the contrast-safe list (Memory Book: `paper` or `white`; Navy Classic: its own colour only). The content itself does not move: the notes list, the back table, the autograph grid and the profile letter stay where the flow puts them, and a heading moved into a narrower box wraps. So the free room is small on the Memory Book notes page (about 150 x 85 px beside the heading, A5 design px) and large on the Navy profile and back pages; the Memory Book notes looks differ by what fills that corner and by the tilt, not by layout. Making the content blocks movable (heading below, two-column notes, a movable back text block) needs a runtime and validator change and is a separate decision.
+
+**Distinctness gate** (`internal/booklayout/shipped_distinct_test.go`): the item boxes of a template (rotated as drawn) and the boxes of any element it moves or resizes are drawn on an 8 px grid of the A5 page; two templates of a kind fail when the intersection over union of the two drawings is **0.8 or more**. The page colour is not compared, so a copy with only `bg.color` changed has overlap 1 and fails; so does a copy with every item moved 5 px, and two pages with no decoration. The limit is 0.8, not 0.6, because the Memory Book covers (unchanged by this task) measure 0.63 and the small Memory Book heading corner puts two notes looks at 0.76 and two profile looks at 0.78; Navy Classic stays below 0.35. Raise a look's distance rather than the limit.

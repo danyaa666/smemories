@@ -7,7 +7,7 @@
  "licence": "LICENCE.txt",
  "page": {
   "bg": {
-   "color": "white"
+   "color": "paper"
   },
   "overrides": {
    "back.pact": {
@@ -18,33 +18,99 @@
    {
     "id": "bkpact01",
     "t": "asset",
-    "asset": "shape.heart",
-    "x": 368,
-    "w": 74,
-    "h": 74,
-    "cy": 898,
-    "r": -10,
+    "asset": "sticker.tape-stripes",
+    "x": 637,
+    "w": 137,
+    "h": 137,
+    "cy": 74,
+    "r": -18,
     "tint": "accent"
    },
    {
     "id": "bkpact02",
     "t": "asset",
     "asset": "shape.star",
-    "x": 846,
-    "w": 74,
-    "h": 74,
-    "cy": 60,
+    "x": 767,
+    "w": 61,
+    "h": 61,
+    "cy": 56,
     "r": 14,
     "tint": "accent"
    },
    {
     "id": "bkpact03",
     "t": "asset",
+    "asset": "sticker.doodle-sparkle",
+    "x": 838,
+    "w": 54,
+    "h": 54,
+    "cy": 50,
+    "r": 0,
+    "tint": "soft"
+   },
+   {
+    "id": "bkpact04",
+    "t": "asset",
     "asset": "sticker.doodle-squiggle",
-    "x": 59,
-    "w": 270,
-    "h": 86,
-    "cy": 902,
+    "x": 686,
+    "w": 147,
+    "h": 49,
+    "cy": 95,
+    "r": 0,
+    "tint": "soft"
+   },
+   {
+    "id": "bkpact05",
+    "t": "asset",
+    "asset": "shape.heart",
+    "x": 858,
+    "w": 47,
+    "h": 47,
+    "cy": 92,
+    "r": -10,
+    "tint": "accent"
+   },
+   {
+    "id": "bkpact06",
+    "t": "asset",
+    "asset": "shape.heart",
+    "x": 69,
+    "w": 96,
+    "h": 96,
+    "cy": 897,
+    "r": -10,
+    "tint": "accent"
+   },
+   {
+    "id": "bkpact07",
+    "t": "asset",
+    "asset": "shape.heart",
+    "x": 181,
+    "w": 59,
+    "h": 59,
+    "cy": 910,
+    "r": 8,
+    "tint": "accent"
+   },
+   {
+    "id": "bkpact08",
+    "t": "asset",
+    "asset": "shape.star",
+    "x": 257,
+    "w": 76,
+    "h": 76,
+    "cy": 894,
+    "r": 12,
+    "tint": "accent"
+   },
+   {
+    "id": "bkpact09",
+    "t": "asset",
+    "asset": "sticker.doodle-zigzag",
+    "x": 686,
+    "w": 233,
+    "h": 71,
+    "cy": 906,
     "r": 0,
     "tint": "soft"
    }

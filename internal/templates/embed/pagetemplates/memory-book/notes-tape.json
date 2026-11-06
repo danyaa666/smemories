@@ -15,12 +15,56 @@
    {
     "id": "notape01",
     "t": "asset",
+    "asset": "sticker.tape-stripes",
+    "x": 620,
+    "w": 118,
+    "h": 118,
+    "cy": 67,
+    "r": -24,
+    "tint": "accent"
+   },
+   {
+    "id": "notape02",
+    "t": "asset",
     "asset": "sticker.tape-plain",
     "x": 672,
-    "w": 98,
-    "h": 98,
-    "cy": 62,
-    "r": -8,
+    "w": 118,
+    "h": 118,
+    "cy": 93,
+    "r": 16,
+    "tint": "soft"
+   },
+   {
+    "id": "notape03",
+    "t": "asset",
+    "asset": "shape.heart",
+    "x": 740,
+    "w": 39,
+    "h": 39,
+    "cy": 45,
+    "r": -10,
+    "tint": "accent"
+   },
+   {
+    "id": "notape04",
+    "t": "asset",
+    "asset": "sticker.doodle-sparkle",
+    "x": 762,
+    "w": 37,
+    "h": 37,
+    "cy": 82,
+    "r": 0,
+    "tint": "accent"
+   },
+   {
+    "id": "notape05",
+    "t": "asset",
+    "asset": "shape.star",
+    "x": 627,
+    "w": 29,
+    "h": 29,
+    "cy": 90,
+    "r": 14,
     "tint": "accent"
    }
   ]
