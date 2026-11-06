@@ -64,7 +64,10 @@ export function mockServer(init: {
       template_id: string;
       base_version: number;
     }[],
-    /** Answers for the next list, delete and apply calls (consumed one per call). */
+    /** Calls of template-create (T-176), in order; the route copies the STORED page like the server (images stripped, 20 per user). */
+    creates: [] as { yearbook_id: string; kind: string; name: string }[],
+    /** Answers for the next list, delete, apply and create calls (consumed one per call). */
+    createScript: [] as Step[],
     listScript: [] as Step[],
     deleteScript: [] as Step[],
     applyScript: [] as Step[],
@@ -180,6 +183,47 @@ export function mockServer(init: {
         const step = s.listScript.shift();
         if (step) return step();
         return body({ next_id: "", items: s.templates.filter((x) => x.kind === b.kind) });
+      }
+      if (url === "/api/book-layout/template-create") {
+        const b = JSON.parse(String(req?.body)) as {
+          yearbook_id: string;
+          kind: string;
+          name: string;
+        };
+        s.tcalls.push(`create:${b.kind}:${b.name}`);
+        s.creates.push(b);
+        const step = s.createScript.shift();
+        if (step) return step();
+        const p = s.layout?.pages[b.kind];
+        if (!p) return fail(400, "ERROR_PARAM");
+        if (s.templates.filter((x) => x.source === "own").length >= 20)
+          return fail(409, "ERROR_TEMPLATE_LIMIT", { limit: 20 });
+        const items = (p.items ?? []).filter((i) => i.t !== "image");
+        const stripped = (p.items?.length ?? 0) - items.length + (p.bg?.media ? 1 : 0);
+        const { bg, ...rest } = p;
+        const page = { ...rest, items, ...(bg && !bg.media ? { bg } : {}) };
+        const id = `01J9Z3K6V8Q4M7N2P5R8C${String(s.templates.length).padStart(5, "0")}`;
+        const created_at = Date.now();
+        s.templates.push({
+          id,
+          source: "own",
+          label_en: b.name,
+          label_vi: b.name,
+          kind: b.kind,
+          item_count: items.length,
+          created_at,
+          page,
+        });
+        return body({
+          id,
+          name: b.name,
+          kind: b.kind,
+          template_id: "memory-book",
+          item_count: items.length,
+          bytes: JSON.stringify(page).length,
+          created_at,
+          stripped,
+        });
       }
       if (url === "/api/book-layout/template-delete") {
         const b = JSON.parse(String(req?.body)) as { id: string };
