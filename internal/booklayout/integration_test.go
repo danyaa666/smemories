@@ -26,6 +26,7 @@ import (
 	"github.com/danyaa666/smemories/internal/legal"
 	"github.com/danyaa666/smemories/internal/mailer"
 	"github.com/danyaa666/smemories/internal/media"
+	"github.com/danyaa666/smemories/internal/metrics"
 	"github.com/danyaa666/smemories/internal/notes"
 	"github.com/danyaa666/smemories/internal/ratelimit"
 	"github.com/danyaa666/smemories/internal/redis/redistest"
@@ -49,6 +50,7 @@ type env struct {
 	results sync.Map // metric result -> *atomic.Int64
 	history sync.Map // "snapshot:<kind>", "restore:<result>" -> *atomic.Int64
 	pruned  atomic.Int64
+	metrics *metrics.Metrics
 }
 
 func (e *env) bump(key string, n int64) {
@@ -75,8 +77,14 @@ func (e *env) counted(result string) int64 {
 // and the layout as a child of the yearbook delete. perMinute 0 and limiters nil mean no rate limit.
 func newEnv(t *testing.T, limiters *ratelimit.Factory, perMinute int) *env {
 	t.Helper()
+	return newEnvObserved(t, limiters, perMinute, slog.New(slog.DiscardHandler), nil)
+}
+
+// newEnvObserved is newEnv with the application log and the Prometheus registry the API would have (T-179: what do they hold after a
+// layout has been written). log feeds every service and the router, as in cmd/smemories-api; mt may be nil.
+func newEnvObserved(t *testing.T, limiters *ratelimit.Factory, perMinute int, log *slog.Logger, mt *metrics.Metrics) *env {
+	t.Helper()
 	d := dbtest.New(t)
-	log := slog.New(slog.DiscardHandler)
 	e := &env{t: t, db: d, now: t0}
 	hasher := auth.NewHasher(auth.HashParams{MemoryKiB: 64, Time: 1, Parallelism: 1}, 4, auth.HashWait)
 	mail, _ := mailer.NewLog("test", io.Discard)
@@ -100,25 +108,31 @@ func newEnv(t *testing.T, limiters *ratelimit.Factory, perMinute int) *env {
 	mediaSvc := media.NewService(media.NewStore(d), storage.NewMemory(), 2, ratelimit.NewMemoryFactory(time.Now), func() time.Time { return e.now })
 	design := bookdesign.NewService(bookdesign.NewStore(d), nil, func() time.Time { return e.now })
 	layout := booklayout.NewService(booklayout.NewStore(d), mediaSvc, limiters, perMinute, func() time.Time { return e.now })
+	if mt == nil {
+		mt = metrics.New() // the instruments are always there; only a test that reads them serves the registry
+	}
 	layout.SetCounter(func(r string) {
 		v, _ := e.results.LoadOrStore(r, new(atomic.Int64))
 		v.(*atomic.Int64).Add(1)
+		mt.LayoutSave(r)
 	})
 	layout.SetObserver(booklayout.Observer{
-		Snapshot: func(k string) { e.bump("snapshot:"+k, 1) },
-		Pruned:   func(n int) { e.pruned.Add(int64(n)) },
-		Restore:  func(r string) { e.bump("restore:"+r, 1) },
+		Snapshot: func(k string) { e.bump("snapshot:"+k, 1); mt.LayoutSnapshot(k) },
+		Pruned:   func(n int) { e.pruned.Add(int64(n)); mt.LayoutSnapshotsPruned(n) },
+		Restore:  func(r string) { e.bump("restore:"+r, 1); mt.LayoutRestore(r) },
 
-		TemplateCreated: func(n int) { e.bump("tpl:created", 1); e.bump("tpl:stripped", int64(n)) },
-		TemplateDeleted: func() { e.bump("tpl:deleted", 1) },
-		Apply:           func(src, r string) { e.bump("apply:"+src+":"+r, 1) },
+		TemplateCreated: func(n int) { e.bump("tpl:created", 1); e.bump("tpl:stripped", int64(n)); mt.PageTemplateCreated(n) },
+		TemplateDeleted: func() { e.bump("tpl:deleted", 1); mt.PageTemplateDeleted() },
+		Apply:           func(src, r string) { e.bump("apply:"+src+":"+r, 1); mt.PageTemplateApply(src, r) },
+		Log:             log,
 	})
+	e.metrics = mt
 	ystore := yearbook.NewStore(d)
 	ystore.OnTemplateChange(design.DeleteByYearbook)
 	ystore.OnTemplateChange(layout.DeleteByYearbook)
 	ysvc := yearbook.NewService(ystore, cursors, mediaSvc, func() time.Time { return e.now }, mediaSvc, design, layout)
 	nsvc := notes.NewService(notes.NewStore(d), mediaSvc, cursors, ratelimit.NewMemoryFactory(time.Now), log, nil)
-	e.h = httpx.NewRouter(log, ah.Routes,
+	e.h = httpx.NewRouterWith(log, httpx.RouterConfig{Metrics: mt}, ah.Routes,
 		yearbook.NewHandler(ysvc, ah.RequireUser, []string{origin}).Routes,
 		booklayout.NewHandler(layout, ah.RequireUser, []string{origin}).Routes,
 		bookdata.NewHandler(bookdata.NewService(ysvc, nsvc, design, layout), ah.RequireUser).Routes)
