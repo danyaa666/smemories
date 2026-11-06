@@ -31,6 +31,7 @@ const (
 	MaxTextRunes    = 500
 	MinBox, MaxBox  = 10, 2000
 	MaxRadius       = 500
+	MaxDepth        = 16   // nesting of a document: the deepest real one is 5 (root, pages, page, items, item); checked before anything is decoded (a save body adds one level)
 	pagePermille    = 1000 // a page is 1000 units wide, and 1000 units high for cy
 
 	// pageRatioPermille is the A5 page height over its width (210 / 148) in thousandths. A box's height h is in thousandths of the page
@@ -56,6 +57,7 @@ const (
 	CodeNotTintable = "not_tintable"
 	CodeNotOwnMedia = "not_own_media"
 	CodeNotOneOf    = "not_one_of"
+	CodeTooDeep     = "too_deep"
 )
 
 // Problem is one thing wrong with a document: Path is like pages.cover.items[2].x, Code one of the Code* values.
@@ -153,7 +155,31 @@ func MediaRefs(raw []byte) []string {
 	return ids
 }
 
+// tooDeep reports whether raw nests objects or arrays deeper than MaxDepth. It is one pass over the bytes (string aware), so a hostile
+// document is refused before a single map is allocated for it.
+func tooDeep(raw []byte) bool {
+	depth, inStr, esc := 0, false, false
+	for _, b := range raw {
+		switch {
+		case inStr:
+			inStr, esc = b != '"' || esc, b == '\\' && !esc
+		case b == '"':
+			inStr = true
+		case b == '{' || b == '[':
+			if depth++; depth > MaxDepth {
+				return true
+			}
+		case b == '}' || b == ']':
+			depth--
+		}
+	}
+	return false
+}
+
 func decode(raw []byte) (map[string]any, bool) {
+	if tooDeep(raw) {
+		return nil, false
+	}
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.UseNumber()
 	var root map[string]any
@@ -167,6 +193,14 @@ func decode(raw []byte) (map[string]any, bool) {
 }
 
 func (c *checker) document(raw []byte) []byte {
+	if len(raw) > MaxBytes && !c.lenient { // the route caps the body, this keeps every other caller (apply, restore) to the same limit
+		c.add("", CodeTooLong)
+		return nil
+	}
+	if tooDeep(raw) {
+		c.add("", CodeTooDeep)
+		return nil
+	}
 	root, ok := decode(raw)
 	if !ok {
 		c.add("", CodeInvalidJSON)
@@ -194,7 +228,7 @@ func (c *checker) document(raw []byte) []byte {
 	}
 	sort.Strings(names)
 	for _, k := range names {
-		p := "pages." + k
+		p := "pages." + seg(k)
 		kind, known := c.m.Kind(k)
 		if !known {
 			c.drop(pages, k, p, CodeUnknownID)
@@ -214,7 +248,11 @@ func (c *checker) document(raw []byte) []byte {
 	if !c.lenient && c.total > MaxItemsTotal {
 		c.add("pages", CodeTooMany)
 	}
-	return c.out(root)
+	out := c.out(root)
+	if !c.lenient && len(out) > MaxBytes { // NFC can make a text longer in bytes than it was sent
+		c.add("", CodeTooLong)
+	}
+	return out
 }
 
 // out is the canonical document: compact, keys sorted, HTML characters not escaped (the table stays readable; the web renders text as text).
@@ -255,9 +293,18 @@ func (c *checker) keys(path string, m map[string]any, allowed ...string) {
 
 func join(path, k string) string {
 	if path == "" {
-		return k
+		return seg(k)
 	}
-	return path + "." + k
+	return path + "." + seg(k)
+}
+
+// seg is a member name as it may appear in a problem path: a short plain name, else "?". A problem list names the members the sender got
+// wrong, but never carries what the sender wrote beyond that (no control or bidi characters, no 100 KB key repeated twenty times; E09 T-179).
+func seg(k string) string {
+	if len(k) > 40 || strings.Trim(k, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-") != "" {
+		return "?"
+	}
+	return k
 }
 
 func (c *checker) page(p string, page map[string]any, kind templates.LayoutPageKind) {
@@ -321,7 +368,7 @@ func (c *checker) overrides(p string, ov map[string]any, kind templates.LayoutPa
 	}
 	sort.Strings(ids)
 	for _, id := range ids {
-		ep := p + "." + id
+		ep := p + "." + seg(id)
 		if !slices.Contains(kind.Editable, id) {
 			c.drop(ov, id, ep, CodeUnknownID)
 			continue

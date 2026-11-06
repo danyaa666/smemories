@@ -1,6 +1,7 @@
 package booklayout
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"io"
@@ -17,6 +18,9 @@ import (
 // maxBody caps the save request before it is decoded: the document plus the other two fields.
 const maxBody = MaxBytes + 4<<10
 
+// smallBody caps the other write routes: a page kind, an id, a version number and a template name of at most 60 characters (240 bytes).
+const smallBody = 8 << 10
+
 // Handler serves /api/book-layout/*: the owner reads, saves and resets the free layout of a book.
 type Handler struct {
 	svc            *Service
@@ -29,18 +33,23 @@ func NewHandler(svc *Service, requireUser func(http.Handler) http.Handler, allow
 	return &Handler{svc: svc, requireUser: requireUser, allowedOrigins: allowedOrigins}
 }
 
-// Routes registers the endpoints on mux (pass to httpx.NewRouter).
+// Routes registers the endpoints on mux (pass to httpx.NewRouter). Every POST route is mounted as Guard (origin) -> RequireUser -> body cap
+// -> handler: an anonymous caller is refused before a byte is read, and the body is capped before it is decoded (save: maxBody inside
+// save; every other route: smallBody, they carry ids and a name).
 func (h *Handler) Routes(mux *http.ServeMux) {
 	mux.Handle("GET /api/book-layout/get", h.requireUser(http.HandlerFunc(h.get)))
-	mux.Handle("POST /api/book-layout/save", auth.Guard(h.allowedOrigins, h.requireUser(http.HandlerFunc(h.save))))
-	mux.Handle("POST /api/book-layout/reset", auth.Guard(h.allowedOrigins, h.requireUser(http.HandlerFunc(h.reset))))
-	mux.Handle("POST /api/book-layout/version-list", auth.Guard(h.allowedOrigins, h.requireUser(http.HandlerFunc(h.versionList))))
-	mux.Handle("POST /api/book-layout/version-get", auth.Guard(h.allowedOrigins, h.requireUser(http.HandlerFunc(h.versionGet))))
-	mux.Handle("POST /api/book-layout/template-list", auth.Guard(h.allowedOrigins, h.requireUser(http.HandlerFunc(h.templateList))))
-	mux.Handle("POST /api/book-layout/template-create", auth.Guard(h.allowedOrigins, h.requireUser(http.HandlerFunc(h.templateCreate))))
-	mux.Handle("POST /api/book-layout/template-delete", auth.Guard(h.allowedOrigins, h.requireUser(http.HandlerFunc(h.templateDelete))))
-	mux.Handle("POST /api/book-layout/apply-template", auth.Guard(h.allowedOrigins, h.requireUser(http.HandlerFunc(h.applyTemplate))))
-	mux.Handle("POST /api/book-layout/restore", auth.Guard(h.allowedOrigins, h.requireUser(http.HandlerFunc(h.restore))))
+	post := func(path string, f http.HandlerFunc, limit int64) {
+		mux.Handle("POST /api/book-layout/"+path, auth.Guard(h.allowedOrigins, h.requireUser(httpx.WithBodyLimit(limit, f))))
+	}
+	post("save", h.save, maxBody)
+	post("reset", h.reset, smallBody)
+	post("version-list", h.versionList, smallBody)
+	post("version-get", h.versionGet, smallBody)
+	post("template-list", h.templateList, smallBody)
+	post("template-create", h.templateCreate, smallBody)
+	post("template-delete", h.templateDelete, smallBody)
+	post("apply-template", h.applyTemplate, smallBody)
+	post("restore", h.restore, smallBody)
 }
 
 type templateListInput struct {
@@ -219,33 +228,29 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 	respond(w, r, v, err)
 }
 
-// watchBody notes that the body cap was hit, so the handler can count it.
-type watchBody struct {
-	io.ReadCloser
-	tooLarge bool
-}
-
-func (b *watchBody) Read(p []byte) (int, error) {
-	n, err := b.ReadCloser.Read(p)
-	var big *http.MaxBytesError
-	if errors.As(err, &big) {
-		b.tooLarge = true
-	}
-	return n, err
-}
-
 func (h *Handler) save(w http.ResponseWriter, r *http.Request) {
 	u, ok := auth.MustUser(w, r)
 	if !ok {
 		return
 	}
-	body := &watchBody{ReadCloser: http.MaxBytesReader(w, r.Body, maxBody)}
-	r.Body = body
-	var in saveInput
-	if !httpx.DecodeJSON(w, r, &in) {
-		if body.tooLarge {
+	// The body is read whole (at most maxBody) so its nesting can be checked before anything is decoded into maps.
+	raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxBody))
+	if err != nil {
+		var big *http.MaxBytesError
+		if errors.As(err, &big) {
 			h.svc.Counted(ResultTooLarge)
 		}
+		httpx.WriteBodyError(w, r, err)
+		return
+	}
+	if tooDeep(raw) {
+		h.svc.Counted(ResultInvalid)
+		fail(w, r, invalid(Problem{"", CodeTooDeep}))
+		return
+	}
+	r.Body = io.NopCloser(bytes.NewReader(raw))
+	var in saveInput
+	if !httpx.DecodeJSON(w, r, &in) {
 		return
 	}
 	if !validID(w, r, in.YearbookID) {
