@@ -224,7 +224,7 @@ func TestMigrateBookLayoutTable(t *testing.T) {
 	if n := dump(t, ctx, d, `SELECT COUNT(*) FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = 'book_layout_tab'`)[0]; n != "0" {
 		t.Errorf("%s foreign keys on book_layout_tab", n)
 	}
-	for range 3 { // the newest migrations: T-163's version table, T-156's layout_version column, and before them this table
+	for range 4 { // the newest migrations: T-173's template table, T-163's version table, T-156's layout_version column, and before them this table
 		if err := db.MigrateDown(ctx, d); err != nil {
 			t.Fatalf("down: %v", err)
 		}
@@ -251,7 +251,7 @@ func TestMigrateYearbookLayoutVersion(t *testing.T) {
 	versions := func() string {
 		return strings.Join(dump(t, ctx, d, `SELECT CONCAT(title, '=', layout_version) FROM yearbook_tab ORDER BY title`), ",")
 	}
-	for range 2 { // T-163's version table is newer than the column
+	for range 3 { // T-173's template table and T-163's version table are newer than the column
 		if err := db.MigrateDown(ctx, d); err != nil {
 			t.Fatalf("down: %v", err)
 		}
@@ -327,8 +327,10 @@ func TestMigrateBookLayoutVersionTable(t *testing.T) {
 	if _, err := d.ExecContext(ctx, `INSERT INTO book_layout_tab (yearbook_id, template_id, layout_json, version, created_at, updated_at) VALUES (9,'memory-book','{}',1,1,1)`); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.MigrateDown(ctx, d); err != nil { // the newest migration is this table's
-		t.Fatalf("down: %v", err)
+	for range 2 { // T-173's template table is newer than this one
+		if err := db.MigrateDown(ctx, d); err != nil {
+			t.Fatalf("down: %v", err)
+		}
 	}
 	if exists() != "0" {
 		t.Fatal("down left the table behind")

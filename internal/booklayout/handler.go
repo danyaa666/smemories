@@ -37,6 +37,9 @@ func (h *Handler) Routes(mux *http.ServeMux) {
 	mux.Handle("POST /api/book-layout/version-list", auth.Guard(h.allowedOrigins, h.requireUser(http.HandlerFunc(h.versionList))))
 	mux.Handle("POST /api/book-layout/version-get", auth.Guard(h.allowedOrigins, h.requireUser(http.HandlerFunc(h.versionGet))))
 	mux.Handle("POST /api/book-layout/template-list", auth.Guard(h.allowedOrigins, h.requireUser(http.HandlerFunc(h.templateList))))
+	mux.Handle("POST /api/book-layout/template-create", auth.Guard(h.allowedOrigins, h.requireUser(http.HandlerFunc(h.templateCreate))))
+	mux.Handle("POST /api/book-layout/template-delete", auth.Guard(h.allowedOrigins, h.requireUser(http.HandlerFunc(h.templateDelete))))
+	mux.Handle("POST /api/book-layout/apply-template", auth.Guard(h.allowedOrigins, h.requireUser(http.HandlerFunc(h.applyTemplate))))
 	mux.Handle("POST /api/book-layout/restore", auth.Guard(h.allowedOrigins, h.requireUser(http.HandlerFunc(h.restore))))
 }
 
@@ -56,6 +59,70 @@ func (h *Handler) templateList(w http.ResponseWriter, r *http.Request) {
 	}
 	items, err := h.svc.Templates(r.Context(), u.InternalID, in.YearbookID, in.Kind)
 	respond(w, r, map[string]any{"items": items, "next_id": ""}, err) // a handful per template, so never a next page
+}
+
+type templateCreateInput struct {
+	YearbookID string `json:"yearbook_id"`
+	Kind       string `json:"kind"`
+	Name       string `json:"name"`
+}
+
+type templateDeleteInput struct {
+	ID string `json:"id"`
+}
+
+type applyInput struct {
+	YearbookID  string `json:"yearbook_id"`
+	BaseVersion *int64 `json:"base_version"`
+	Kind        string `json:"kind"`
+	Source      string `json:"source"`
+	TemplateID  string `json:"template_id"`
+}
+
+func (h *Handler) templateCreate(w http.ResponseWriter, r *http.Request) {
+	u, ok := auth.MustUser(w, r)
+	if !ok {
+		return
+	}
+	var in templateCreateInput
+	if !httpx.DecodeJSON(w, r, &in) || !validID(w, r, in.YearbookID) {
+		return
+	}
+	t, err := h.svc.CreateTemplate(r.Context(), u.InternalID, in.YearbookID, in.Kind, in.Name)
+	respond(w, r, t, err)
+}
+
+func (h *Handler) templateDelete(w http.ResponseWriter, r *http.Request) {
+	u, ok := auth.MustUser(w, r)
+	if !ok {
+		return
+	}
+	var in templateDeleteInput
+	if !httpx.DecodeJSON(w, r, &in) {
+		return
+	}
+	if !ulid.Valid(in.ID) {
+		fail(w, r, apperr.New(apperr.Param, "id must be an own template id"))
+		return
+	}
+	respond(w, r, nil, h.svc.DeleteTemplate(r.Context(), u.InternalID, in.ID))
+}
+
+func (h *Handler) applyTemplate(w http.ResponseWriter, r *http.Request) {
+	u, ok := auth.MustUser(w, r)
+	if !ok {
+		return
+	}
+	var in applyInput
+	if !httpx.DecodeJSON(w, r, &in) || !validID(w, r, in.YearbookID) {
+		return
+	}
+	if in.BaseVersion == nil {
+		fail(w, r, apperr.New(apperr.Param, "base_version is required"))
+		return
+	}
+	v, err := h.svc.ApplyTemplate(r.Context(), u.InternalID, in.YearbookID, in.Kind, in.Source, in.TemplateID, *in.BaseVersion)
+	respond(w, r, v, err)
 }
 
 type versionInput struct {
@@ -230,11 +297,15 @@ func fail(w http.ResponseWriter, r *http.Request, err error) {
 	var ra *RetryAfterError
 	var inv *InvalidError
 	var con *ConflictError
+	var lim *LimitError
 	switch {
 	case errors.As(err, &ra):
 		w.Header().Set("Retry-After", strconv.Itoa(max(int((ra.After+time.Second-1)/time.Second), 1)))
 	case errors.As(err, &inv):
 		writeData(w, r, apperr.CodeOf(err), apperr.Message(err), map[string]any{"problems": inv.Problems})
+		return
+	case errors.As(err, &lim):
+		writeData(w, r, apperr.CodeOf(err), apperr.Message(err), map[string]any{"limit": lim.Limit})
 		return
 	case errors.As(err, &con):
 		writeData(w, r, apperr.CodeOf(err), apperr.Message(err), map[string]any{"version": con.Version, "layout": con.Layout})

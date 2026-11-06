@@ -15,6 +15,7 @@ const (
 	KindAuto    = "auto"    // a save that started a new editing burst
 	KindReset   = "reset"   // book-layout/reset
 	KindRestore = "restore" // book-layout/restore
+	KindApply   = "apply"   // book-layout/apply-template (T-173)
 )
 
 // snapshotCurrent stores the book's current layout document as a snapshot of the given kind, in the caller's transaction, and prunes the

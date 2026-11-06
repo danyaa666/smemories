@@ -41,6 +41,7 @@ A class always has at least one admin. Roles are per class: the same person can 
 | Open a photo of a member's linked book (`media/get-content`; T-027) | 200 for the profile photo, the photos of **approved** notes and the **design images the member's layout references** (T-152, T-153) only, else 404 | 404 | 404 | 404 | 401 |
 | Read or restore the saved earlier versions of a member's layout (`book-layout/version-list`, `version-get`, `restore`; T-163, table `book_layout_version_tab`) | 404 | 404 | 404 | 404 | 401 |
 | List the shipped page templates for a student's book (`book-layout/template-list`; T-172, embedded files, no table; the owner gets 200 for their own book only) | 404 | 404 (200 for their own book) | 404 | 404 | 401 |
+| Save a page as an own template, delete one, apply a shipped or own template to a page (`book-layout/template-create`, `template-delete`, `apply-template`; T-173, table `book_template_tab`; owner only, every row has `owner_id`) | 404 | 404 (200 for their own book and templates) | 404 | 404 | 401 |
 | Read a student's pending or hidden notes, their photos, note-link tokens, the cover or any other photo | **never** | own only, via the normal yearbook endpoints | no | no | no |
 | Edit a student's yearbook | **never** | own only | no | no | no |
 | List, create, change, delete class pages (`class-page/get-list`, `create`, `update`, `delete`; T-127) | 200 | **403** | 404 | 404 | 401 |

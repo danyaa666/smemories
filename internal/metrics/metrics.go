@@ -37,6 +37,10 @@ type Metrics struct {
 	classLayoutsCut prometheus.Counter
 	layoutRestores  *prometheus.CounterVec
 	pageTemplateBad prometheus.Counter
+	tplCreated      prometheus.Counter
+	tplDeleted      prometheus.Counter
+	tplStripped     prometheus.Counter
+	tplApplies      *prometheus.CounterVec
 }
 
 // New returns a registry with the Go runtime and process collectors and the HTTP and rate-limit instruments.
@@ -85,6 +89,23 @@ func New() *Metrics {
 	m.pageTemplateBad = prometheus.NewCounter(prometheus.CounterOpts{
 		Namespace: namespace, Name: "page_templates_rejected_total", Help: "Shipped page templates left out at start-up because they failed the layout validator (T-172). Should stay 0.",
 	})
+	m.tplCreated = prometheus.NewCounter(prometheus.CounterOpts{
+		Namespace: namespace, Name: "page_templates_created_total", Help: "Own page templates created (book-layout/template-create; T-173). No ids or content.",
+	})
+	m.tplDeleted = prometheus.NewCounter(prometheus.CounterOpts{
+		Namespace: namespace, Name: "page_templates_deleted_total", Help: "Own page templates deleted (book-layout/template-delete; T-173).",
+	})
+	m.tplStripped = prometheus.NewCounter(prometheus.CounterOpts{
+		Namespace: namespace, Name: "page_template_items_stripped_total", Help: "Image items and picture backgrounds left out of own page templates when they were created (T-173).",
+	})
+	m.tplApplies = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: namespace, Name: "page_template_applies_total", Help: "Template applies (book-layout/apply-template) by source (shipped, own) and result (ok, conflict, invalid, mismatch; T-173). No ids or content.",
+	}, []string{"source", "result"})
+	for _, src := range []string{"shipped", "own"} {
+		for _, r := range tplApplyResults {
+			m.tplApplies.WithLabelValues(src, r) // present at 0 from the first scrape
+		}
+	}
 	for _, k := range layoutSnapshotKinds {
 		m.layoutSnapshots.WithLabelValues(k) // present at 0 from the first scrape
 	}
@@ -103,7 +124,7 @@ func New() *Metrics {
 		m.publicMedia.WithLabelValues(r) // present at 0 from the first scrape
 	}
 	m.reg.MustRegister(collectors.NewGoCollector(), collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-		m.duration, m.inFlight, m.rateLimited, m.mailFailed, m.publicMedia, m.mediaPanics, m.mediaUploads, m.layoutSaves, m.layoutSnapshots, m.layoutPruned, m.classLayoutsCut, m.layoutRestores, m.pageTemplateBad)
+		m.duration, m.inFlight, m.rateLimited, m.mailFailed, m.publicMedia, m.mediaPanics, m.mediaUploads, m.layoutSaves, m.layoutSnapshots, m.layoutPruned, m.classLayoutsCut, m.layoutRestores, m.pageTemplateBad, m.tplCreated, m.tplDeleted, m.tplStripped, m.tplApplies)
 	return m
 }
 
@@ -167,7 +188,8 @@ func (m *Metrics) LayoutSave(result string) {
 }
 
 var (
-	layoutSnapshotKinds  = []string{"auto", "reset", "restore"}
+	layoutSnapshotKinds  = []string{"auto", "reset", "restore", "apply"}
+	tplApplyResults      = []string{"ok", "conflict", "invalid", "mismatch"}
 	layoutRestoreResults = []string{"ok", "conflict", "invalid", "template_changed"}
 )
 
@@ -191,6 +213,26 @@ func (m *Metrics) LayoutRestore(result string) {
 		result = "invalid"
 	}
 	m.layoutRestores.WithLabelValues(result).Inc()
+}
+
+// PageTemplateCreated, PageTemplateDeleted and PageTemplateApply count the own-template routes (T-173); stripped is the number of image
+// items and picture backgrounds left out of the new template. source and result are constants chosen in code (booklayout.Source*, Apply*);
+// another source is counted as own and another result as invalid, so the label set stays closed.
+func (m *Metrics) PageTemplateCreated(stripped int) {
+	m.tplCreated.Inc()
+	m.tplStripped.Add(float64(stripped))
+}
+
+func (m *Metrics) PageTemplateDeleted() { m.tplDeleted.Inc() }
+
+func (m *Metrics) PageTemplateApply(source, result string) {
+	if source != "shipped" {
+		source = "own"
+	}
+	if !slices.Contains(tplApplyResults, result) {
+		result = "invalid"
+	}
+	m.tplApplies.WithLabelValues(source, result).Inc()
 }
 
 // PageTemplateRejected counts one shipped page template that was left out at start-up.

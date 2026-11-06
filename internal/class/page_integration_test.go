@@ -328,6 +328,9 @@ func TestRosterHasCountsAndFlagsOnly(t *testing.T) {
 // layoutVersionID is the public id of the layout snapshot TestAdminStillHasNoRightsOverAStudentsBook seeds (T-163).
 const layoutVersionID = "01K7QB1B2C3D4E5F6G7H8J9K0M"
 
+// ownTemplateID is the public id of the own page template the same test seeds for the student (T-173).
+const ownTemplateID = "01K7QB1B2C3D4E5F6G7H8J9K0N"
+
 // adminCalls is the admin-404 matrix: every route of api/openapi.yaml that takes a yearbook, note or media id, called as the class admin
 // on a student's linked book. The key is the route (without /api/); a suffix after a space tells variants of one route apart.
 // TestAdminRoutesAreAllInTheMatrix fails when a route of the OpenAPI file that takes such an id is missing from this table.
@@ -383,6 +386,15 @@ func (e *env) adminCalls(admin person, cls, book, coll, note, media string) map[
 		"book-layout/template-list": func() resp { // T-172
 			return e.do(admin, "POST", "/api/book-layout/template-list", body("yearbook_id", book))
 		},
+		"book-layout/template-create": func() resp { // T-173
+			return e.do(admin, "POST", "/api/book-layout/template-create", body("yearbook_id", book, "kind", "cover", "name", "Mine"))
+		},
+		"book-layout/template-delete": func() resp {
+			return e.do(admin, "POST", "/api/book-layout/template-delete", body("id", ownTemplateID))
+		},
+		"book-layout/apply-template": func() resp {
+			return e.do(admin, "POST", "/api/book-layout/apply-template", `{"yearbook_id":"`+book+`","base_version":3,"kind":"cover","source":"own","template_id":"`+ownTemplateID+`"}`)
+		},
 		"book-layout/restore": func() resp {
 			return e.do(admin, "POST", "/api/book-layout/restore", `{"yearbook_id":"`+book+`","id":"`+layoutVersionID+`","base_version":3}`)
 		},
@@ -418,8 +430,9 @@ func TestAdminStillHasNoRightsOverAStudentsBook(t *testing.T) {
 			`SELECT GROUP_CONCAT(CONCAT_WS(',', public_id, status, sort_order) ORDER BY id) FROM note_tab WHERE yearbook_id = ?`,
 			`SELECT GROUP_CONCAT(CONCAT_WS(',', public_id, revoked_at) ORDER BY id) FROM note_collection_tab WHERE yearbook_id = ?`,
 			`SELECT COUNT(*) FROM media_tab WHERE yearbook_id = ?`,
-			`SELECT GROUP_CONCAT(CONCAT_WS(',', version, updated_at, layout_json) ORDER BY id) FROM book_layout_tab WHERE yearbook_id = ?`,              // T-153
-			`SELECT GROUP_CONCAT(CONCAT_WS(',', public_id, version, kind, layout_json) ORDER BY id) FROM book_layout_version_tab WHERE yearbook_id = ?`, // T-163
+			`SELECT GROUP_CONCAT(CONCAT_WS(',', version, updated_at, layout_json) ORDER BY id) FROM book_layout_tab WHERE yearbook_id = ?`,                                                 // T-153
+			`SELECT GROUP_CONCAT(CONCAT_WS(',', public_id, version, kind, layout_json) ORDER BY id) FROM book_layout_version_tab WHERE yearbook_id = ?`,                                    // T-163
+			`SELECT GROUP_CONCAT(CONCAT_WS(',', public_id, name, kind, layout_json) ORDER BY id) FROM book_template_tab WHERE owner_id = (SELECT owner_id FROM yearbook_tab WHERE id = ?)`, // T-173
 		} {
 			var v sql.NullString
 			if err := e.db.QueryRow(q, bookRow).Scan(&v); err != nil {
@@ -434,6 +447,8 @@ func TestAdminStillHasNoRightsOverAStudentsBook(t *testing.T) {
 		bookRow, `{"v":1,"pages":{"cover":{"items":[{"id":"abcdef","t":"text","text":"SECRET-LAYOUT","x":0,"w":100,"h":100,"cy":500}]}}}`)
 	e.exec(`INSERT INTO book_layout_version_tab (public_id, yearbook_id, version, kind, template_id, layout_json, item_count, bytes, created_at)
 		VALUES (?, ?, 2, 'auto', 'memory-book', ?, 1, 1, 1)`, layoutVersionID, bookRow, `{"v":1,"pages":{"cover":{"items":[{"id":"abcdef","t":"text","text":"SECRET-OLD-LAYOUT","x":0,"w":100,"h":100,"cy":500}]}}}`)
+	e.exec(`INSERT INTO book_template_tab (public_id, owner_id, name, kind, template_id, layout_json, item_count, bytes, created_at)
+		SELECT ?, owner_id, 'SECRET-TEMPLATE', 'cover', 'memory-book', ?, 1, 1, 1 FROM yearbook_tab WHERE id = ?`, ownTemplateID, `{"items":[{"id":"abcdef","t":"text","text":"SECRET-OWN-PAGE","x":0,"w":100,"h":100,"cy":500}]}`, bookRow)
 	snapshot := before()
 
 	// T-163: the three history routes are the owner's alone: a member of the same class and the admin of another class get the 404 too
@@ -444,7 +459,10 @@ func TestAdminStillHasNoRightsOverAStudentsBook(t *testing.T) {
 			{"version-list", body("yearbook_id", book)},
 			{"version-get", body("yearbook_id", book, "id", layoutVersionID)},
 			{"restore", `{"yearbook_id":"` + book + `","id":"` + layoutVersionID + `","base_version":3}`},
-			{"template-list", body("yearbook_id", book)}, // T-172
+			{"template-list", body("yearbook_id", book)},                                    // T-172
+			{"template-create", body("yearbook_id", book, "kind", "cover", "name", "Mine")}, // T-173
+			{"template-delete", body("id", ownTemplateID)},
+			{"apply-template", `{"yearbook_id":"` + book + `","base_version":3,"kind":"cover","source":"own","template_id":"` + ownTemplateID + `"}`},
 		} {
 			if r := e.do(p, "POST", "/api/book-layout/"+c.path, c.body); r.Code != 404 || r.code() != "ERROR_NOT_FOUND" || strings.Contains(r.Body.String(), "SECRET") {
 				t.Errorf("%s on book-layout/%s: %d %s", who, c.path, r.Code, r.Body)

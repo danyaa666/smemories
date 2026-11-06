@@ -29,17 +29,25 @@ const (
 	// SourceAuthored is the only source a shipped template may have: we drew it ourselves. Anything derived from another project waits for
 	// the owner's licence decision (ADR 0005 Q6, Q-064).
 	SourceAuthored = "authored"
+
+	// Where a template listed by template-list and named by apply-template comes from (T-173).
+	SourceShipped = "shipped"
+	SourceOwn     = "own"
 )
 
 var templateIDRe = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,39}$`)
 
-// PageTemplate is one shipped page template as the read route returns it (Page is the canonical page value, as Validate re-encodes it).
+// PageTemplate is one page template as the read route returns it (Page is the canonical page value, as Validate re-encodes it). Source is
+// SourceShipped (a file of the binary, id is its slug) or SourceOwn (a row of book_template_tab, id is its ULID, both labels are the name
+// the student gave and CreatedAt is set).
 type PageTemplate struct {
 	ID        string          `json:"id"`
+	Source    string          `json:"source"`
 	LabelEN   string          `json:"label_en"`
 	LabelVI   string          `json:"label_vi"`
 	Kind      string          `json:"kind"`
 	ItemCount int             `json:"item_count"`
+	CreatedAt int64           `json:"created_at,omitempty"`
 	Page      json.RawMessage `json:"page"`
 }
 
@@ -164,7 +172,7 @@ func loadOne(fsys fs.FS, tpl, file string) (*PageTemplate, error) {
 			return fail("a text item holds a web address")
 		}
 	}
-	return &PageTemplate{ID: f.ID, LabelEN: f.LabelEN, LabelVI: f.LabelVI, Kind: kind.ID, ItemCount: len(p.Items), Page: page}, nil
+	return &PageTemplate{ID: f.ID, Source: SourceShipped, LabelEN: f.LabelEN, LabelVI: f.LabelVI, Kind: kind.ID, ItemCount: len(p.Items), Page: page}, nil
 }
 
 var (

@@ -1877,12 +1877,12 @@ paths:
     post:
       operationId: listBookLayoutTemplates
       tags: [book-layout]
-      summary: List the shipped page templates of a book's template
+      summary: List the shipped and the owner's own page templates of a book's template
       description: >-
         Called by the signed-in owner's template gallery (T-172). Returns the page templates shipped with the server for the book's **current** template, optionally
         only those of one page `kind`, sorted by English label then id. A page template is the value of `pages.<kind>` of a layout document (`page`, see
         `BookLayoutPage`) with a name in both languages; it holds only `text` and `asset` items (never an `image` item or a picture background), at most 40 items, and
-        every shipped one passes the layout validator (a build test). Applying one to a book is a later task (T-173); this route only reads. A book whose template cannot hold a
+        every shipped one passes the layout validator (a build test). From T-173 the owner's own templates made on the same book template follow the shipped ones (`source: own`, newest first, `id` a ULID, both labels the name given); applying is `apply-template`. A book whose template cannot hold a
         layout gets an empty list. `kind` must be a page kind of the book's template (else `ERROR_PARAM`). A missing book and someone else's both answer
         `ERROR_NOT_FOUND`; a class admin has no access. Takes from the same per-user limits as `save`. A request with the session cookie must come from an allowed Origin.
       x-auth: required
@@ -1905,13 +1905,13 @@ paths:
                 value: {yearbook_id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, kind: cover}
       responses:
         "200":
-          description: The shipped page templates.
+          description: The shipped and own page templates.
           content:
             application/json:
               schema: {$ref: "#/components/schemas/BookLayoutTemplateListResponse"}
               examples:
                 list:
-                  value: {status: OK, data: {items: [{id: cover-sunny, label_en: Sunny cover, label_vi: Bìa nắng, kind: cover, item_count: 1, page: {bg: {color: soft}, items: [{id: t1a2b3, t: text, text: Kỷ niệm của lớp, x: 100, w: 800, h: 200, cy: 420, r: 0}]}}], next_id: ""}}
+                  value: {status: OK, data: {items: [{id: cover-sunny, source: shipped, label_en: Sunny cover, label_vi: Bìa nắng, kind: cover, item_count: 1, page: {bg: {color: soft}, items: [{id: t1a2b3, t: text, text: Kỷ niệm của lớp, x: 100, w: 800, h: 200, cy: 420, r: 0}]}}], next_id: ""}}
         "400": {$ref: "#/components/responses/ApiBadRequest"}
         "401": {$ref: "#/components/responses/ApiUnauthorized"}
         "403": {$ref: "#/components/responses/ApiForbidden"}
@@ -1962,6 +1962,173 @@ paths:
         "401": {$ref: "#/components/responses/ApiUnauthorized"}
         "403": {$ref: "#/components/responses/ApiForbidden"}
         "404": {$ref: "#/components/responses/ApiNotFound"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/book-layout/template-create:
+    post:
+      operationId: createBookLayoutTemplate
+      tags: [book-layout]
+      summary: Save one page of the book as the owner's own page template
+      description: >-
+        Called by the signed-in owner's editor ("Save as my template", T-173). Copies the book's **current** `pages.<kind>` into a new template that only the owner can
+        read. **`image` items and a picture `bg.media` are not copied** (an own image is not shareable); `stripped` says how many were left out so the student can be told.
+        What is left is validated like any page and must be at most 64 KiB (`ERROR_TOO_LARGE` otherwise). `name` is plain text of 1 to 60 characters (NFC, trimmed, no control
+        characters). A kind the book has no saved page of is `ERROR_PARAM`. A user keeps at most **20** templates: the 21st is `ERROR_TEMPLATE_LIMIT` (409, `data.limit`).
+        A missing book and someone else's both answer `ERROR_NOT_FOUND`; a class admin has no access. Takes from the same per-user limits as `save`. A request with the
+        session cookie must come from an allowed Origin.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_TEMPLATE_LIMIT, description: "The user already has 20 own templates (`data.limit`). Nothing was stored."}
+        - {code: ERROR_INVALID_LAYOUT, description: "The stored page no longer validates (`data.problems`), or the book's template cannot hold a layout."}
+        - {code: ERROR_NOT_FOUND, description: The yearbook does not exist or belongs to someone else; the two cannot be told apart.}
+        - {code: ERROR_RATE_LIMITED, description: "Too many requests; wait `Retry-After` seconds (shared with `save`)."}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/BookLayoutTemplateCreateRequest"}
+            examples:
+              cover:
+                value: {yearbook_id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, kind: cover, name: My blue cover}
+      responses:
+        "200":
+          description: The new template.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/BookLayoutTemplateCreateResponse"}
+              examples:
+                created:
+                  value: {status: OK, data: {id: 01K7QC2D3E4F5G6H7J8K9M0N1P, name: My blue cover, kind: cover, template_id: memory-book, item_count: 3, bytes: 912, created_at: 1793361600000, stripped: 1}}
+        "400":
+          description: "`ERROR_PARAM` or `ERROR_INVALID_LAYOUT` with `data.problems`."
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/BookLayoutInvalidError"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "409":
+          description: "`ERROR_TEMPLATE_LIMIT`: the user already has 20 own templates; `data.limit` is 20."
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/BookLayoutTemplateLimitError"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/book-layout/template-delete:
+    post:
+      operationId: deleteBookLayoutTemplate
+      tags: [book-layout]
+      summary: Delete one of the owner's own page templates
+      description: >-
+        Called by the signed-in owner's template gallery (T-173). Deletes the own template `id`. Books that used the template do not change (applying copies the page). Another
+        user's template and an unknown id both answer `ERROR_NOT_FOUND`; a class admin has no access. Takes from the same per-user limits as `save`. A request with the session
+        cookie must come from an allowed Origin.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: There is no own template with this id; someone else's cannot be told apart.}
+        - {code: ERROR_RATE_LIMITED, description: "Too many requests; wait `Retry-After` seconds (shared with `save`)."}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/BookLayoutTemplateDeleteRequest"}
+            examples:
+              delete:
+                value: {id: 01K7QC2D3E4F5G6H7J8K9M0N1P}
+      responses:
+        "200":
+          description: Deleted.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/EmptyResponse"}
+              examples:
+                deleted:
+                  value: {status: OK, data: {}}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/book-layout/apply-template:
+    post:
+      operationId: applyBookLayoutTemplate
+      tags: [book-layout]
+      summary: Apply a shipped or own page template to one page of a book
+      description: >-
+        Called by the signed-in owner's template gallery (T-173). Replaces `pages.<kind>` (`bg`, `overrides`, `items`, nothing else) of the book's layout with the page of the
+        template `template_id` (`source` `shipped`: a shipped template of the book's template; `own`: one of the owner's own templates) in **one write**: the whole document is
+        validated like a restore (an item or a page background that names an asset that no longer exists or a design image that was deleted is **dropped** and counted in
+        `dropped`; any other problem is `ERROR_INVALID_LAYOUT`, `data.problems`), one new version is written and the document it replaces is stored as **one** snapshot of kind
+        `apply`, in the same transaction. `base_version` is the version the editor holds, as for `save`: a stale one is `ERROR_VERSION_CONFLICT` (409, `data` is the stored
+        `{version, layout}`). An own template made on another book template than the book has now is `ERROR_TEMPLATE_MISMATCH` (409); a template of another page kind than `kind`
+        is `ERROR_PARAM`. A failed apply changes neither the layout nor the history. A book without a layout gets one. Undo is `restore` of the new snapshot. A missing book,
+        someone else's, an unknown shipped id and an unknown or foreign own id all answer `ERROR_NOT_FOUND`; a class admin has no access. Takes from the same per-user limits
+        as `save`. A request with the session cookie must come from an allowed Origin.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_INVALID_LAYOUT, description: "The resulting document is not valid for the book's current template (`data.problems`), or the template cannot hold a layout. Nothing was changed."}
+        - {code: ERROR_VERSION_CONFLICT, description: "`base_version` is not the stored version (`data.version`, `data.layout`). Nothing was changed."}
+        - {code: ERROR_TEMPLATE_MISMATCH, description: "The own template was made on another book template than the book has now. Nothing was changed."}
+        - {code: ERROR_NOT_FOUND, description: "The yearbook or the template does not exist, or belongs to someone else; the cases cannot be told apart."}
+        - {code: ERROR_RATE_LIMITED, description: "Too many requests; wait `Retry-After` seconds (shared with `save`)."}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/BookLayoutApplyTemplateRequest"}
+            examples:
+              shipped:
+                value: {yearbook_id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, base_version: 9, kind: cover, source: shipped, template_id: cover-sunny}
+      responses:
+        "200":
+          description: Applied as a new version.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/BookLayoutRestoredResponse"}
+              examples:
+                applied:
+                  value: {status: OK, data: {version: 10, updated_at: 1793361600000, dropped: 0, layout: {v: 1, pages: {cover: {bg: {color: soft}, items: [{id: t1a2b3, t: text, text: Kỷ niệm của lớp, x: 100, w: 800, h: 200, cy: 420, r: 0}]}}}}}
+        "400":
+          description: "`ERROR_PARAM` or `ERROR_INVALID_LAYOUT` with `data.problems`."
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/BookLayoutInvalidError"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "409":
+          description: "`ERROR_VERSION_CONFLICT` (`data` is the stored version and document) or `ERROR_TEMPLATE_MISMATCH`."
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/BookLayoutConflictError"}
         "413": {$ref: "#/components/responses/ApiTooLarge"}
         "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
         "429": {$ref: "#/components/responses/ApiRateLimited"}
@@ -4257,7 +4424,7 @@ components:
                 properties:
                   id: {type: string, description: "ULID of the snapshot; the `id` of `version-get` and `restore`."}
                   version: {type: integer, format: int64, description: The layout version the document held when it was replaced.}
-                  kind: {type: string, enum: [auto, reset, restore], description: "What replaced it: `auto` a save that began a new editing burst, `reset` the reset endpoint, `restore` a restore."}
+                  kind: {type: string, enum: [auto, reset, restore, apply], description: "What replaced it: `auto` a save that began a new editing burst, `reset` the reset endpoint, `restore` a restore, `apply` an apply-template (T-173)."}
                   created_at: {type: integer, format: int64, description: "Unix ms, when the document was replaced."}
                   item_count: {type: integer, description: Items on all pages of the document.}
                   bytes: {type: integer, description: Size of the stored document in bytes.}
@@ -4275,23 +4442,80 @@ components:
         status: {type: string, const: OK, description: Always `OK` on success.}
         data:
           type: object
-          description: The shipped page templates.
+          description: The shipped page templates, then the owner's own ones.
           required: [items, next_id]
           properties:
             next_id: {type: string, description: "Always the empty string: the list is short and has no next page (the shape of docs/api-contract.md section 5)."}
             items:
               type: array
-              description: The templates, sorted by English label then id.
+              description: The shipped templates sorted by English label then id, then the owner's own ones, newest first.
               items:
                 type: object
-                required: [id, label_en, label_vi, kind, item_count, page]
+                required: [id, source, label_en, label_vi, kind, item_count, page]
                 properties:
-                  id: {type: string, description: "Template id (lower-case letters, digits, hyphens), unique within the book template and kind."}
+                  id: {type: string, description: "Template id: lower-case letters, digits, hyphens for a shipped one (unique within the book template and kind); a ULID for an own one."}
+                  source: {type: string, enum: [shipped, own], description: "`shipped`: a file of the server; `own`: the owner's saved page (T-173)."}
+                  created_at: {type: integer, format: int64, description: "Own templates only: Unix ms."}
                   label_en: {type: string, maxLength: 60, description: English name, plain text.}
                   label_vi: {type: string, maxLength: 60, description: Vietnamese name, plain text.}
                   kind: {type: string, description: The page kind it is made for.}
                   item_count: {type: integer, minimum: 0, maximum: 40, description: Number of items in `page`.}
                   page: {$ref: "#/components/schemas/BookLayoutPage"}
+    BookLayoutTemplateCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [yearbook_id, kind, name]
+      properties:
+        yearbook_id: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: "Required. ULID of the yearbook."}
+        kind: {type: string, description: "Required. The page kind to copy (`cover`, `profile`, `notes`, `back`); the book must have a saved page of it."}
+        name: {type: string, minLength: 1, maxLength: 60, description: "Required. Plain text, 1 to 60 characters."}
+    BookLayoutTemplateCreateResponse:
+      type: object
+      required: [status, data]
+      properties:
+        status: {type: string, const: OK, description: Always `OK` on success.}
+        data:
+          type: object
+          description: The new own template (without its page).
+          required: [id, name, kind, template_id, item_count, bytes, created_at, stripped]
+          properties:
+            id: {type: string, description: "ULID of the template; the `id` of `template-delete` and the `template_id` of `apply-template` with `source` `own`."}
+            name: {type: string, description: The name as stored (trimmed).}
+            kind: {type: string, description: The page kind.}
+            template_id: {type: string, description: The book template the page was made on.}
+            item_count: {type: integer, minimum: 0, maximum: 40, description: Items kept.}
+            bytes: {type: integer, maximum: 65536, description: Size of the stored page.}
+            created_at: {type: integer, format: int64, description: Unix ms.}
+            stripped: {type: integer, minimum: 0, description: "Image items and picture backgrounds that were not copied."}
+    BookLayoutTemplateDeleteRequest:
+      type: object
+      additionalProperties: false
+      required: [id]
+      properties:
+        id: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: "Required. ULID of the own template."}
+    BookLayoutApplyTemplateRequest:
+      type: object
+      additionalProperties: false
+      required: [yearbook_id, base_version, kind, source, template_id]
+      properties:
+        yearbook_id: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: "Required. ULID of the yearbook."}
+        base_version: {type: integer, format: int64, minimum: 0, description: "Required. The layout version the editor holds (as for `save`); 0 when the book had no layout."}
+        kind: {type: string, description: "Required. The page kind to replace; the template must be for the same kind."}
+        source: {type: string, enum: [shipped, own], description: "Required. Where the template comes from."}
+        template_id: {type: string, description: "Required. A shipped template's id (lower-case letters, digits, hyphens) or an own template's ULID."}
+    BookLayoutTemplateLimitError:
+      description: "`ERROR_TEMPLATE_LIMIT`: the user already has the most own templates allowed."
+      allOf:
+        - {$ref: "#/components/schemas/ApiError"}
+        - type: object
+          required: [data]
+          properties:
+            data:
+              type: object
+              description: The limit.
+              required: [limit]
+              properties:
+                limit: {type: integer, description: The limit (20).}
     BookLayoutVersionGetResponse:
       type: object
       required: [status, data]
@@ -4304,7 +4528,7 @@ components:
           properties:
             id: {type: string, description: ULID of the snapshot.}
             version: {type: integer, format: int64, description: The layout version the document held when it was replaced.}
-            kind: {type: string, enum: [auto, reset, restore], description: What replaced it (see `version-list`).}
+            kind: {type: string, enum: [auto, reset, restore, apply], description: What replaced it (see `version-list`).}
             created_at: {type: integer, format: int64, description: "Unix ms, when the document was replaced."}
             layout: {$ref: "#/components/schemas/BookLayoutDocument"}
     BookLayoutRestoredResponse:
