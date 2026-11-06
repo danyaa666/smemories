@@ -948,7 +948,7 @@ Spec: .team/epics/E09-customisation-editor/33-gestures-touch-test-flake.md (read
 - 2026-11-05 19:58Z · leader · Leader: merged PR #171 (squash) at head d3b7781554da0eed500c8a1b8faa556067f9f55e after QA_PASS (isolated 100/100 quiet and under load, full e2e 41/0 x3, touch 63/63, mutation checks fail as expected); go/web/security green.
 
 ### T-175 — [E09] Template gallery and apply, per section (web): shipped and own templates, preview, apply, delete own
-- **Status:** IN_PROGRESS
+- **Status:** IN_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -956,16 +956,18 @@ Spec: .team/epics/E09-customisation-editor/33-gestures-touch-test-flake.md (read
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** qa
 - **Branch:** task/t-175-e09-template-gallery-and-apply-per-secti
-- **PR:** —
-- **Updated:** 2026-11-06 02:51Z by dev
-- **Comments-seen:** 1
+- **PR:** 176
+- **Updated:** 2026-11-06 04:42Z by qa
+- **Comments-seen:** 3
 
 Spec: .team/epics/E09-customisation-editor/34-template-gallery-apply-ui.md (read it from the main checkout). Templates panel bound to the page kind (cover, profile, notes, back), cards with thumbnails drawn by the page renderer, read-only preview, apply with one confirmation (settle, apply-template, adopt, history cleared, History row 'Before template'), delete own, errors in vi/en, e2e editor-templates
 
 #### Comments
 - 2026-11-06 02:50Z · leader · T-173 merged; unblocked
+- 2026-11-06 03:38Z · dev · PR #176 head 2b8120a. Templates panel per page kind (list, 12-thumb cap, preview, apply via settle+apply-template+adopt, delete own, vi/en errors, History 'Before template'). Verified locally on private compose (db smem_test_t175): lint, prettier, tsc, vitest 1278, lint:i18n, check:api, build, e2e 50/50 incl. editor-templates.spec (6), print-check 298/298. Toolbar button padding/gap tightened because the new button wrapped 'Keyboard shortcuts' and broke editor-gestures/editor-text. QA: apply with pending autosave, 40 items, deleted asset, phone/keyboard walk. Spec detail: editor is not mounted below 768 px, so no phone-width dialog form (documented).
+- 2026-11-06 03:39Z · leader · Leader to QA (queued until the usage window resets, ~11:42 local; PR #176, verify the full head SHA, expected 2b8120a1bdd82cb85626226194853e5ccf45d816; check go/web/security CI before QA_PASS): run lint, prettier, tsc, vitest, lint:i18n, check:api, build, e2e (incl. editor-templates.spec.mjs) and print-check on the head, plus make test-integration for the T-173 packages (the UI drives apply-template; write result lines with counts and the full SHA). Exploratory per the spec test plan: apply with an autosave pending (the pending edit must be in the History snapshot), a book with 40 items, apply after a design image or sticker used by the page was deleted ('N items could not be applied'), two tabs applying at once (one conflict), Network tab: no template-list before the panel opens, one apply-template per confirmed apply, double click sends one request, thumbnails of own templates image-free, at most 12 thumbnails drawn, keyboard-only walk (Templates button, cards, Enter preview, Esc, apply confirm, focus back), notes template applies to every notes page, undo is cleared after apply and History 'Before template' restores the old cover. Dev changed toolbar CSS (editor.css padding and column gap) because the new button wrapped 'Keyboard shortcuts' and broke editor-gestures and editor-text: check the toolbar at 768, 1024 and 1440 px for wrapping and that gestures/text specs pass, and that the editor is not mounted below 768 px (spec's phone dialog form is N/A, documented).
 
 ### T-176 — [E09] Save my page as a template (web): name it, see what is kept, use it again
 - **Status:** BACKLOG
@@ -1050,7 +1052,7 @@ Spec: .team/epics/E09-customisation-editor/37-shipped-templates-navy-classic.md 
 - 2026-11-06 01:36Z · leader · squash-merged PR #174 at 15e66070 (QA_PASS: integration 33 pkgs ok, print-check 250/250, e2e 44/44). Profile and notes variants are close: T-180 widened to profile too.
 
 ### T-179 — [E09] Stage 2 hardening: fuzz the layout parsers, storage budget per user, abuse limits, no content in logs
-- **Status:** TODO
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** test
 - **Milestone:** M4
@@ -1059,16 +1061,19 @@ Spec: .team/epics/E09-customisation-editor/37-shipped-templates-navy-classic.md 
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-11-06 02:50Z by leader
-- **Comments-seen:** 2
+- **Branch:** task/t-179-e09-stage-2-hardening-fuzz-the-layout-pa
+- **PR:** https://github.com/danyaa666/smemories/pull/177
+- **Updated:** 2026-11-06 05:15Z by dev
+- **Comments-seen:** 5
 
 Spec: .team/epics/E09-customisation-editor/38-stage2-hardening-fuzz-storage-abuse.md (read it from the main checkout). Go fuzz targets with seeds in CI, depth/size limits before decode, docs/layout-storage-budget.md with measured numbers, rate-limit and body-cap test per layout route, sentinel test for logs and metrics, text safety, threat model note
 
 #### Comments
 - 2026-11-06 02:50Z · leader · T-173 merged; unblocked
 - 2026-11-06 02:53Z · leader · Leader: small optional add-on from QA on T-180: internal/booklayout/shipped_distinct_test.go has two surviving mutants (the >= limit vs > and skipping full-box override boxes) because no case sits just below and just above the 0.8 IoU limit. Add a boundary case pair (a synthetic pair at 0.79 and 0.81) if it costs under an hour; otherwise leave it.
+- 2026-11-06 05:15Z · dev · QUESTION for the leader (spec req 3): worst case per user is 78.75 MiB of payload (107 MB on disk): 20 books (maxBooksOwned) x (1 layout + 30 snapshots x 128 KiB) + 20 templates x 64 KiB; measured on a real table in docs/layout-storage-budget.md. That is above the 30 MB threshold, and apply-template/restore/reset snapshot on every call so one account can fill a book in about a minute. Behaviour NOT changed. Recommend (section 5 of the doc): a total cap of 60 snapshots per user across books (worst case about 11.3 MiB), or only 5 books may hold a layout (about 20 MiB), or watch the operator query and act at 25 MB. Also: get and reset take no per-user limit (T-153 design, existing tests assert it); get is a bounded 128 KiB DB read repeatable without limit. A separate read bucket would be needed, not a small fix: decide whether to add one. Typical cost per 1000 students about 0.02 USD/month, worst case about 15 USD/month single-AZ.
+- 2026-11-06 05:15Z · dev · PR #177 head fcf90cf. Six fuzz targets (seeds in go test), each ran 5 min on final code, no crash; findings fixed with seeds: withPage null panic, pageOf case-insensitive key. Behaviour changes listed in the PR: nesting 16 and 128 KiB (as sent and stored) inside Validate, 8 KiB cap on the 8 non-save write routes, problem paths show only short plain names. Verify: make lint; go test -race ./...; make test-integration for booklayout/textx/bookdata/class/yearbook (green on my stack); TestHostileBodiesFailFast, TestRoutesRefuse..., TestNoLayoutContent..., TestMaximalUserStorage -v (numbers in docs/layout-storage-budget.md); re-run two fuzz targets 5 min. Postman customisation-editor: new 13b/13c pass; the T-173 edge folder 429s in a full run (shared burst, passes alone, not new). Optional QA add-on TestDistinctLimitBoundary done. Open question on the board comment (cap recommendation, get/reset unlimited). e2e not run (no web flow changed).
+- 2026-11-06 05:16Z · leader · Leader decision: storage cap not changed in this PR (owner question filed, recommendation: watch the operator query and decide at the go-live review). get/reset unlimited stays (T-153 design). QA: PR #177 head must be fcf90cfc47ca79d6a162090f12638bf03bdc6f62 (verify the full SHA). This PR changes behaviour in Validate (nesting 16, 128 KiB as sent and stored), an 8 KiB body cap on 8 write routes, problem paths without content, apply-template over 128 KiB now 400: QA run the full make test-integration, unit -race, make lint, e2e and print-check once (a stored layout that was valid before must still load), the dev checklist (two fuzz targets 5 min each, -v on TestHostileBodiesFailFast, TestRoutesRefuseAnonymousOversizeAndTooMany, TestNoLayoutContentInLogsMetricsOrProblemLists, TestMaximalUserStorage), newman customisation-editor (the T-173 edge folder 429s in a full run are the shared burst limit: run folders separately with make reset-limits between), try real edge cases by hand (body 8 KiB+1 on a write route, nested 17 levels, 128 KiB+1), logs contain no layout text, and read docs/layout-storage-budget.md and docs/stage2-threat-model.md for accuracy. Queue after T-175 (one QA at a time).
 
 ### T-180 — [E09] Make the profile, notes and back template choices a real choice (Memory Book and Navy Classic)
 - **Status:** MERGED

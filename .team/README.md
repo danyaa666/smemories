@@ -11,8 +11,8 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 6 | T-023, T-024, T-025, T-031, T-050, T-176 |
-| TODO | 1 | T-179 |
-| IN_PROGRESS | 1 | T-175 |
+| READY_FOR_QA | 1 | T-179 |
+| IN_QA | 1 | T-175 |
 | MERGED | 28 | T-150, T-151, T-152, T-153, T-154, T-155, T-156, T-157, T-158, T-159, T-160, T-161, T-162, T-163, T-164, T-165, T-166, T-167, T-168, T-169, T-170, T-171, T-172, T-173, T-174, T-177, T-178, T-180 |
 | DONE | 136 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138, T-139, T-140, T-141, T-142, T-143, T-144, T-145, T-146, T-147, T-149, T-148 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
@@ -21,9 +21,9 @@
 
 **Awaiting your review (MERGED):** T-150 ([E09] Spike: layout editor architecture and ADR 0004); T-151 ([E09] Asset pack and registry for stickers, shapes and frames); T-152 ([E09] Backend: student-uploaded design images (backgrounds and decorations)); T-153 ([E09] Layout document model and API (backend)); T-154 ([E09] Web layout runtime: the book draws a layout (Memory Book)); T-155 ([E09] Fix three stale Postman assertions in the customisation-editor collection); T-156 ([E09] Layout version must never go back (reset / template change)); T-157 ([E09] print-check: refuse a foreign server on its port; refresh test counts in docs); T-158 ([E09] Editor state: document store, undo/redo, autosave and conflict handling (web)); T-159 ([E09] Editor route and shell: page strip, zoom, selection overlay, property panel (web)); T-160 ([E09] Editor gestures: move, resize, rotate, snap, guides, with keyboard control (web)); T-161 ([E09] Editor text boxes: add, type in place, font, size, colour, align (web)); T-162 ([E09] Editor palette: stickers, shapes, frames, own images and the page background (web)); T-163 ([E09] Layout version history and restore (backend)); T-164 ([E09] Palette follow-ups: copy, history edge, distinct cap/quota code (web + one small API change)); T-165 ([E09] Editor version history panel: list, preview and restore (web)); T-166 ([E09] Navy Classic: page kinds and editable elements for the layout editor (web + manifest)); T-167 ([E09] Class book carries each member's layout (server cap, privacy, web wiring)); T-168 ([E09] History e2e hardening: friendly mysql-missing message, QA probe cases (tests only)); T-169 ([E09] Spike: Doory-template import and a Fabric.js image studio beside the DOM editor (ADR 0005)); T-170 ([E09] Editor flow: page by page, Save and done, Print, back to the book manage page (web)); T-171 ([E09] Stretching shapes: rectangle and ellipse that fill their box (registry + web)); T-172 ([E09] Page templates: model, shipped storage, validator gate and read route (Go + web preview)); T-173 ([E09] Own page templates and the apply API (Go): save my page, apply a template per section); T-174 ([E09] Stabilise the editor-gestures touch test (flake: 2 to 3 px against 0.5 allowed)); T-177 ([E09] Shipped page templates for Memory Book: four or more looks per page kind, authored by us); T-178 ([E09] Shipped page templates for Navy Classic: four or more looks per page kind, authored by us); T-180 ([E09] Make the profile, notes and back template choices a real choice (Memory Book and Navy Classic))
 
-**Open questions for you:** Q-064 (Doory templates: licence route, studio, and template colours (ADR 0005, T-169))
+**Open questions for you:** Q-064 (Doory templates: licence route, studio, and template colours (ADR 0005, T-169)); Q-065 (Storage cap per user for layout history (T-179, docs/layout-storage-budget.md): cap now, or watch and decide at go-live?)
 
-_Board last written 2026-11-06 02:53Z_
+_Board last written 2026-11-06 05:16Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -714,6 +714,15 @@ My recommendation: A. Everything users can touch is built; going live turns the 
 - **Answer:** _(pending)_
 
 Spike T-169 (PR #165, ADR 0005 on that branch) found: 73% of the 230 objects in Doory's 10 starter templates convert to our layout today (85% with two stretching shapes); text converts at 96%, lines and paths not at all. The converter is deterministic and every output passes our layout validator; three converted templates print within the ADR 0004 thresholds. The templates are under the Attribution Assurance License, not CC0, and 4 other contributors besides the author hold copyright, so the author alone cannot waive terms. DECISIONS: (1) Licence route. A = accept the credit line 'Doory by Siam, creator and maintainer of Doory, https://github.com/shaongitbd/doory' on the template gallery and the app footer, keep the signed licence text, convert the templates we like (fastest; ongoing obligation; credit never on printed pages). B = we author our own pages in our format using Doory only as inspiration; nothing converted is committed (more design work; no obligations; our Vietnamese copy and themes are needed anyway). Recommended: B. (2) Confirm no Doory stock photos ship (they show real people; our books are made by minors). (3) Image studio (Fabric.js): the ADR shows no job needs it that CSS/SVG, existing image controls or a vector draw item cannot do with less weight; recommended: none in the first release (D-45 allows it later). (4) Template colours: converted art snaps to the book's five theme tokens (it wears the student's theme); an optional template-private palette of up to 8 colours would keep original colours but changes the layout document and validator; recommended: decide after the first authored templates. Work that does not depend on this answer is already queued: page-by-page flow, stretching shapes, page-template model, own-template API.
+
+### Q-065 — Storage cap per user for layout history (T-179, docs/layout-storage-budget.md): cap now, or watch and decide at go-live?
+- **Status:** OPEN
+- **Asked:** 2026-11-06 05:16Z
+- **Blocks:** —
+- **Recommendation:** Do not change behaviour now. Keep the operator query (docs/layout-storage-budget.md) and decide at the go-live review (T-023): there is no production data yet, typical cost is about 0.02 USD per 1000 students per month, and the worst case is one abusive account at about 107 MB on disk (about 15 USD per month single-AZ at scale). If you want a hard rule now, pick a total cap of 60 snapshots per user across books (worst case about 11.3 MiB); it shortens the history of a student with many books, which is a retention trade-off.
+- **Answer:** _(pending)_
+
+Dev measured the worst case per user in T-179: 20 books x (1 layout + 30 snapshots x 128 KiB) + 20 templates x 64 KiB = 78.75 MiB payload (about 107 MB on disk), above our 30 MB threshold. Options: (A) leave as is and watch the operator query, act at 25 MB (recommended, no user impact); (B) total cap of 60 snapshots per user across books, worst case about 11.3 MiB (older snapshots of the heaviest book are dropped first); (C) only 5 books per user may hold a layout, about 20 MiB. Related and separate: get and reset have no per-user rate limit (T-153 design, tests assert it); get is a bounded 128 KiB read. Not blocking any task.
 
 <!-- questions:end -->
 
@@ -1805,7 +1814,7 @@ Multi-stage Dockerfile (distroless or alpine, non-root), production config valid
 - **Branch:** —
 - **PR:** —
 - **Updated:** 2026-10-09 02:28Z by leader
-- **Comments-seen:** 2
+- **Comments-seen:** 3
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E06-go-live/03-aws-infrastructure-as-code-and-deploy.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1816,6 +1825,7 @@ Fargate service, RDS MySQL (private subnets, encrypted, backups), S3 (private, e
 #### Comments
 - 2026-10-17 15:11Z · leader · DEFERRED by the owner (decision D-31, 2026-10-17): this needs a real domain or AWS credentials, or is a go-live gate. Do not start it until the leader opens the go-live phase (E06 PRD, 'Live verification phase'). Stays BACKLOG.
 - 2026-10-20 16:48Z · leader · Leader 2026-10-20: audit run 1 items 3-6 added to the spec checklist (more token paths kept out of edge logs, upload spool sizing, Redis sizing, readyz private).
+- 2026-11-06 05:16Z · leader · Leader: at the go-live review decide the per-user layout storage cap (owner question Q-065, docs/layout-storage-budget.md operator query).
 
 ### T-024 — [E06] Observability: metrics, alarms, uptime check, log retention
 - **Status:** BACKLOG
