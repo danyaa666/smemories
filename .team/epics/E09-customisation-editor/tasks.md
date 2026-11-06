@@ -948,7 +948,7 @@ Spec: .team/epics/E09-customisation-editor/33-gestures-touch-test-flake.md (read
 - 2026-11-05 19:58Z · leader · Leader: merged PR #171 (squash) at head d3b7781554da0eed500c8a1b8faa556067f9f55e after QA_PASS (isolated 100/100 quiet and under load, full e2e 41/0 x3, touch 63/63, mutation checks fail as expected); go/web/security green.
 
 ### T-175 — [E09] Template gallery and apply, per section (web): shipped and own templates, preview, apply, delete own
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -956,10 +956,10 @@ Spec: .team/epics/E09-customisation-editor/33-gestures-touch-test-flake.md (read
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-175-e09-template-gallery-and-apply-per-secti
 - **PR:** —
-- **Updated:** 2026-11-06 02:50Z by leader
+- **Updated:** 2026-11-06 02:51Z by dev
 - **Comments-seen:** 1
 
 Spec: .team/epics/E09-customisation-editor/34-template-gallery-apply-ui.md (read it from the main checkout). Templates panel bound to the page kind (cover, profile, notes, back), cards with thumbnails drawn by the page renderer, read-only preview, apply with one confirmation (settle, apply-template, adopt, history cleared, History row 'Before template'), delete own, errors in vi/en, e2e editor-templates
@@ -1062,15 +1062,16 @@ Spec: .team/epics/E09-customisation-editor/37-shipped-templates-navy-classic.md 
 - **Branch:** —
 - **PR:** —
 - **Updated:** 2026-11-06 02:50Z by leader
-- **Comments-seen:** 1
+- **Comments-seen:** 2
 
 Spec: .team/epics/E09-customisation-editor/38-stage2-hardening-fuzz-storage-abuse.md (read it from the main checkout). Go fuzz targets with seeds in CI, depth/size limits before decode, docs/layout-storage-budget.md with measured numbers, rate-limit and body-cap test per layout route, sentinel test for logs and metrics, text safety, threat model note
 
 #### Comments
 - 2026-11-06 02:50Z · leader · T-173 merged; unblocked
+- 2026-11-06 02:53Z · leader · Leader: small optional add-on from QA on T-180: internal/booklayout/shipped_distinct_test.go has two surviving mutants (the >= limit vs > and skipping full-box override boxes) because no case sits just below and just above the 0.8 IoU limit. Add a boundary case pair (a synthetic pair at 0.79 and 0.81) if it costs under an hour; otherwise leave it.
 
 ### T-180 — [E09] Make the profile, notes and back template choices a real choice (Memory Book and Navy Classic)
-- **Status:** IN_QA
+- **Status:** MERGED
 - **Priority:** P3
 - **Type:** feature
 - **Milestone:** M4
@@ -1078,11 +1079,11 @@ Spec: .team/epics/E09-customisation-editor/38-stage2-hardening-fuzz-storage-abus
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** —
 - **Branch:** task/t-180-e09-make-the-profile-notes-and-back-temp
 - **PR:** https://github.com/danyaa666/smemories/pull/175
-- **Updated:** 2026-11-06 02:25Z by qa
-- **Comments-seen:** 4
+- **Updated:** 2026-11-06 02:53Z by leader
+- **Comments-seen:** 6
 
 Spec: .team/epics/E09-customisation-editor/39-bolder-notes-back-variants.md (read it from the main checkout). QA on T-177 and T-178: profile-*, notes-* and back-* look alike (covers are fine) (same page, one or two corner stickers). Inventory what may be overridden, four looks that differ at a glance per kind and template, stronger distinctness gate (overlap and colour-only twins), no runtime or validator change; report if real variety needs movable content blocks
 
@@ -1091,5 +1092,21 @@ Spec: .team/epics/E09-customisation-editor/39-bolder-notes-back-variants.md (rea
 - 2026-11-06 02:24Z · dev · FINDING (req 4), PR #175. Inventory table is in the PR body. Memory Book notes/back cannot get layout-level variety today: the heading block cannot shift sideways (I tried x moved 110 px with a narrower box: the title wraps and overlaps its subtitle), the notes list, back table, autograph grid and profile letter are flow content, and the free room on the MB notes page is a 150 x 70 px corner. Shipped what fits: bigger corner clusters, tilts, paper/white page, MB notes/back 5 files redrawn; Navy (much more free room) 7 files redrawn, all profile/notes/back looks tell apart in the sheet. PROPOSED DESIGN (needs your decision, not built): (1) a manifest flag per editable flow element 'movable_in_flow' so a moved heading re-flows content: heading below the photo row or hidden-with-content-shifted; (2) notes 'columns': 1|2 page option read by the notes template (two-column answers); (3) 'back.table_height' override so the back text block (pact) can sit at top. Each needs the validator (new override keys), memory.tsx/navy.tsx and print-check changes; I would do (1) first. Gate: limit 0.8 not 0.6 (MB covers measure 0.63, unchanged by rule; MB corner puts notes at 0.76), numbers in the PR.
 - 2026-11-06 02:24Z · dev · PR #175 head 8b23f641edc0f1d4fce80ee1ed677c2ada013d86. 12 templates redrawn (MB notes-tape/doodle/stickers, back-pact/doodle; Navy notes-corners/tilted, back-seal/stars/rules, profile-tilted/crest), covers/profile-MB untouched byte for byte. New shipped_distinct_test.go (IoU>=0.8 on A5 box union; mutation test + hand twin). Dev ran: go test, -race integration booklayout+templates ok, vitest layout 151 ok, print-check full 298/298, e2e 44/44 on private stack (ports 13180/16180/19180, 18180/14180). QA: re-run make test-integration, e2e, print-check; look at A4 contact sheets (node tools/print-check/contact-sheet*.mjs --sizes A4 --out DIR); mutation-check the gate; diff covers. Finding + proposed design in comment.
 - 2026-11-06 02:24Z · leader · Leader to QA (PR #175, verify full head SHA, expected 8b23f641edc0f1d4fce80ee1ed677c2ada013d86; go/web CI may still be pending, check before QA_PASS): I viewed both contact sheets. Navy Classic is now a clear choice per kind (back rules/seal/stars/thanks, notes corners/cream/rules/tilted, profile crest/portrait/tilted). Memory Book notes and back are still the weakest (differences are sticker clusters and tilt); dev reports a hard limit (content blocks cannot move: heading wraps over its subtitle, about 150 x 70 px free beside it), accepted, a runtime change is an owner-level decision for later. Check: cover files byte for byte equal to develop, mutation-check shipped_distinct_test.go (colour-only copy, all items moved 5 px, empty pages, the 0.8 limit: judge whether it catches real twins), no prose/image items, contrast, margins and Navy inner rule on A5/A4/Letter, print-check full + e2e + make test-integration for booklayout/templates (write result lines + full SHA), look at A4 with a long-name, no-photo student; dev moved one star on profile-tilted that hit the caption on Letter: confirm no overlap on all papers.
+- 2026-11-06 02:52Z · qa · QA_PASS T-180, PR #175, head 8b23f641edc0f1d4fce80ee1ed677c2ada013d86 (checked before and after testing; worktree clean). CI on that head: go pass, web pass, security pass, e2e/go-integration/image skipped by D-37/D-38.
+  RESULT LINES (local, private compose smemqa180, ports 13281/16281/19281, SMEM_TEST_S3_ENDPOINT set, stack removed afterwards): make-test-integration equivalent 'go test -race -count=1 -timeout 30m -tags integration ./...' = 33 packages ok, 0 FAIL (booklayout 167.9 s, templates 9.6 s). print-check full (cd tools/print-check && npm test): tests 298, pass 298, fail 0, skipped 0. e2e (scripts/e2e.sh direct, API 18381, web 14381, db smem_test_e2e): 44 passed, 0 failed (4.0 m).
+  EVIDENCE
+  AC1 inventory: table is in the PR body (5459 chars, has the inventory). Contact sheets on A4 viewed with the long-name student, with photos and with NO photo (my scratch copies of contact-sheet*.mjs, deleted, not committed). Navy notes (corners, cream, rules, tilted), back (rules, seal, stars, thanks) and profile (cream, crest, portrait, tilted) tell apart at a glance. Memory Book: see honest view below.
+  AC2 gate mutations on a scratch copy (worktree untouched), one at a time against shipped_distinct_test.go: limit 0.8 to 1.01 -> TestDistinctGateCatchesTwins FAILS (colour twin, 5 px twin, empty pages); limit 0.6 -> TestShippedTemplatesAreDistinct FAILS on shipped MB pages (dev's reason for 0.8 confirmed); empty-pages rule removed -> fails; items ignored -> both fail; bg compared instead of ignored -> fails; cell 8 to 200 -> fails. Colour-only twin: IoU 1.00 on all 32 shipped pages (caught). Shape-swap twin (same boxes, other sticker): 1.00 (caught). 5 px nudge of all items: caught on most pages (0.80 to 1.00) but NOT on small-decoration pages (notes-airy 0.64, profile-cream 0.66, notes-cream 0.85 ok). Fine sweep on navy notes-corners, all items moved: 4.9 px 0.886, 5.7 px 0.865, 6.5 px 0.845, 7.3 px 0.845 flagged; 8.2 px 0.787 and above NOT flagged; boundary flips exactly at 0.8. So 0.8 catches colour, shape and tiny-nudge twins but a 1.5 mm to 2 mm shift passes. Judgement: acceptable as a floor (real shipped worst cases 0.54 back, 0.76 notes, 0.78 profile for MB, 0.17 or less for Navy), not a guarantee of taste.
+  Existing gates still bite (scratch mutations): bg ink -> contrast 1.00:1 fails (Navy and MB); text item with words -> fails (MB: holds words; Navy: contrast and neutral-text rule); image item -> manifest validator rejects (not_own_media); item at x 0 -> leaves the inner margin (Navy 44/38/38 px, MB 5 mm) on A5/A4/Letter; x 900 with 40 degree tilt -> x out_of_range.
+  Contrast >= 4.5:1 and no prose/image: asserted by TestNavyClassicTemplateGates and TestMemoryBookTemplateGates, both pass on the head.
+  Print-check on A5/A4/Letter: profile-tilted A5 0.223 %, A4 0.215 %, Letter 0.091 %, Navy profile-tilted A5 0.125 %, all 'covers no text or signature'. Letter crop viewed at 520 px: the moved star is about 25 px clear of the caption 'Khoa 2026', no overlap.
+  Byte equality: git diff develop..HEAD and origin/develop..HEAD on every cover-*.json and the four Memory Book profile-*.json is empty. Diff is 16 files: 12 template JSON, shipped_distinct_test.go, docs/templates.md, two contact-sheet PNGs; nothing under .team/, web/, cmd/ (develop is behind by one docs commit only; PR mergeable).
+  AC3: result lines above.
+  NON-BLOCKING OBSERVATIONS
+  1. Mutating shipped_distinct_test.go: replacing the override-box branch (o[x] nil check) with always-skip survives, and >= to > survives (no boundary case). Only profile-portrait and MB cover/profile-corners overrides use full boxes, so no shipped page depends on it today; a dev follow-up could add a near-twin case just below and above 0.8 and one with a full-box override.
+  2. MB profile pair measures 0.78 and notes pair 0.76, close to the 0.8 limit; any new MB look near those will trip it.
+  3. The gate ignores asset identity by design; two pages with the same boxes and different stickers are twins (right call).
+  HONEST VIEW (A4, long name, no-photo student): Navy Classic is now a real choice for notes, back and profile: stars on the corners, a diamond rule, a seal medallion, an arc of stars, a thick bar; the long name and empty photo oval do not break any look. Memory Book notes and back are still only a choice of sticker clusters and tilt: heading, list and table stay put, so the four cards read as one page with different confetti (notes-airy, notes-doodle, notes-stickers, notes-tape and back-pact vs back-thanks are the weakest pairs). Dev's hard limit (heading wraps over its subtitle if moved, flow content cannot move, about 150 x 70 px free) is real and the finding plus proposed design (movable_in_flow flag, notes columns, back table_height) is on the board for the leader; a runtime change is outside this task. Verdict does not depend on it (AC2 requires distinct looks inside today's rules; they are distinct by the gate).
+- 2026-11-06 02:53Z · leader · squash-merged PR #175 at 8b23f641 (QA_PASS: integration 33 pkgs ok, print-check 298/298, e2e 44/44; gate mutants caught except >= vs > and full-box override boxes). Memory Book notes/back variety limit stays (content blocks cannot move): owner-level runtime decision for the stage 2 exit check.
 
 <!-- tasks:end -->
