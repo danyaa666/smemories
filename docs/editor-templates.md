@@ -61,7 +61,7 @@ A failed apply leaves the editor, its history and its autosave exactly as before
 
 ## Limits and cost
 
-No `template-list` call before the panel opens; at most two kinds in memory; `apply-template` is the only write and is never sent by a preview; the three template routes share the save rate limit (burst 20 per 10 s, 60 a minute). The panel is only offered for a book template that has a `design.layout` block (the editor itself is not mounted otherwise). The editor does not mount below 768 px, so the panel has no phone-width dialog form; below that width the route shows its own message.
+No `template-list` call before the panel opens; at most two kinds in memory; `apply-template` is the only write and is never sent by a preview; the three template routes share the save rate limit (burst 20 per 10 s, 60 a minute). The panel is only offered for a book template that has a `design.layout` block (the editor itself is not mounted otherwise). Below 768 px the panel is a full-height dialog of the phone editor (T-181, [editor-phone.md](editor-phone.md)); a previewed template is drawn on the page with the Apply bar under it.
 
 ## Tests
 
@@ -70,6 +70,6 @@ No `template-list` call before the panel opens; at most two kinds in memory; `ap
 ## Not proven by a machine (check by hand)
 
 - A screen reader reading the card names ("Template Clean title, 6 items, shipped"), the banner and the live region.
-- Touch: the 44 px targets of the cards' buttons on a tablet (the editor needs at least 768 px) and a drag-free page scroll over the list.
+- Touch: the 44 px targets of the cards' buttons and of the save, delete and apply dialogs (T-181 added `.ed-panel .dialog button` to the coarse-pointer rule) and a drag-free page scroll over the list.
 - A shipped template on each book template and page kind drawn as the thumbnail shows it (the thumbnail and the applied page use the same components; the print check covers the page itself).
 - The save dialog read by a screen reader (the summary, the polite counter, the error), and the name typed on a phone-sized touch device with Telex or VNI (the e2e types composed text only).

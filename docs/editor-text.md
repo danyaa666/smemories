@@ -31,4 +31,6 @@ Automated tests drive the browser's composition path with CDP in Chromium. They 
 | c | Firefox desktop: typing and paste | not run; unproven |
 | d | Android Gboard Telex | not run (no device); unproven |
 
+Rows b and d have a phone twin since T-181: on a phone the text is typed in the sheet's textarea (the same field component and the same composition handling), and its checklist for iOS Safari and Android Gboard is in [editor-phone.md](editor-phone.md). Both are **not run** until the owner runs them.
+
 A failure of (a) or (b) blocks the merge: the editor then keeps only the panel field (requirement 9 of the task).
