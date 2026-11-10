@@ -1148,7 +1148,7 @@ Spec: .team/epics/E09-customisation-editor/39-bolder-notes-back-variants.md (rea
 - 2026-11-06 02:53Z · leader · squash-merged PR #175 at 8b23f641 (QA_PASS: integration 33 pkgs ok, print-check 298/298, e2e 44/44; gate mutants caught except >= vs > and full-box override boxes). Memory Book notes/back variety limit stays (content blocks cannot move): owner-level runtime decision for the stage 2 exit check.
 
 ### T-181 — [E09] Phone mode of the editor: view and light edit below 768 px
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -1156,16 +1156,17 @@ Spec: .team/epics/E09-customisation-editor/39-bolder-notes-back-variants.md (rea
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-181-e09-phone-mode-of-the-editor-view-and-li
-- **PR:** —
-- **Updated:** 2026-11-10 17:07Z by dev
+- **PR:** https://github.com/danyaa666/smemories/pull/179
+- **Updated:** 2026-11-10 17:22Z by dev
 - **Comments-seen:** 1
 
 Spec: .team/epics/E09-customisation-editor/40-phone-mode.md (read it from the main checkout). Phone shell over the same store (bottom sheet property panel, text edited in the sheet, pager, Templates/History as dialogs, undo/redo buttons), no drag handles, shell switch at 768 px keeps state, Playwright touch spec, docs/editor-phone.md, owner manual checks iOS Safari and Gboard
 
 #### Comments
 - 2026-11-06 06:54Z · leader · Leader: small fix to include (QA on T-176): in web/src/styles/editor.css '.ed-panel button {min-height:36px}' wins over .btn, so the Templates panel dialogs (save, delete, apply confirm) have 36 px Cancel/Save/Confirm buttons on touch at 768 px, below the 44 px rule. Add '.ed-panel .dialog button' (or the real selector) to the '@media (pointer: coarse)' 44 px block, with a test that measures the button heights on a touch viewport, as part of the phone-width dialogs.
+- 2026-11-10 17:22Z · dev · PR #179 head 406ebb3. Phone shell below 768 px: one EditorBody+store for both widths (EditorShell is now a thin desktop wrapper), PhoneStage (read-only, tap select, no gesture code; desktop Stage is a lazy chunk a phone never fetches), top bar, bottom pager + sheet (Edit=PropertyPanel+move arrows+delete confirm, Layers, Add, page list), History/Templates full-height dialogs, visualViewport keyboard inset, 44 px rule for Templates dialogs (leader note). Green locally: eslint/prettier, tsc, vitest 1327, lint:i18n, check:api, build. Editor route JS gzip 28.32 -> 27.60 kB (phone), desktop +4.28 kB lazy Stage chunk. NOT RUN (no Docker/browsers in this cloud session): make test-integration, make e2e (new tools/e2e/editor-phone.spec.mjs is written but never executed; editor-shell.spec step 7 changed to expect the phone editor at 700 px), print-check, 4x CPU throttle, iOS Safari/Gboard (owner checklist docs/editor-phone.md). Deviations: spec says 100-item page but server caps 40/page (MAX_ITEMS_PAGE), e2e uses 40; hardware Back does not close dialogs (leave guard owns history; Close/Esc do). QA: run full e2e incl. editor-phone.spec on head, desktop suite unchanged at 768+, check desktop Stage lazy load does not break any desktop spec timing.
 
 ### T-182 — [E09] Accessibility and i18n audit of the editor, with fixes
 - **Status:** BACKLOG
