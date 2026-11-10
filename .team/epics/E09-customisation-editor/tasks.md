@@ -1148,7 +1148,7 @@ Spec: .team/epics/E09-customisation-editor/39-bolder-notes-back-variants.md (rea
 - 2026-11-06 02:53Z · leader · squash-merged PR #175 at 8b23f641 (QA_PASS: integration 33 pkgs ok, print-check 298/298, e2e 44/44; gate mutants caught except >= vs > and full-box override boxes). Memory Book notes/back variety limit stays (content blocks cannot move): owner-level runtime decision for the stage 2 exit check.
 
 ### T-181 — [E09] Phone mode of the editor: view and light edit below 768 px
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -1156,10 +1156,10 @@ Spec: .team/epics/E09-customisation-editor/39-bolder-notes-back-variants.md (rea
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-181-e09-phone-mode-of-the-editor-view-and-li
 - **PR:** —
-- **Updated:** 2026-11-06 by leader
+- **Updated:** 2026-11-10 17:07Z by dev
 - **Comments-seen:** 1
 
 Spec: .team/epics/E09-customisation-editor/40-phone-mode.md (read it from the main checkout). Phone shell over the same store (bottom sheet property panel, text edited in the sheet, pager, Templates/History as dialogs, undo/redo buttons), no drag handles, shell switch at 768 px keeps state, Playwright touch spec, docs/editor-phone.md, owner manual checks iOS Safari and Gboard
