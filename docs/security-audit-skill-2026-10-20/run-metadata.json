@@ -1,0 +1,55 @@
+{
+  "run_id": "smemories-run-1-20261020",
+  "repo": "smemories",
+  "target": "/home/user/smemories",
+  "source_ref": {
+    "commit": "a2226aab7909d7b196d5a8083171c1c688938dab",
+    "branch": "develop",
+    "worktree_dirty": false
+  },
+  "profile": "quick",
+  "scope_paths": [
+    "."
+  ],
+  "scope_notes": "Whole repository. .team/ and .agents/ are team-process material, read for context only, not audit targets.",
+  "budget": null,
+  "execution_policy": "sandboxed-source-and-local-only",
+  "execution_notes": "No OS-enforced sandbox with all required controls was verified on this host, so no target-controlled code is executed. Runtime-dependent leads become needs_validation.",
+  "selected_companion_files": [
+    "CLIENT-SIDE.md",
+    "CLOUD-AND-DEPLOYMENT.md",
+    "DATA-ISOLATION-AND-LIFECYCLE.md",
+    "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md",
+    "SUPPLY-CHAIN-AND-RELEASE.md",
+    "WEB-PROTOCOL-AND-AUTH.md"
+  ],
+  "prior_run_paths": [],
+  "prior_run_notes": "No compatible prior coverage-ledger.json or findings.json exists for this repo.",
+  "shared_file_owners": {
+    "parent": [
+      "run-metadata.json",
+      "architecture.md",
+      "coverage-ledger.json",
+      "findings.json",
+      "REPORT.md",
+      "FINDINGS-DETAIL.md",
+      "NEEDS-VALIDATION.md"
+    ]
+  },
+  "run_status": "complete",
+  "execution_deviations": [
+    {
+      "agent": "recon-1a",
+      "what": "Ran `go version` inside the target; GOTOOLCHAIN=auto downloaded the go1.26.0 toolchain into /root/go/pkg/mod (outside the target). No target code was executed and the worktree stayed clean, but it was an unintended network fetch contrary to the no-network rule.",
+      "follow_up": "Hunter/verifier prompts forbid running any `go`, `npm`, or other toolchain command."
+    }
+  ],
+  "coverage_claim": "partial: quick profile, one hunter wave, one final critic (stop=False), deferred units listed in REPORT.md",
+  "agents_spent": {
+    "reconnaissance": 4,
+    "hunters": 8,
+    "critic": 1,
+    "verifiers": 10,
+    "total": 23
+  }
+}
