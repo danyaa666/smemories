@@ -1,0 +1,5 @@
+* text=auto eol=lf
+# Golden files are compared byte for byte; git autocrlf on Windows must not turn them into CRLF (T-184).
+**/testdata/**/*.txt text eol=lf
+docs/design/notes/tokens.css text eol=lf
+web/src/styles/tokens.css text eol=lf

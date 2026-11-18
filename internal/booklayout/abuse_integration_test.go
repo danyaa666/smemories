@@ -134,8 +134,8 @@ func (r route) body0(book string) string {
 // Req 2: hostile bodies through the real route fail fast with the right code and bounded allocation, and store nothing.
 func TestHostileBodiesFailFast(t *testing.T) {
 	const (
-		maxTime  = 200 * time.Millisecond
-		maxAlloc = 2 << 20 // a refusal before decoding: the recorder's copy of the body and the request, nothing of the document (measured: 0.3 MB)
+		maxTime  = time.Second // the byte ceiling is the hard gate; 200 ms flaked under -race on a slower Windows box (269 ms), a quadratic path takes many seconds
+		maxAlloc = 2 << 20     // a refusal before decoding: the recorder's copy of the body and the request, nothing of the document (measured: 0.3 MB)
 		// 43 000 empty items is the most a 128 KiB body holds: it is decoded (about 6 MB), looked at twice (the media ids, the validator) and
 		// refused for having too many items (measured: 12 MB). The ceiling is 24 MiB, about 190 times the body.
 		maxDecodeAlloc = 24 << 20
