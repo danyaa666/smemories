@@ -17,7 +17,7 @@ export const ROTATE_KEYS: Record<string, -1 | 1> = { ",": -1, "<": -1, ".": 1, "
 export const STEP = 1; // design px
 export const BIG_STEP = 10; // Shift+Arrow and the resize keys
 export const TURN = 1; // degrees
-export const BIG_TURN = 15; // Shift + , and .
+export const BIG_TURN = 15; // Shift + , and Shift + .
 
 /** What a key event asks for, or null when it is not ours (the browser keeps Alt+Arrow, Ctrl and Cmd combinations). */
 export function nudgeOf(e: {
@@ -46,15 +46,15 @@ export const SHORTCUTS: readonly { id: string; keys: string }[] = [
   { id: "move", keys: "← ↑ → ↓" },
   { id: "moveBig", keys: "Shift + ← ↑ → ↓" },
   { id: "resize", keys: "Alt + Shift + ← ↑ → ↓ (Mac: Option + Shift)" },
-  { id: "rotate", keys: ", and ." },
+  { id: "rotate", keys: ", / ." },
   { id: "rotateBig", keys: "Shift + , and Shift + ." },
   { id: "delete", keys: "Delete, Backspace" },
   { id: "escape", keys: "Esc" },
   { id: "undo", keys: "Ctrl + Z (Mac: Cmd + Z)" },
   { id: "redo", keys: "Ctrl + Shift + Z, Ctrl + Y (Mac: Cmd + Shift + Z)" },
-  { id: "noSnap", keys: "Alt (Mac: Option) while dragging" },
-  { id: "ratio", keys: "Shift while resizing" },
-  { id: "snap15", keys: "Shift while rotating" },
+  { id: "noSnap", keys: "" }, // these three read "key + gesture": the words come from `editor.helpKeys` (en, vi)
+  { id: "ratio", keys: "" },
+  { id: "snap15", keys: "" },
   { id: "pages", keys: "Page Up, Page Down" },
   { id: "help", keys: "?" },
 ];

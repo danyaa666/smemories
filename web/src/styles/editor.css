@@ -680,13 +680,32 @@
   display: flex;
   gap: var(--space-2);
 }
+/* A touch screen at tablet width (T-182): every button, link and field of the editor is at least 44 px, as on the phone. */
 @media (pointer: coarse) {
+  .ed-toolbar button,
+  .ed-bar button,
+  .ed-panel button,
+  .ed-panel input:not([type="checkbox"]),
+  .ed-panel select,
+  .ed-help button,
   .ed-panel .ed-tpl-pick,
   .ed-tpl-buttons button,
   .ed-tpl-actions button,
   /* the dialogs of the Templates panel (save, delete, apply): '.ed-panel button' above would keep their buttons at 36 px */
   .ed-panel .dialog button {
     min-height: 44px;
+  }
+  .ed-toolbar a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .ed-panel .ed-swatch {
+    width: 44px;
+    height: 44px;
+  }
+  .ed-check {
+    min-height: 44px; /* the label row is the target of a check box */
   }
 }
 

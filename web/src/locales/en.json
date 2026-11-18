@@ -1112,6 +1112,11 @@
     "helpButton": "Keyboard shortcuts",
     "helpTitle": "Keyboard shortcuts",
     "helpClose": "Close",
+    "helpKeys": {
+      "noSnap": "Alt (Mac: Option) + drag",
+      "ratio": "Shift + drag a handle",
+      "snap15": "Shift + rotate"
+    },
     "help": {
       "tab": "Select the next or previous item on the page",
       "move": "Move the selected item 1 px",

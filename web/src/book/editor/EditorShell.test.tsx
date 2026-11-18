@@ -528,7 +528,8 @@ describe("gestures (keyboard and buttons)", () => {
     await key("{ArrowRight}{ArrowRight}{ArrowRight}");
     await key("{Shift>}{ArrowRight}{/Shift}");
     expect(field("Left").valueAsNumber).toBeCloseTo(left0 + (13 / 816) * 100, 1);
-    expect(live()).toContain("Moved right 10.");
+    // a run of keys says its first step at once and the last one when the interval is over (T-182)
+    await waitFor(() => expect(live()).toContain("Moved right 10."));
     expect(live()).toContain("percent from the left");
     expect(undoable()).toBe(false); // the burst is still open: nothing committed yet
     await key("{Control>}z{/Control}"); // Ctrl closes the burst, then undo takes the whole burst away
@@ -558,7 +559,7 @@ describe("gestures (keyboard and buttons)", () => {
     expect(field("Rotation (degrees)")).toHaveValue(26);
     await key(",");
     expect(field("Rotation (degrees)")).toHaveValue(25);
-    expect(live()).toContain("Rotated to 25 degrees");
+    await waitFor(() => expect(live()).toContain("Rotated to 25 degrees"));
   });
 
   it("Delete removes the selected item, clears the selection and says so; a template element is not deleted", async () => {

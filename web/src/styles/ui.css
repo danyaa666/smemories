@@ -258,6 +258,16 @@
   }
 }
 
+/* A person who asked the system for less motion gets none (T-182): the loading shimmer stands still and colour changes are immediate. */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+  .btn {
+    transition: none;
+  }
+}
+
 /* ── EmptyState ───────────────────────────────── */
 .empty {
   display: flex;
