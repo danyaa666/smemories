@@ -162,7 +162,7 @@ Redis db, and run again.
 
 **The `e2e` job is paused (D-37, T-132; `image` and `go-integration` are paused too, see [ci.md](ci.md)):** it does not run on pushes and pull requests (it shows as skipped) and runs only by hand with `gh workflow run ci.yml --ref <branch>`. QA runs the same commands locally (`make e2e` and the print-check, see CLAUDE.md "CI scope"). To switch it back on, delete the `if:` line above the job.
 
-The print-check suite has 181 tests (run `make print-check` for the current number) and takes about 5-6 min locally (about 319 s); the job's "Print check" step is limited to 15 min and the whole job to 25 min (T-149), and the step prints `print-check: N s`.
+The print-check suite has 298 tests (run `make print-check` for the current number) and takes about 5-6 min on a Mac but 19-21 min on the CI runner (T-185: the 15 min limit cut it off, it did not hang); the job's "Print check" step is limited to 30 min and the whole job to 60 min (T-149, T-185), and the step prints `print-check: N s`.
 
 The `e2e` job in `.github/workflows/ci.yml` starts MySQL, the S3 store and Valkey like `go-integration`, then runs `scripts/e2e.sh`. The
 error starts with `STEP FAILED: <n. title>`, then Playwright's own message and code frame. On failure the artifact `e2e-failure`
@@ -172,7 +172,7 @@ A trace holds every request, response body and page snapshot, so it would contai
 `token=...`, `/c/<token>`, `/join/<token>`, `"token":"..."` and the `__Host-smem_session` cookie by `REDACTED`, and packs it again without directory entries (Playwright's reader fails on them; needs `unzip`, `zip` and `perl`; the
 runner and macOS have them). It fails closed: a `trace.zip` that cannot be scrubbed and checked is deleted and the reason printed, so it is never uploaded; the run's exit code is kept. `npm run guard-test` in `tools/e2e` tests the script. The trace stays useful (steps, screenshots, request URLs and statuses) and the artifact expires after 3 days. The token
 is also never printed to the job log (every error leaving a step is scrubbed of it). To check it:
-`unzip -q out/results/*/trace.zip -d /tmp/t && grep -rE 'get-content\?token=[^R]' /tmp/t` finds nothing. A new bearer secret in the app needs a rule in the script. The job has a 25 minute limit (the journey itself 240 s per spec, the print check 15 min) and caches the Chromium download per
+`unzip -q out/results/*/trace.zip -d /tmp/t && grep -rE 'get-content\?token=[^R]' /tmp/t` finds nothing. A new bearer secret in the app needs a rule in the script. The job has a 60 minute limit (the journey itself 240 s per spec, the print check 30 min) and caches the Chromium download per
 Playwright version.
 
 ## Changing the journey when a screen changes
