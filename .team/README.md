@@ -11,8 +11,7 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 6 | T-023, T-024, T-025, T-031, T-050, T-183 |
-| TODO | 1 | T-182 |
-| IN_PROGRESS | 1 | T-185 |
+| TODO | 2 | T-185, T-182 |
 | MERGED | 32 | T-184, T-150, T-151, T-152, T-153, T-154, T-155, T-156, T-157, T-158, T-159, T-160, T-161, T-162, T-163, T-164, T-165, T-166, T-167, T-168, T-169, T-170, T-171, T-172, T-173, T-174, T-175, T-176, T-177, T-178, T-179, T-180 |
 | DONE | 137 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138, T-139, T-140, T-141, T-142, T-143, T-144, T-145, T-146, T-147, T-149, T-148, T-181 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
@@ -23,7 +22,7 @@
 
 **Open questions for you:** Q-064 (Doory templates: licence route, studio, and template colours (ADR 0005, T-169)); Q-065 (Storage cap per user for layout history (T-179, docs/layout-storage-budget.md): cap now, or watch and decide at go-live?)
 
-_Board last written 2026-11-18 12:49Z_
+_Board last written 2026-11-18 15:03Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -6578,7 +6577,7 @@ Spec: .team/epics/E01-foundation/16-windows-dev-machine-tests.md (read it from t
 - 2026-11-18 10:10Z · leader · merged 2f89947. Review: test-side only, Windows-only skips with reasons, httpx keep-alive root cause fixed; 1 s ceiling and 20 s vitest timeout also apply on Linux (alloc ceiling stays the hard gate). For owner to check: make test passes on your Windows PC; existing checkouts need 'git add --renormalize .' once (eol=lf).
 
 ### T-185 — [E01] Print check: A5 notes drift 3 px, step hangs to timeout; develop e2e cannot install Chromium
-- **Status:** IN_PROGRESS
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** bug
 - **Milestone:** M4
@@ -6586,16 +6585,17 @@ Spec: .team/epics/E01-foundation/16-windows-dev-machine-tests.md (read it from t
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-185-e01-print-check-a5-notes-drift-3-px-step
 - **PR:** —
-- **Updated:** 2026-11-18 12:49Z by dev
-- **Comments-seen:** 1
+- **Updated:** 2026-11-18 15:03Z by leader
+- **Comments-seen:** 2
 
 Spec: .team/epics/E01-foundation/17-print-check-drift-and-e2e-chromium.md (read it from the main checkout). Found reviewing T-181: manual CI 44293267820 print check failed (note01 y0 1516 vs 1513 at 192 dpi) then hung to the 15 min timeout; develop baseline 44298102605 failed twice at Install Chromium.
 
 #### Comments
 - 2026-11-18 12:47Z · leader · Leader: context from the previous leader session: QA ran print-check 298/298 LOCALLY (macOS) on develop at cc3d8c6 (T-176 merge, 2026-11-06), i.e. the same develop the CI run failed on. So the 3 px A5 notes mismatch may be specific to the Linux CI runner (fonts, Chromium build, DPI), not a code drift. First step: run print-check locally on this Windows PC on develop head and compare; only then decide code bug vs environment.
+- 2026-11-18 15:03Z · leader · Reclaimed: the dev run was stopped by an app restart. Worktree .team/worktrees/T-185 has an uncommitted edit to .github/workflows/ci.yml and no results yet; the next dev run resumes from it (check the diff first).
 
 <!-- tasks:end -->
 
