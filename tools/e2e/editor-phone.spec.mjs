@@ -4,7 +4,7 @@
 //
 // Tests: (1) 375x812: open from the manage page, tap the cover title, nudge and widen it with the sheet, add a Vietnamese text typed in the sheet, add a sticker,
 // undo, page with the pager, apply an own template, restore from History, Done, reload; the same document at 1024 px; nothing is dragged and no desktop
-// stage chunk is fetched; (2) 414x896 and landscape 812x375 smoke; (3) 40 items on a page (the server's per-page cap) on a 4x CPU throttle.
+// stage chunk is fetched; (2) 414x896 and landscape 667x375 smoke; (3) 40 items on a page (the server's per-page cap) on a 4x CPU throttle.
 import { expect, request, test } from "@playwright/test";
 
 const BASE = process.env.E2E_BASE_URL;
@@ -289,6 +289,9 @@ test("375x812 touch: select, nudge, widen, type Vietnamese in the sheet, sticker
     await page.locator(".ed-prevbar").getByRole("button", { name: "Restore" }).tap();
     await page.getByRole("dialog").getByRole("button", { name: "Restore" }).tap();
     await expect.poll(async () => (await items(page, "profile")).map((i) => i.text).join("|")).toContain(BEFORE);
+    // As on the desktop, a restore leaves History open; on a phone the dialog covers Done, so it is closed first.
+    await page.getByRole("dialog").getByRole("button", { name: "Close" }).tap();
+    await expect(page.getByRole("dialog")).toBeHidden();
   });
   await step("Done saves and goes back to the manage page; a reload shows the same document at 1024 px", async () => {
     await page.getByRole("button", { name: "Done", exact: true }).tap();
@@ -312,7 +315,7 @@ test("375x812 touch: select, nudge, widen, type Vietnamese in the sheet, sticker
   });
 });
 
-test("414x896 portrait and 812x375 landscape: the sheet opens, the selection survives a rotation", async ({ browser }) => {
+test("414x896 portrait and 667x375 landscape: the sheet opens, the selection survives a rotation", async ({ browser }) => {
   test.skip(!BASE || !OTP || !bookId, "needs the setup test");
   const page = await phone(browser, 414, 896);
   await saveLayout(page, { v: 1, pages: { cover: { items: [textItem("coverTxt", `Xoay ${RUN}`)] } } });
@@ -320,7 +323,7 @@ test("414x896 portrait and 812x375 landscape: the sheet opens, the selection sur
   await page.getByRole("button", { name: new RegExp(`^Text: Xoay`) }).tap();
   await expect(sheet(page)).toBeVisible();
   await step("rotate to landscape: still selected, the sheet is still open, the bottom bar is on screen", async () => {
-    await page.setViewportSize({ width: 812, height: 375 });
+    await page.setViewportSize({ width: 667, height: 375 });
     await expect(page.getByRole("button", { name: new RegExp(`^Text: Xoay`) })).toHaveAttribute("aria-pressed", "true");
     await expect(sheet(page)).toBeVisible();
     const bar = await page.locator(".ed-pager").last().boundingBox();
