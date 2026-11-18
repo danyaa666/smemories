@@ -11,18 +11,18 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 6 | T-023, T-024, T-025, T-031, T-050, T-183 |
-| TODO | 2 | T-185, T-182 |
+| TODO | 3 | T-185, T-186, T-182 |
 | MERGED | 32 | T-184, T-150, T-151, T-152, T-153, T-154, T-155, T-156, T-157, T-158, T-159, T-160, T-161, T-162, T-163, T-164, T-165, T-166, T-167, T-168, T-169, T-170, T-171, T-172, T-173, T-174, T-175, T-176, T-177, T-178, T-179, T-180 |
 | DONE | 137 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138, T-139, T-140, T-141, T-142, T-143, T-144, T-145, T-146, T-147, T-149, T-148, T-181 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Epics (done/total):** E06-go-live 1/1; E09-customisation-editor 33/35; (unfiled) 135/149
+**Epics (done/total):** E06-go-live 1/1; E09-customisation-editor 33/35; (unfiled) 135/150
 
 **Awaiting your review (MERGED):** T-184 ([E01] Unit tests pass on a Windows dev machine (make test with -race)); T-150 ([E09] Spike: layout editor architecture and ADR 0004); T-151 ([E09] Asset pack and registry for stickers, shapes and frames); T-152 ([E09] Backend: student-uploaded design images (backgrounds and decorations)); T-153 ([E09] Layout document model and API (backend)); T-154 ([E09] Web layout runtime: the book draws a layout (Memory Book)); T-155 ([E09] Fix three stale Postman assertions in the customisation-editor collection); T-156 ([E09] Layout version must never go back (reset / template change)); T-157 ([E09] print-check: refuse a foreign server on its port; refresh test counts in docs); T-158 ([E09] Editor state: document store, undo/redo, autosave and conflict handling (web)); T-159 ([E09] Editor route and shell: page strip, zoom, selection overlay, property panel (web)); T-160 ([E09] Editor gestures: move, resize, rotate, snap, guides, with keyboard control (web)); T-161 ([E09] Editor text boxes: add, type in place, font, size, colour, align (web)); T-162 ([E09] Editor palette: stickers, shapes, frames, own images and the page background (web)); T-163 ([E09] Layout version history and restore (backend)); T-164 ([E09] Palette follow-ups: copy, history edge, distinct cap/quota code (web + one small API change)); T-165 ([E09] Editor version history panel: list, preview and restore (web)); T-166 ([E09] Navy Classic: page kinds and editable elements for the layout editor (web + manifest)); T-167 ([E09] Class book carries each member's layout (server cap, privacy, web wiring)); T-168 ([E09] History e2e hardening: friendly mysql-missing message, QA probe cases (tests only)); T-169 ([E09] Spike: Doory-template import and a Fabric.js image studio beside the DOM editor (ADR 0005)); T-170 ([E09] Editor flow: page by page, Save and done, Print, back to the book manage page (web)); T-171 ([E09] Stretching shapes: rectangle and ellipse that fill their box (registry + web)); T-172 ([E09] Page templates: model, shipped storage, validator gate and read route (Go + web preview)); T-173 ([E09] Own page templates and the apply API (Go): save my page, apply a template per section); T-174 ([E09] Stabilise the editor-gestures touch test (flake: 2 to 3 px against 0.5 allowed)); T-175 ([E09] Template gallery and apply, per section (web): shipped and own templates, preview, apply, delete own); T-176 ([E09] Save my page as a template (web): name it, see what is kept, use it again); T-177 ([E09] Shipped page templates for Memory Book: four or more looks per page kind, authored by us); T-178 ([E09] Shipped page templates for Navy Classic: four or more looks per page kind, authored by us); T-179 ([E09] Stage 2 hardening: fuzz the layout parsers, storage budget per user, abuse limits, no content in logs); T-180 ([E09] Make the profile, notes and back template choices a real choice (Memory Book and Navy Classic))
 
 **Open questions for you:** Q-064 (Doory templates: licence route, studio, and template colours (ADR 0005, T-169)); Q-065 (Storage cap per user for layout history (T-179, docs/layout-storage-budget.md): cap now, or watch and decide at go-live?)
 
-_Board last written 2026-11-18 15:03Z_
+_Board last written 2026-11-18 16:26Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -6587,15 +6587,38 @@ Spec: .team/epics/E01-foundation/16-windows-dev-machine-tests.md (read it from t
 - **Owner-approved:** —
 - **Assignee:** —
 - **Branch:** task/t-185-e01-print-check-a5-notes-drift-3-px-step
-- **PR:** —
-- **Updated:** 2026-11-18 15:03Z by leader
-- **Comments-seen:** 2
+- **PR:** https://github.com/danyaa666/smemories/pull/182
+- **Updated:** 2026-11-18 16:26Z by leader
+- **Comments-seen:** 6
 
 Spec: .team/epics/E01-foundation/17-print-check-drift-and-e2e-chromium.md (read it from the main checkout). Found reviewing T-181: manual CI 44293267820 print check failed (note01 y0 1516 vs 1513 at 192 dpi) then hung to the 15 min timeout; develop baseline 44298102605 failed twice at Install Chromium.
 
 #### Comments
 - 2026-11-18 12:47Z · leader · Leader: context from the previous leader session: QA ran print-check 298/298 LOCALLY (macOS) on develop at cc3d8c6 (T-176 merge, 2026-11-06), i.e. the same develop the CI run failed on. So the 3 px A5 notes mismatch may be specific to the Linux CI runner (fonts, Chromium build, DPI), not a code drift. First step: run print-check locally on this Windows PC on develop head and compare; only then decide code bug vs environment.
 - 2026-11-18 15:03Z · leader · Reclaimed: the dev run was stopped by an app restart. Worktree .team/worktrees/T-185 has an uncommitted edit to .github/workflows/ci.yml and no results yet; the next dev run resumes from it (check the diff first).
+- 2026-11-18 15:52Z · dev · dev interim (2026-11-18). (1) Windows: print-check cannot run here at all (spawn npx ENOENT, then C:\C:\ paths and pdftotext differences); not fixed, separate task if wanted. Docker is down, so no local Linux repro. (2) CI evidence, branch task/t-185-*: run 44332084141 Install Chromium OK (17 s) with the apt retry/lock fix; journey 63 passed, 1 failed: editor-phone.spec.mjs:344 read --kb right after dispatchEvent, React had not rendered yet (race, Linux only) -> now expect.poll. Run 44334658321 (head fdcea18): journey 63/63 passed; print check ran to the end: 298 tests, 292 pass, 6 fail, 1147 s (19 min). So there is NO hang: the suite is just longer than the 15 min step limit (T-149 set it when it had far fewer tests); node:test reports the first failure at once and keeps going. All 6 failures are screen-vs-print pixel parity on Linux: A5 note01 y0 +3 px (whole text line 3 px lower on screen, ink rows shown in the log), A4 notes-doodle/stickers/tape 2.159 % vs 0.547 % baseline, A4 profile-tilted, Letter thin01 y1 7 px. The layout parity tests (T-154) were never run on Linux CI before, so this looks like Linux font hinting (screen rounds metrics, PDF does not), not code drift on develop. Testing --font-render-hinting=none in run 44340594952.
+- 2026-11-18 16:24Z · dev · dev: PR #182 (head 3ecab96) has the CI fixes (Chromium install, keyboard-inset race, limits 30/60 min, docs). Requirement 2 (Linux screen-vs-print parity, 6 failing tests) is not solved after 2 approaches (evidence only; hinting off was worse: 10 fail, reverted). Needs a Linux environment to iterate: Docker Desktop is down here and print-check does not run on Windows. Options for the leader: (a) start Docker/WSL so I can reproduce in a ubuntu-24.04 container; (b) merge #182 as is and make the 6 Linux-failing parity tests skip on Linux (they pass on macOS; QA runs print-check locally per D-37) with a follow-up task; (c) a dev on a Mac/Linux box. Print-check ends cleanly; it never hung (19-21 min suite vs 15 min limit).
+- 2026-11-18 16:24Z · dev · Linux parity failures need a Linux repro; PR #182 has the CI fixes; see comment
+- 2026-11-18 16:26Z · leader · Rescoped by leader: T-185 = PR #182 as it is (Chromium install fixed, step/job limits 30/60 min, journey race fixed, no hang: the suite outran the 15 min limit). Requirement 2 (the six Linux parity failures) moved to T-186. Dev: set T-185 READY_FOR_QA on PR #182 with its CI run ids; QA checks the CI changes, not print-check parity.
+
+### T-186 — [E01] Print check on Linux: six screen-vs-print parity failures
+- **Status:** TODO
+- **Priority:** P2
+- **Type:** bug
+- **Milestone:** M4
+- **Depends-on:** T-185
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-11-18 16:26Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E01-foundation/18-print-check-linux-parity.md (read it from the main checkout). Split out of T-185: Linux CI print-check 292/298, six layout parity failures that never ran on Linux before; reproduce in a local ubuntu-24.04 container (Docker is up).
+
+#### Comments
 
 <!-- tasks:end -->
 
