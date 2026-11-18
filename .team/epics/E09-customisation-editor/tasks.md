@@ -1212,7 +1212,7 @@ Spec: .team/epics/E09-customisation-editor/40-phone-mode.md (read it from the ma
 - 2026-11-18 12:48Z · leader · owner approved before merge (D-47)
 
 ### T-182 — [E09] Accessibility and i18n audit of the editor, with fixes
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -1220,10 +1220,10 @@ Spec: .team/epics/E09-customisation-editor/40-phone-mode.md (read it from the ma
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-182-e09-accessibility-and-i18n-audit-of-the-
 - **PR:** —
-- **Updated:** 2026-11-18 12:48Z by leader
+- **Updated:** 2026-11-18 16:29Z by dev
 - **Comments-seen:** 2
 
 Spec: .team/epics/E09-customisation-editor/41-editor-accessibility-i18n-audit.md (read it from the main checkout). Keyboard-only journey spec, aria snapshots, announcement bounds, contrast/zoom/target checks, hard-coded string check, vi text length, docs/editor-accessibility.md with findings table and owner screen-reader checklist; no new dependency
