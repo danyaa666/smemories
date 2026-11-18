@@ -25,6 +25,6 @@ A save makes a snapshot only after 10 minutes. The Playwright spec cannot wait, 
 
 ## Check by hand (not proven by a machine)
 
-- **Phone widths**: the editor does not mount below 768 px (a message with a link back shows), so there is no phone history dialog; check that message on a real phone. On a tablet at 768 to 1100 px check that the panel, the stage and the dashed preview outline fit without horizontal scroll.
+- **Phone widths**: below 768 px History is a full-height dialog of the phone editor (T-181, [editor-phone.md](editor-phone.md)); a previewed version is drawn on the page with the Restore bar under it. The checklist is in editor-phone.md. On a tablet at 768 to 1100 px check that the panel, the stage and the dashed preview outline fit without horizontal scroll.
 - Screen readers: the live region texts ("Previewing...", "Version restored.", the dropped message) and the radio group names.
 - Two real devices restoring at once.

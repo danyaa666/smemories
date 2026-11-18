@@ -990,7 +990,6 @@
     "back": "Quay lại tuỳ chỉnh",
     "loading": "Đang tải bố cục...",
     "loadFailed": "Không tải được bố cục.",
-    "narrow": "Trình chỉnh bố cục cần màn hình rộng ít nhất 768 px. Hãy mở cuốn sách trên máy tính bảng hoặc máy tính, hoặc quay lại để tuỳ chỉnh thiết kế.",
     "noLayout": "Mẫu của cuốn sách này chưa hỗ trợ bố cục tự do. Hãy chọn mẫu khác ở màn hình in.",
     "toolbar": "Thanh công cụ",
     "undo": "Hoàn tác",
@@ -1400,6 +1399,38 @@
           "other": "Có lỗi xảy ra. Không có gì bị thay đổi."
         }
       }
+    },
+    "phone": {
+      "move": "Di chuyển",
+      "moveLeft": "Dịch sang trái",
+      "moveRight": "Dịch sang phải",
+      "moveUp": "Dịch lên",
+      "moveDown": "Dịch xuống",
+      "moveLeftBig": "Dịch xa sang trái",
+      "moveRightBig": "Dịch xa sang phải",
+      "moveUpBig": "Dịch xa lên",
+      "moveDownBig": "Dịch xa xuống",
+      "movedLeft": "Đã chuyển sang trái",
+      "movedRight": "Đã chuyển sang phải",
+      "movedUp": "Đã chuyển lên",
+      "movedDown": "Đã chuyển xuống",
+      "movedLeftBig": "Đã chuyển xa sang trái",
+      "movedRightBig": "Đã chuyển xa sang phải",
+      "movedUpBig": "Đã chuyển xa lên",
+      "movedDownBig": "Đã chuyển xa xuống",
+      "deleteTitle": "Xoá mục này?",
+      "deleteBody": "“{{name}}” sẽ bị xoá khỏi trang. Bạn có thể hoàn tác.",
+      "cancel": "Huỷ",
+      "layers": "Các lớp",
+      "add": "Thêm",
+      "edit": "Sửa",
+      "pages": "Các trang",
+      "close": "Đóng",
+      "noItems": "Trang này chưa có gì.",
+      "hidden": "(đã ẩn)",
+      "pager": "Các trang",
+      "actions": "Sửa trang",
+      "preview": "Xem trước"
     }
   }
 }

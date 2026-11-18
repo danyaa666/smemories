@@ -683,7 +683,220 @@
 @media (pointer: coarse) {
   .ed-panel .ed-tpl-pick,
   .ed-tpl-buttons button,
-  .ed-tpl-actions button {
+  .ed-tpl-actions button,
+  /* the dialogs of the Templates panel (save, delete, apply): '.ed-panel button' above would keep their buttons at 36 px */
+  .ed-panel .dialog button {
     min-height: 44px;
   }
+}
+
+/* the phone editor (T-181), below 768 px: a top bar, the page, a bottom sheet and a pager. Everything here is under .ed-phone, so 768 px and wider is untouched. */
+.ed-phone {
+  --ed-bottom: 120px; /* the pager and the action row; the sheet is added on top of it */
+  padding-bottom: calc(var(--ed-bottom) + env(safe-area-inset-bottom));
+}
+.ed-phone button,
+.ed-phone a.ed-plink,
+.ed-phone select {
+  min-height: 44px;
+}
+.ed-phone .ed-panel button {
+  min-height: 44px;
+}
+.ed-phone .ed-panel input,
+.ed-phone .ed-panel textarea,
+.ed-phone .ed-panel select,
+.ed-phone .ed-panel-text {
+  font-size: 16px; /* below 16 px iOS Safari zooms the page when a field gets the focus */
+}
+.ed-pbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  background: var(--color-paper, #fff);
+}
+.ed-prow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.ed-prow button,
+.ed-prow a.ed-plink,
+.ed-pager button {
+  min-width: 44px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+  cursor: pointer;
+}
+.ed-prow a.ed-plink {
+  display: inline-flex;
+  align-items: center;
+}
+.ed-prow button:disabled,
+.ed-pager button[aria-disabled="true"] {
+  opacity: 0.5;
+}
+.ed-prow [data-save-state] {
+  flex: 1 1 auto;
+  min-width: 4em;
+  font-size: 0.85em;
+}
+.ed-pbody {
+  min-height: 0;
+}
+.ed-pstage {
+  height: auto;
+}
+.ed-pstage .ed-scroll {
+  overflow: visible; /* the screen scrolls, never the page */
+  padding: 8px;
+}
+.ed-phone .ed-hit,
+.ed-phone .ed-box.is-selected .ed-hit {
+  touch-action: manipulation; /* a vertical swipe over the page always scrolls the screen */
+}
+.ed-phone .ed-hit:hover {
+  border-color: transparent;
+}
+/* at least 2 px, visible on any colour: the white ring under the coloured one */
+.ed-phone .ed-box.is-selected .ed-hit {
+  border: 2px solid var(--color-primary);
+  box-shadow:
+    0 0 0 2px #fff,
+    0 0 0 3px rgba(0, 0, 0, 0.5);
+}
+/* the bottom: the sheet on top of the pager, on the visual viewport so the on-screen keyboard never covers it */
+.ed-bottom {
+  position: fixed;
+  right: 0;
+  bottom: var(--kb, 0px);
+  left: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: env(safe-area-inset-bottom);
+  background: var(--color-surface, #fff);
+  border-top: 1px solid var(--color-border);
+}
+.ed-sheet {
+  display: flex;
+  flex-direction: column;
+  max-height: min(55vh, calc(var(--vvh, 100vh) - 150px));
+  border-bottom: 1px solid var(--color-border);
+}
+.ed-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
+}
+.ed-sheet-head h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+.ed-sheet-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 var(--space-3) var(--space-3);
+}
+.ed-phone .ed-sheet-body .ed-panel {
+  width: auto;
+  max-height: none;
+}
+.ed-pager {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+}
+.ed-pager.ed-pact {
+  grid-template-columns: repeat(3, 1fr);
+}
+.ed-pager button[aria-expanded="true"] {
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary);
+}
+.ed-plist {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ed-plist button {
+  width: 100%;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+  text-align: left;
+}
+.ed-plist button[aria-pressed="true"],
+.ed-plist button[aria-current="page"] {
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary);
+}
+.ed-move {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+.ed-move button {
+  padding: 0 var(--space-1);
+}
+/* History and Templates: a full-height dialog; hidden (not unmounted) while a version or a template is previewed on the page */
+.ed-fulldialog {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  background: var(--color-paper, #fff);
+}
+.ed-fulldialog[hidden] {
+  display: none;
+}
+.ed-fulldialog:focus {
+  outline: none;
+}
+.ed-fd-head {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+.ed-fd-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: var(--space-3);
+}
+.ed-phone .ed-fulldialog .ed-panel {
+  width: auto;
+  max-height: none;
+}
+.ed-prevbar {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 30;
+  padding: var(--space-2) var(--space-3) calc(var(--space-2) + env(safe-area-inset-bottom));
+  background: var(--color-surface, #fff);
+  border-top: 3px dashed var(--color-primary);
+}
+/* the sheet takes room from the screen, so the page can still be scrolled clear of it */
+.ed-phone:has(.ed-sheet) {
+  padding-bottom: calc(var(--ed-bottom) + min(55vh, 420px) + env(safe-area-inset-bottom));
 }

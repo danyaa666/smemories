@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { lazy } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import { getBookData } from "../api/book";
@@ -6,18 +7,23 @@ import { getBookDesign } from "../api/bookDesign";
 import { retryOnce } from "../api/notes";
 import { getYearbook } from "../api/yearbooks";
 import { errorText, isBookGone } from "../auth/errors";
-import { EditorShell } from "../book/editor/EditorShell";
+import { EditorBody } from "../book/editor/EditorBody";
+import { PhoneStage } from "../book/editor/PhoneStage";
 import { getTemplate } from "../book/templates";
 import { Banner } from "../components/ui/Banner";
 import { Button } from "../components/ui/Button";
 import { Skeleton } from "../components/ui/Skeleton";
 import { useMediaQuery } from "../components/useMediaQuery";
 
+// The desktop stage holds every gesture module (drag, resize, rotate, snap, keys): it is a chunk of its own, fetched only at 768 px and wider (T-181).
+const DesktopStage = lazy(() => import("../book/editor/Stage").then((m) => ({ default: m.Stage })));
+
 const DEFAULT_SAFE_MM = 5; // the guide when the design block cannot be read: it is only a drawing aid
 
 /**
  * The free-layout editor route (epic E09 stage 2, T-159): `/yearbooks/:id/editor`, owner only (the yearbook request the shell makes anyway answers 403/404
- * for anyone else, and nothing else is requested then). Below 768 px the editor does not mount at all: a message says so (phone mode is a later task).
+ * for anyone else, and nothing else is requested then). Below 768 px it is the phone editor (T-181: view and light edit through a bottom sheet); the one
+ * component and store serve both widths, so crossing 768 px keeps the selection, the open sheet and the typed text.
  */
 export function Editor() {
   const { t } = useTranslation();
@@ -29,12 +35,12 @@ export function Editor() {
         <Link to={`/yearbooks/${id}/customise`}>{t("editor.back")}</Link>
       </p>
       <h1>{t("editor.title")}</h1>
-      {narrow ? <Banner variant="warning">{t("editor.narrow")}</Banner> : <Loaded id={id} />}
+      <Loaded id={id} phone={narrow} />
     </>
   );
 }
 
-function Loaded({ id }: { id: string }) {
+function Loaded({ id, phone }: { id: string; phone: boolean }) {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const book = useQuery({ queryKey: ["yearbook", id], queryFn: () => getYearbook(id) }); // the same request as the shell's: it tells who owns the book
@@ -82,8 +88,10 @@ function Loaded({ id }: { id: string }) {
   if (!getTemplate(data.data.yearbook.template_id).layout)
     return <Banner variant="warning">{t("editor.noLayout")}</Banner>;
   return (
-    <EditorShell
+    <EditorBody
       key={templateId ?? ""}
+      phone={phone}
+      Stage={phone ? PhoneStage : DesktopStage}
       bookId={id}
       onDone={() => void qc.invalidateQueries({ queryKey: ["book-data", id] })} // the manage page shows the book as it is now
       data={data.data}

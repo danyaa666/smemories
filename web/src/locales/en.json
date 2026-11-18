@@ -990,7 +990,6 @@
     "back": "Back to customise",
     "loading": "Loading the layout...",
     "loadFailed": "The layout could not be loaded.",
-    "narrow": "The layout editor needs a screen at least 768 px wide. Open this book on a tablet or a computer, or go back to customise the design.",
     "noLayout": "This book's template does not support free layout. Choose another template on the print screen.",
     "toolbar": "Editor toolbar",
     "undo": "Undo",
@@ -1400,6 +1399,38 @@
           "other": "Something went wrong. Nothing was changed."
         }
       }
+    },
+    "phone": {
+      "move": "Move",
+      "moveLeft": "Move left",
+      "moveRight": "Move right",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "moveLeftBig": "Move far left",
+      "moveRightBig": "Move far right",
+      "moveUpBig": "Move far up",
+      "moveDownBig": "Move far down",
+      "movedLeft": "Moved left",
+      "movedRight": "Moved right",
+      "movedUp": "Moved up",
+      "movedDown": "Moved down",
+      "movedLeftBig": "Moved far left",
+      "movedRightBig": "Moved far right",
+      "movedUpBig": "Moved far up",
+      "movedDownBig": "Moved far down",
+      "deleteTitle": "Delete this item?",
+      "deleteBody": "“{{name}}” will be removed from the page. You can undo this.",
+      "cancel": "Cancel",
+      "layers": "Layers",
+      "add": "Add",
+      "edit": "Edit",
+      "pages": "Pages",
+      "close": "Close",
+      "noItems": "There is nothing on this page yet.",
+      "hidden": "(hidden)",
+      "pager": "Pages",
+      "actions": "Edit the page",
+      "preview": "Preview"
     }
   }
 }

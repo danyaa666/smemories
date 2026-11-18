@@ -21,6 +21,7 @@ import {
 } from "./document";
 import { pageName, targetName } from "./names";
 import { BIG_STEP, BIG_TURN, TURN } from "./gestures/keys";
+import { Dialog } from "../../components/ui/Dialog";
 import type { GestureStore } from "./gestures/useGestures";
 import { AssetControls, ImageControls } from "./ItemControls";
 import { Swatches } from "./Swatches";
@@ -28,6 +29,9 @@ import { TextControls } from "./TextControls";
 import { nudge, type Nudge } from "./gestures/math";
 import { NumField, tenth } from "./NumField";
 import { overrideOf, patchOf, type Target } from "./targets";
+
+const PHONE_STEP = 5; // design px (the page is 816 wide): one small tap of a move arrow
+const PHONE_BIG = 40;
 
 /**
  * The property panel (T-159): the numbers, the stacking order and the actions of the selection, or the properties of the page when nothing is selected.
@@ -52,6 +56,7 @@ export function PropertyPanel({
   onDuplicate,
   pickImage,
   onMoreBackgrounds,
+  phone = false,
 }: {
   doc: LayoutDoc;
   kind: string;
@@ -75,9 +80,12 @@ export function PropertyPanel({
   pickImage: (onPick: (m: Media) => void) => ReactNode;
   /** Opens the palette's Background tab. */
   onMoreBackgrounds: () => void;
+  /** The panel of the phone's bottom sheet (T-181): four move arrows with a small and a big step (no handles on a phone), and one confirm before a delete. */
+  phone?: boolean;
 }) {
   const { t } = useTranslation();
   const [replacing, setReplacing] = useState<string | null>(null); // the id of the image item that is being replaced
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [last, setRefused] = useState<{ id?: string; why: Refusal } | null>(null);
   const refused = last && last.id === selected?.id ? last.why : null; // a refusal belongs to the selection it was made on
 
@@ -170,6 +178,12 @@ export function PropertyPanel({
       announce(t("editor.reordered", { n: to + 1, total: list.length }));
   };
   const hasOverride = overrideOf(doc, selected.id) !== undefined;
+  const remove = () => {
+    if (run(removeItem(kind, selected.id))) {
+      select([]);
+      announce(t("editor.deleted"));
+    }
+  };
 
   return (
     <aside className="ed-panel" aria-label={t("editor.panel")}>
@@ -203,6 +217,31 @@ export function PropertyPanel({
         )}
         {field(t("editor.rotation"), selected.r, [-180, 180], (n) => ({ r: Math.round(n) }), 1)}
       </fieldset>
+      {phone && (
+        <div role="group" aria-label={t("editor.phone.move")} className="ed-row ed-move">
+          {(
+            [
+              ["Left", -1, 0],
+              ["Right", 1, 0],
+              ["Up", 0, -1],
+              ["Down", 0, 1],
+            ] as const
+          ).flatMap(([name, x, y]) =>
+            ([["", PHONE_STEP] as const, ["Big", PHONE_BIG] as const] as const).map(([big, n]) => (
+              <button
+                key={name + big}
+                type="button"
+                disabled={readOnly}
+                onClick={() =>
+                  step({ kind: "move", dx: x * n, dy: y * n }, t(`editor.phone.moved${name}${big}`))
+                }
+              >
+                {t(`editor.phone.move${name}${big}`)}
+              </button>
+            )),
+          )}
+        </div>
+      )}
       <div role="group" aria-label={t("editor.nudge")} className="ed-row">
         <button
           type="button"
@@ -339,15 +378,25 @@ export function PropertyPanel({
             type="button"
             className="ed-danger"
             disabled={readOnly}
-            onClick={() => {
-              if (run(removeItem(kind, selected.id))) {
-                select([]);
-                announce(t("editor.deleted"));
-              }
-            }}
+            onClick={() => (phone ? setConfirmDelete(true) : remove())}
           >
             {t("editor.delete")}
           </button>
+          {confirmDelete && (
+            <Dialog
+              title={t("editor.phone.deleteTitle")}
+              confirmLabel={t("editor.delete")}
+              cancelLabel={t("editor.phone.cancel")}
+              danger
+              onConfirm={() => {
+                setConfirmDelete(false);
+                remove();
+              }}
+              onCancel={() => setConfirmDelete(false)}
+            >
+              <p>{t("editor.phone.deleteBody", { name: targetName(t, selected) })}</p>
+            </Dialog>
+          )}
         </>
       ) : (
         <div className="ed-row">

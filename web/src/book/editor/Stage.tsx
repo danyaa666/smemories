@@ -14,14 +14,15 @@ import {
 import { useTranslation } from "react-i18next";
 import type { BookData } from "../../api/book";
 import { BookPages, type OnePage } from "../BookPages";
-import { pageBox, type Rect } from "../layout/geometry";
-import { kindOf, type TemplateLayout, type TextEdit } from "../layout/runtime";
+import { pageBox } from "../layout/geometry";
+import type { TemplateLayout, TextEdit } from "../layout/runtime";
 import { DESIGN_W, designZoom, pagePx, SIZES, type PageSize } from "../sizes";
 import { pageName, targetName } from "./names";
 import { useGestures, type Api, type GestureStore } from "./gestures/useGestures";
 import { PageTextField } from "./PageTextField";
 import type { Handle } from "./gestures/math";
-import { targetsOf, unrotate, type Target } from "./targets";
+import { boxStyle, useMeasured } from "./measure";
+import { targetsOf, type Target } from "./targets";
 import "../book.css";
 
 const ZOOMS = [50, 75, 100, 125, 150, 200];
@@ -32,76 +33,6 @@ const HANDLES: readonly Handle[] = ["n", "e", "s", "w", "nw", "ne", "se", "sw"];
 const HIT = 44; // screen px: the smallest hit target of a handle (WCAG 2.5.8 asks 24, touch guidelines 44)
 const SMALL = HIT * 2; // a box with a side shorter than this (screen px) gets its handles pushed outside the corners
 const noop = () => {};
-
-/** Where the template draws each unmoved element of the page, measured on the stage (design px, unrotated); the template's natural place is the fallback. */
-function useMeasured(
-  root: React.RefObject<HTMLElement | null>,
-  kind: string,
-  spec: TemplateLayout | undefined,
-  data: BookData,
-  page: OnePage,
-  scale: number,
-) {
-  const [measured, setMeasured] = useState<{ rects: Record<string, Rect>; order: string[] }>({
-    rects: {},
-    order: [],
-  });
-  useLayoutEffect(() => {
-    let live = true;
-    const measure = () => {
-      const el = root.current;
-      const sheet = el?.querySelector(".bk-sheet");
-      const sr = sheet?.getBoundingClientRect();
-      const next: Record<string, Rect> = {};
-      // the layout ids in the page's DOM order = the order the elements are drawn in (a moved element is appended to the page when it first moves)
-      const order = el
-        ? [...el.querySelectorAll<HTMLElement>("[data-layout-id]")].map((n) => n.dataset.layoutId!)
-        : [];
-      if (el && sr && sr.width > 0) {
-        const k = sr.width / DESIGN_W; // screen px per design px
-        for (const [id, nat] of Object.entries(spec?.natural ?? {})) {
-          if (kindOf(id) !== kind) continue;
-          const wrap = el.querySelector<HTMLElement>(`[data-layout-id="${id}"]`);
-          if (!wrap) continue;
-          const parts = wrap.style.display === "contents" ? [...wrap.children] : [wrap];
-          const rs = parts.map((p) => p.getBoundingClientRect()).filter((r) => r.width > 0);
-          if (rs.length === 0) continue;
-          const l = Math.min(...rs.map((r) => r.left));
-          const t = Math.min(...rs.map((r) => r.top));
-          const w = Math.max(...rs.map((r) => r.right)) - l;
-          const h = Math.max(...rs.map((r) => r.bottom)) - t;
-          const own = unrotate(w / k, h / k, nat.r ?? 0);
-          const cx = (l - sr.left + w / 2) / k;
-          const cy = (t - sr.top + h / 2) / k;
-          next[id] = { left: cx - own.w / 2, top: cy - own.h / 2, width: own.w, height: own.h };
-        }
-      }
-      // keep the old object when nothing moved by a tenth of a design px: no render loop
-      setMeasured((prev) => {
-        const same =
-          order.join() === prev.order.join() &&
-          Object.keys(next).length === Object.keys(prev.rects).length &&
-          Object.entries(next).every(([id, r]) => {
-            const q = prev.rects[id];
-            return (
-              q &&
-              Math.abs(q.left - r.left) < 0.1 &&
-              Math.abs(q.top - r.top) < 0.1 &&
-              Math.abs(q.width - r.width) < 0.1 &&
-              Math.abs(q.height - r.height) < 0.1
-            );
-          });
-        return same ? prev : { rects: next, order };
-      });
-    };
-    measure();
-    void document.fonts?.ready.then(() => live && measure()); // text that fits after the fonts arrive can change a box
-    return () => {
-      live = false;
-    };
-  }, [root, kind, spec, data, page, scale]);
-  return measured;
-}
 
 /**
  * The stage (T-159): the selected page drawn by the real book renderer with the layout runtime, a zoom (fit, or 50 to 200 percent), the safe margin
@@ -337,14 +268,6 @@ export function Stage({
     </section>
   );
 }
-
-const boxStyle = (x: Target, k: number): CSSProperties => ({
-  left: x.rect.left * k,
-  top: x.rect.top * k,
-  width: x.rect.width * k,
-  height: x.rect.height * k,
-  transform: x.r ? `rotate(${x.r}deg)` : undefined,
-});
 
 /** The hit area of one target (a focusable button over its drawn box). Later boxes are drawn later, so a click on an overlap picks the topmost. */
 const Box = memo(

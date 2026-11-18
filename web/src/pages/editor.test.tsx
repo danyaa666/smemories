@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { BookData } from "../api/book";
 import { err, mockApi, ok, renderApp, user } from "../test/api";
 
-// T-159: the editor route: owner only, narrow screens, templates without a layout, and the way in from the customise screen.
+// T-159: the editor route: owner only, narrow screens (the phone editor, T-181), templates without a layout, and the way in from the customise screen.
 
 const BOOK = "01J9Z3K6V8Q4M7N2P5R8T0AAAA";
 const yearbook = {
@@ -94,17 +94,20 @@ describe("the editor route", () => {
     expect(calls.filter((c) => c.path.startsWith("/book-layout/get")).length).toBe(1);
   });
 
-  it("does not mount below 768 px: a message, a link back and no layout request", async () => {
+  it("below 768 px it mounts the phone editor (T-181): a bottom pager, no page strip, no desktop stage, the link back and the layout request", async () => {
     narrow(true);
     const calls = serve();
     renderApp(`/yearbooks/${BOOK}/editor`);
-    expect(await screen.findByText(/needs a screen at least 768 px wide/)).toBeInTheDocument();
+    expect(await screen.findByTestId("page-position")).toHaveTextContent("Page 1 of 3: Cover");
+    expect(screen.queryByText(/needs a screen at least 768 px wide/)).toBeNull();
     expect(screen.getByRole("link", { name: "Back to customise" })).toHaveAttribute(
       "href",
       `/yearbooks/${BOOK}/customise`,
     );
     expect(screen.queryByRole("navigation", { name: "Pages" })).toBeNull();
-    expect(calls.some((c) => c.path.startsWith("/book-layout"))).toBe(false);
+    expect(document.querySelector(".ed-phone")).not.toBeNull();
+    expect(document.querySelector(".ed-handle")).toBeNull();
+    expect(calls.some((c) => c.path.startsWith("/book-layout/get"))).toBe(true);
   });
 
   it("asks nothing more for a book that is not the caller's", async () => {

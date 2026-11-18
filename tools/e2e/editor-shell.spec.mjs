@@ -223,11 +223,13 @@ test("layout editor shell: open, select, change the width, undo, reload; handles
     }
   });
 
-  await step("7. below 768 px the editor does not mount", async () => {
+  await step("7. below 768 px the phone editor mounts (T-181: the desktop toolbar and page strip do not)", async () => {
     await owner.setViewportSize({ width: 700, height: 900 });
     await owner.goto(editorUrl());
-    await expect(owner.getByText(/needs a screen at least 768 px wide/)).toBeVisible();
-    await expect(owner.getByRole("toolbar", { name: "Editor toolbar" })).toHaveCount(0);
+    await expect(owner.getByText(/needs a screen at least 768 px wide/)).toHaveCount(0);
+    await expect(owner.getByTestId("page-position")).toBeVisible();
+    await expect(owner.getByRole("toolbar", { name: "Editor toolbar" })).toBeVisible(); // the phone's top bar has the same name
+    await expect(owner.getByRole("navigation", { name: "Pages" })).toHaveCount(0);
     await expect(owner.getByRole("link", { name: "Back to customise" })).toBeVisible();
   });
 });
