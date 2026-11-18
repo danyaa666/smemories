@@ -26,8 +26,10 @@ func TestServeStartsAndShutsDownOnCancel(t *testing.T) {
 	served := make(chan error, 1)
 	go func() { served <- Serve(ctx, NewServer(ln.Addr().String(), h), ln, 0, 5*time.Second) }()
 
+	// No keep-alive: a speculative second dial would leave a never-used connection that Shutdown waits 5 s for (seen on Windows).
+	client := &http.Client{Transport: &http.Transport{DisableKeepAlives: true}}
 	base := "http://" + ln.Addr().String()
-	resp, err := http.Get(base + "/healthz")
+	resp, err := client.Get(base + "/healthz")
 	if err != nil || resp.StatusCode != 200 {
 		t.Fatalf("healthz: %v %v", resp, err)
 	}
@@ -40,7 +42,7 @@ func TestServeStartsAndShutsDownOnCancel(t *testing.T) {
 	}
 	res := make(chan result, 1)
 	go func() {
-		resp, err := http.Get(base + "/slow")
+		resp, err := client.Get(base + "/slow")
 		if err != nil {
 			res <- result{err: err}
 			return
@@ -65,7 +67,7 @@ func TestServeStartsAndShutsDownOnCancel(t *testing.T) {
 	if err := <-served; err != nil {
 		t.Fatalf("Serve returned %v, want nil", err)
 	}
-	if resp, err := http.Get(base + "/healthz"); err == nil {
+	if resp, err := client.Get(base + "/healthz"); err == nil {
 		_ = resp.Body.Close()
 		t.Fatal("server still accepting after shutdown")
 	}

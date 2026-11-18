@@ -56,7 +56,7 @@ func TestValidateRejects(t *testing.T) {
 		{"hidden duplicate", `{"sections":{"hidden":["profile","profile"]}}`, "listed twice"},
 		{"hidden wrong type", `{"sections":{"hidden":{"profile":true}}}`, "sections.hidden:"},
 		{"text unknown id", `{"texts":{"cover.nope":"x"}}`, "texts: unknown id"},
-		{"text wrong type", `{"texts":{"cover.belongs":5}}`, "texts:"},
+		{"text wrong type", `{"texts":{"cover.belongs":5}}`, "texts"},
 		{"text is a list", `{"texts":["x"]}`, "texts:"},
 		{"text too long by one", `{"texts":{"cover.belongs":"` + runes(41) + `"}}`, "at most 40"},
 		{"text 5000 runes", `{"texts":{"cover.belongs":"` + runes(5000) + `"}}`, "larger than 4096"},
@@ -68,7 +68,7 @@ func TestValidateRejects(t *testing.T) {
 		{"text 41 runes after trim", `{"texts":{"cover.belongs":"  ` + runes(41) + `  "}}`, "at most 40"},
 		{"image unknown id", `{"images":{"cover.nope":"dots"}}`, "images: unknown id"},
 		{"image unknown choice", `{"images":{"cover.pattern":"waves"}}`, "unknown choice"},
-		{"image wrong type", `{"images":{"cover.pattern":["dots"]}}`, "images:"},
+		{"image wrong type", `{"images":{"cover.pattern":["dots"]}}`, "images"}, // Go 1.27 names the full path (images.cover.pattern), 1.26 the key only
 		{"over 4096 bytes", `{"texts":{"cover.belongs":"a"},"pad":"` + strings.Repeat("x", 4100) + `"}`, "larger than 4096"},
 	}
 	for _, c := range cases {
