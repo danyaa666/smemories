@@ -22,7 +22,7 @@
 
 **Open questions for you:** Q-064 (Doory templates: licence route, studio, and template colours (ADR 0005, T-169)); Q-065 (Storage cap per user for layout history (T-179, docs/layout-storage-budget.md): cap now, or watch and decide at go-live?)
 
-_Board last written 2026-11-18 07:18Z_
+_Board last written 2026-11-18 08:02Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
