@@ -10,7 +10,7 @@ import path from "node:path";
 import { after, before, describe, test } from "node:test";
 import { chromium } from "playwright";
 import { makeBook } from "./fixture.mjs";
-import { inspect, open, raster, savePdf, serveBook, startServer, text } from "./lib.mjs";
+import { CHROMIUM_ARGS, inspect, open, raster, savePdf, serveBook, startServer, text } from "./lib.mjs";
 import { KINDS, NAME_LONG, PDF_PAGE, covers, layoutOf, sampleBook, shippedTemplates } from "./navy-templates.mjs";
 
 const squash = (x) => x.replace(/\s+/g, "");
@@ -19,7 +19,7 @@ const tmp = mkdtempSync(path.join(os.tmpdir(), "print-check-navy-"));
 let stop, browser;
 before(async () => {
   stop = await startServer();
-  browser = await chromium.launch();
+  browser = await chromium.launch({ args: CHROMIUM_ARGS });
 });
 after(async () => {
   await browser?.close();

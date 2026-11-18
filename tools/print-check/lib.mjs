@@ -22,6 +22,10 @@ const freePort = () =>
 export const PORT = Number(process.env.PRINT_CHECK_PORT ?? (await freePort()));
 export const BASE = `http://localhost:${PORT}`;
 
+// T-185: on Linux, Chromium hints fonts on screen (rounded ascent and descent, whole-pixel baselines) but not in a PDF, so a text box sat 3 px (192 dpi) lower on screen than in print on the CI runner
+// and never on macOS. Hinting off makes the screen draw like the print path, so the comparison measures our CSS and not the platform's font rendering.
+export const CHROMIUM_ARGS = ["--font-render-hinting=none"];
+
 /** Starts `vite` in web/ on PORT and resolves with a stop function. Fails if the port already answers or that vite exits (--strictPort), so a foreign server is never used. */
 export async function startServer() {
   const held = new Error(`port ${PORT} is held by another process (print-check never tests a server it did not start); free it or set PRINT_CHECK_PORT`);

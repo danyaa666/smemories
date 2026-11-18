@@ -10,7 +10,7 @@ import { after, before, describe, test } from "node:test";
 import { chromium } from "playwright";
 import { CLASS_BOOK_CASES, DESIGN_IMAGE, DESIGN_TITLE, HIDDEN_PHOTOS, LAYOUT_MARK, classBookPages, designOf, makeBook, makeClassBook, makeDesignClassBook, makeLayout, makeNavyLayout, photoId, SIGNATURES, studentName } from "./fixture.mjs";
 import { KINDS, layoutOf, sampleBook, shippedTemplates } from "./templates.mjs";
-import { BASE, fitBoxes, inkIn, inspect, open, openClassBook, openEditor, settleStage, raster, savePdf, serveBook, signatureBoxes, startServer, text, words } from "./lib.mjs";
+import { CHROMIUM_ARGS, BASE, fitBoxes, inkIn, inspect, open, openClassBook, openEditor, settleStage, raster, savePdf, serveBook, signatureBoxes, startServer, text, words } from "./lib.mjs";
 
 const squash = (x) => x.replace(/\s+/g, "");
 const PT = { A5: [419.53, 595.28], A4: [595.28, 841.89], Letter: [612, 792] }; // exact sizes in points
@@ -18,7 +18,7 @@ const tmp = mkdtempSync(path.join(os.tmpdir(), "print-check-"));
 let stop, browser;
 before(async () => {
   stop = await startServer();
-  browser = await chromium.launch();
+  browser = await chromium.launch({ args: CHROMIUM_ARGS });
 });
 after(async () => {
   await browser?.close();
