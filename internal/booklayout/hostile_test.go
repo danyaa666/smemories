@@ -30,8 +30,8 @@ func measure(f func()) measured {
 
 func TestHostileDocumentsFailFast(t *testing.T) {
 	const (
-		maxTime  = 200 * time.Millisecond
-		maxAlloc = 4 << 20 // 4 MiB: a refusal before decoding reads the bytes once and allocates a problem list
+		maxTime  = time.Second // the byte ceiling is the hard gate; 200 ms flaked under -race on a slower Windows box (269 ms), a quadratic path takes many seconds
+		maxAlloc = 4 << 20     // 4 MiB: a refusal before decoding reads the bytes once and allocates a problem list
 		// A document inside the limits is decoded before its item count is known: 43 000 empty items (about 6 MB, 45 times the input) is the
 		// worst a 128 KiB body can cost. 16 MiB is the ceiling; the body cap is what keeps it from growing.
 		maxDecodeAlloc = 16 << 20

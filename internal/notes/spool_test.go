@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -26,8 +27,15 @@ func TestSweepSpool(t *testing.T) {
 	write("smem-upload-y", time.Now())
 	write("other-file", old)
 	write("target", old) // an old file behind the symlink must survive too
+	survivors := []string{"smem-upload-y", "other-file", "target", "smem-upload-dir/smem-upload-inner"}
 	if err := os.Symlink(filepath.Join(dir, "target"), filepath.Join(dir, "smem-upload-z")); err != nil {
-		t.Fatal(err)
+		// Windows needs admin rights or Developer Mode to create a symlink; the rest of the test still runs.
+		if runtime.GOOS != "windows" {
+			t.Fatal(err)
+		}
+		t.Logf("symlink sub-case skipped on Windows: %v", err)
+	} else {
+		survivors = append(survivors, "smem-upload-z")
 	}
 	sub := filepath.Join(dir, "smem-upload-dir")
 	if err := os.Mkdir(sub, 0o700); err != nil {
@@ -47,7 +55,7 @@ func TestSweepSpool(t *testing.T) {
 	if _, err := os.Lstat(filepath.Join(dir, "smem-upload-x")); !os.IsNotExist(err) {
 		t.Fatal("old spool file kept")
 	}
-	for _, n := range []string{"smem-upload-y", "other-file", "target", "smem-upload-z", "smem-upload-dir/smem-upload-inner"} {
+	for _, n := range survivors {
 		if _, err := os.Lstat(filepath.Join(dir, n)); err != nil {
 			t.Fatalf("%s: %v", n, err)
 		}
@@ -74,7 +82,8 @@ func TestCheckSpool(t *testing.T) {
 	if err := (&Handler{tmpDir: filepath.Join(dir, "nope")}).CheckSpool(); err == nil {
 		t.Fatal("a missing directory must fail")
 	}
-	if os.Geteuid() != 0 {
+	// chmod 0o500 does not make a directory read-only on Windows.
+	if os.Geteuid() != 0 && runtime.GOOS != "windows" {
 		if err := os.Chmod(dir, 0o500); err != nil {
 			t.Fatal(err)
 		}
