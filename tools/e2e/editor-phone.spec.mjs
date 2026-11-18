@@ -350,7 +350,7 @@ test("crossing 768 px keeps the selection and the typed text (AC3); a 40-item pa
   test.skip(!BASE || !OTP || !bookId, "needs the setup test");
   const page = await phone(browser, 375, 812);
   const many = Array.from({ length: 40 }, (_, i) =>
-    textItem(`many${i}`, `Mục ${i}`, { x: 20 + (i % 8) * 110, w: 100, h: 60, cy: 60 + Math.floor(i / 8) * 150 }),
+    textItem(`many${String(i).padStart(2, "0")}`, `Mục ${i}`, { x: 20 + (i % 8) * 110, w: 100, h: 60, cy: 60 + Math.floor(i / 8) * 150 }),
   );
   await saveLayout(page, { v: 1, pages: { cover: { items: many } } });
   await openEditor(page);
@@ -369,6 +369,7 @@ test("crossing 768 px keeps the selection and the typed text (AC3); a 40-item pa
   await step("4x CPU throttle: a tap selects within a second and a swipe scrolls the screen", async () => {
     const cdp = await page.context().newCDPSession(page);
     await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
+    await page.getByRole("button", { name: "Close" }).tap(); // the open sheet of "Mục ba" covers the lower part of the page
     const t0 = Date.now();
     await page.getByRole("button", { name: "Text: Mục 20", exact: true }).tap();
     await expect(page.getByRole("button", { name: "Text: Mục 20", exact: true })).toHaveAttribute("aria-pressed", "true");
