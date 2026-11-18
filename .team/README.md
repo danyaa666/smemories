@@ -11,7 +11,8 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 7 | T-023, T-024, T-025, T-031, T-050, T-182, T-183 |
-| TODO | 2 | T-184, T-181 |
+| TODO | 1 | T-181 |
+| CHANGES_REQUESTED | 1 | T-184 |
 | MERGED | 31 | T-150, T-151, T-152, T-153, T-154, T-155, T-156, T-157, T-158, T-159, T-160, T-161, T-162, T-163, T-164, T-165, T-166, T-167, T-168, T-169, T-170, T-171, T-172, T-173, T-174, T-175, T-176, T-177, T-178, T-179, T-180 |
 | DONE | 136 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138, T-139, T-140, T-141, T-142, T-143, T-144, T-145, T-146, T-147, T-149, T-148 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
@@ -22,7 +23,7 @@
 
 **Open questions for you:** Q-064 (Doory templates: licence route, studio, and template colours (ADR 0005, T-169)); Q-065 (Storage cap per user for layout history (T-179, docs/layout-storage-budget.md): cap now, or watch and decide at go-live?)
 
-_Board last written 2026-11-18 09:14Z_
+_Board last written 2026-11-18 09:37Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -6536,23 +6537,26 @@ Spec: .team/epics/E09-customisation-editor/07-journey-print-check-docs.md.
 - 2026-10-30 20:44Z · human · accepted by owner
 
 ### T-184 — [E01] Unit tests pass on a Windows dev machine (make test with -race)
-- **Status:** TODO
+- **Status:** CHANGES_REQUESTED
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M4
 - **Depends-on:** —
 - **Risk:** low
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-11-18 09:14Z by leader
+- **Branch:** task/t-184-e01-unit-tests-pass-on-a-windows-dev-mac
+- **PR:** 180
+- **Updated:** 2026-11-18 09:37Z by leader
 - **Comments-seen:** 0
 
 Spec: .team/epics/E01-foundation/16-windows-dev-machine-tests.md (read it from the main checkout). Four tests fail only on Windows (D-46): booklayout hostile-input time ceiling under -race, httpx Serve shutdown, notes spool symlink and read-only dir. Fix the tests, not the product; CI on Linux must stay green.
 
 #### Comments
+- 2026-11-18 09:35Z · dev · PR #180 head 4643a65. make test on Windows: 32 Go pkgs ok, web 1311/1311, exit 0. Beyond the 4 spec tests: CRLF goldens (.gitattributes, existing checkouts need renormalize), Go 1.27 json error path in bookdesign test, vitest testTimeout 20s. See PR body.
+- 2026-11-18 09:37Z · leader · Leader: CI go job FAILS on PR #180 (head 4643a65) at the gofmt step. Cause: the five Go test files were committed with CRLF line endings (git show origin/<branch>:internal/booklayout/hostile_test.go has 164 CR lines; develop has 0); gofmt -l flags booklayout/hostile_test.go and abuse_integration_test.go. Fix: (1) make .gitattributes repo-wide: first line '* text=auto eol=lf' (keep your golden-file lines), so Windows commits are always LF; (2) git add --renormalize . and commit; (3) prove it: 'git ls-files --eol -- <changed files>' shows i/lf, 'gofmt -l ./internal' is empty, CI go job green. Also justify in the PR: the bookdesign Go 1.27 field-path change must pass on the Go version CI uses (check setup-go in ci.yml) as well as 1.27.
+- 2026-11-18 09:37Z · leader · CI gofmt fails: CRLF committed; see comment
 
 <!-- tasks:end -->
 
