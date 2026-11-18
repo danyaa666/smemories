@@ -24,7 +24,7 @@ def newest(pattern):
     found = glob.glob(pattern)
     if not found:
         sys.exit("agent-team plugin not found under ~/.claude/plugins/cache")
-    return max(found, key=lambda p: tuple(int(x) for x in p.split("/")[-3].split(".")))
+    return max(found, key=lambda p: tuple(int(x) for x in p.replace(os.sep, "/").split("/")[-3].split(".")))
 
 
 def limits():

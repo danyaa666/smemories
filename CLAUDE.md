@@ -2,6 +2,15 @@
 
 Board and decisions: [.team/README.md](.team/README.md). Product description: [README.md](README.md).
 
+## The owner reviews every PR before it is merged (owner decision D-47, 2026-11-18)
+
+Branch per task from `develop` → dev implements → QA verifies → PR to `develop` → leader review → **owner reviews and approves**
+(`bin/team approve T-xxx` or in chat; the task's `Owner-approved` becomes `yes`) → only then the leader merges. This holds for every task,
+not only `Risk: high`; `board.py` only enforces it for high-risk tasks, so the **leader checks `Owner-approved: yes` before every merge**.
+After a review passes, the leader comments "review OK; awaiting owner approval: <what to look at>" and leaves the task in `QA_PASS`.
+`develop` refuses direct pushes, so board-only changes (`.team/`, leader docs, `CLAUDE.md`) go in one `chore(team): board sync` PR, about
+daily or with a feature PR, whose head commit has **no** `[skip ci]` (the required checks must run); the owner approves it like a feature.
+
 ## Usage gate in the Claude desktop app (owner-approved 2026-10-07, one-command form 2026-10-15)
 
 The desktop app's session never runs the statusLine, so `~/.claude/team-usage.json` is not filled automatically
@@ -59,6 +68,10 @@ they run only by hand (`gh workflow run ci.yml --ref <branch>`) and show as *ski
 - Where a spec says "CI green" for integration, race-integration, e2e or print-check, read it as "QA ran it locally and reported it" until the jobs are switched back on (delete the two `if:` lines in `ci.yml`).
 
 ## Local stack (since 2026-10-07)
+
+**Since 2026-11-18 (D-46, Windows PC at `C:/Users/dang/smemories`) the compose project is `smemories`** (compose names it after the
+checkout folder); the paragraph below describes the previous machine, where the folder was `awesomeproject1`. On Windows, set
+`PATH` to include the WinLibs GCC `mingw64/bin` if `go test -race` says cgo is missing (only sessions started before 2026-11-18 16:20 need it).
 
 The dev MySQL and MinIO stack runs as the compose project `awesomeproject1`, started with `make up` from the main checkout
 (`make migrate` applies the schema). The old shared `smemories` project was retired; its data volumes `smemories_mysql-data` and
