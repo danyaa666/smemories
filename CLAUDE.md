@@ -71,7 +71,9 @@ they run only by hand (`gh workflow run ci.yml --ref <branch>`) and show as *ski
 
 **Since 2026-11-18 (D-46, Windows PC at `C:/Users/dang/smemories`) the compose project is `smemories`** (compose names it after the
 checkout folder); the paragraph below describes the previous machine, where the folder was `awesomeproject1`. On Windows, set
-`PATH` to include the WinLibs GCC `mingw64/bin` if `go test -race` says cgo is missing (only sessions started before 2026-11-18 16:20 need it).
+`PATH` to include the WinLibs GCC `mingw64/bin` if `go test -race` says cgo is missing, Poppler's `Library/bin` (winget
+`oschwartz10612.Poppler`) if `pdfinfo` is missing, and `C:/Program Files (x86)/GnuWin32/bin` if `zip` is missing. All three are on the user
+PATH, so only sessions started before they were installed (2026-11-18) need this.
 
 The dev MySQL and MinIO stack runs as the compose project `awesomeproject1`, started with `make up` from the main checkout
 (`make migrate` applies the schema). The old shared `smemories` project was retired; its data volumes `smemories_mysql-data` and
