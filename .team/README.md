@@ -12,7 +12,7 @@
 |---|---:|---|
 | BACKLOG | 6 | T-023, T-024, T-025, T-031, T-050, T-183 |
 | TODO | 1 | T-186 |
-| IN_PROGRESS | 1 | T-182 |
+| READY_FOR_QA | 1 | T-182 |
 | CHANGES_REQUESTED | 1 | T-185 |
 | MERGED | 32 | T-184, T-150, T-151, T-152, T-153, T-154, T-155, T-156, T-157, T-158, T-159, T-160, T-161, T-162, T-163, T-164, T-165, T-166, T-167, T-168, T-169, T-170, T-171, T-172, T-173, T-174, T-175, T-176, T-177, T-178, T-179, T-180 |
 | DONE | 137 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138, T-139, T-140, T-141, T-142, T-143, T-144, T-145, T-146, T-147, T-149, T-148, T-181 |
@@ -24,7 +24,7 @@
 
 **Open questions for you:** Q-064 (Doory templates: licence route, studio, and template colours (ADR 0005, T-169)); Q-065 (Storage cap per user for layout history (T-179, docs/layout-storage-budget.md): cap now, or watch and decide at go-live?)
 
-_Board last written 2026-11-18 17:16Z_
+_Board last written 2026-11-18 17:44Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -6590,8 +6590,8 @@ Spec: .team/epics/E01-foundation/16-windows-dev-machine-tests.md (read it from t
 - **Assignee:** —
 - **Branch:** task/t-185-e01-print-check-a5-notes-drift-3-px-step
 - **PR:** https://github.com/danyaa666/smemories/pull/182
-- **Updated:** 2026-11-18 17:16Z by leader
-- **Comments-seen:** 11
+- **Updated:** 2026-11-18 17:44Z by dev
+- **Comments-seen:** 12
 
 Spec: .team/epics/E01-foundation/17-print-check-drift-and-e2e-chromium.md (read it from the main checkout). Found reviewing T-181: manual CI 44293267820 print check failed (note01 y0 1516 vs 1513 at 192 dpi) then hung to the 15 min timeout; develop baseline 44298102605 failed twice at Install Chromium.
 
@@ -6607,6 +6607,7 @@ Spec: .team/epics/E01-foundation/17-print-check-drift-and-e2e-chromium.md (read 
 - 2026-11-18 16:44Z · leader · QA brief (leader): scope is PR #182 only (CI/e2e infra), not print-check parity (T-186). Check: (1) ci.yml diff: Chromium install retry and apt-lock handling are correct YAML and cannot mask a real install failure (it must still fail after the retries); step 30 min / job 60 min limits are deliberate; (2) the editor-phone '--kb' race fix uses expect.poll and still asserts the same thing; (3) docs/e2e.md matches; (4) the manual CI runs on the branch: journey 63/63 and print-check 292/298 with exactly the six T-186 failures, nothing new; (5) nothing outside CI, tools/e2e and docs changed. Record run ids and head SHA.
 - 2026-11-18 17:16Z · qa · QA_PASS T-185, PR #182 head 3ecab96 (CI/e2e infra only; print-check parity is T-186). Evidence is from CI and diff reading; nothing was run locally (Windows cannot run print-check). (1) ci.yml diff read: apt conf file Acquire::Retries 3 / Timeout 20 / DPkg::Lock::Timeout 120; 3 attempts of timeout -k 5 200; after a failed attempt it runs pkill -x apt-get and dpkg --configure -a, both with || true, and the loop still ends in 'exit 1', so a persistent install failure still fails the step. Worst case 3x200 s plus cleanup is about 11 min, inside the new 12 min step limit. Step 30 min and job 60 min are consistent with the observed 19-21 min suite and are explained in comments and docs. The runs executing the workflow prove the YAML parses. (2) editor-phone.spec.mjs:344: the same assertion (--kb > 300) now runs under expect.poll over the same page.evaluate; it asserts the same thing and only waits for React's render. (3) docs/e2e.md: 298 tests, 19-21 min on CI, 30/60 min limits: matches ci.yml. (4) Manual CI run 44350931687 ON THE HEAD 3ecab96 (I started it): Install Chromium OK, 1 attempt, 16 s; guard-test 8/8; journey 63 passed (6.1 m); print-check 298 tests, 292 pass, 6 fail, ended cleanly (about 19.5 min, no hang), failures exactly the six T-186 ones: A5 notes note01 y0 1516 vs 1513, A4 profile-tilted 0.848 %, A4 notes-doodle/stickers/tape 2.159 %, Letter thin01 y1 323 vs 330. Nothing new. Earlier run 44334658321 (head fdcea18; code identical to the head, only docs/e2e.md differs) gave the same 63/63 and 292/298 with the same six. The overall run conclusion is failure, because of print-check. The PR run 44347001063 (go, web, security) is green. Skipped per D-37 (go-integration and e2e only run by hand). In run 44350931687 go-integration, go, web, security and image passed. (5) FINDING, non-blocking: the diff touches tools/print-check/check.test.mjs, outside your 'CI, tools/e2e, docs' scope: a leftover T-185 diagnostic, the function rowsOf and a ' T185DIAG {json}' suffix on the failure message at the layout-parity assert (about line 1188). It does not change what is asserted (the message is only extended when the assertion already fails), but it dumps a large JSON blob into the failure text and leaves the 'The extent of the dark pixels' JSDoc detached from inkBox. Either accept it as help for T-186 or ask dev to revert it; I did not edit it. Observation: develop's e2e job stays red until T-186 lands, because 6 print-check tests fail on Linux.
 - 2026-11-18 17:16Z · leader · Leader review: everything else is OK (QA run 44350931687: Chromium 16 s first try, journey 63/63, print-check 292/298 = exactly the T-186 six; retry still fails the step after 3 attempts; 30/60 min limits; expect.poll keeps the --kb > 300 check). One blocking item: 1) tools/print-check/check.test.mjs (~line 1188): remove the leftover T185DIAG diagnostic (rowsOf helper and the JSON suffix on the parity assert) and reattach the inkBox JSDoc, so the file is identical to develop. If the diagnostic helps T-186, re-add it on the T-186 branch. No other change; push, keep CI green, back to READY_FOR_QA (QA only needs to confirm the file now matches develop).
+- 2026-11-18 17:44Z · dev · dev: PR #182 stays READY_FOR_QA, nothing changed.
 
 ### T-186 — [E01] Print check on Linux: six screen-vs-print parity failures
 - **Status:** TODO

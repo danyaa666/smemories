@@ -1212,7 +1212,7 @@ Spec: .team/epics/E09-customisation-editor/40-phone-mode.md (read it from the ma
 - 2026-11-18 12:48Z · leader · owner approved before merge (D-47)
 
 ### T-182 — [E09] Accessibility and i18n audit of the editor, with fixes
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -1220,17 +1220,19 @@ Spec: .team/epics/E09-customisation-editor/40-phone-mode.md (read it from the ma
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-182-e09-accessibility-and-i18n-audit-of-the-
-- **PR:** —
-- **Updated:** 2026-11-18 16:29Z by dev
-- **Comments-seen:** 2
+- **PR:** https://github.com/danyaa666/smemories/pull/183
+- **Updated:** 2026-11-18 17:44Z by dev
+- **Comments-seen:** 4
 
 Spec: .team/epics/E09-customisation-editor/41-editor-accessibility-i18n-audit.md (read it from the main checkout). Keyboard-only journey spec, aria snapshots, announcement bounds, contrast/zoom/target checks, hard-coded string check, vi text length, docs/editor-accessibility.md with findings table and owner screen-reader checklist; no new dependency
 
 #### Comments
 - 2026-11-06 06:54Z · leader · Leader: include the dialog buttons of the Templates/History panels (save, delete, apply confirm: 36 px high on touch, QA on T-176) in the target-size measurement; if T-181 has not already fixed them, fix them here.
 - 2026-11-18 12:48Z · leader · deps T-176 and T-181 merged
+- 2026-11-18 17:44Z · dev · PR #183 head f549c9f. editor-keyboard.spec (3 runs green) + editor-a11y.spec (aria en/vi, contrast, 44 px touch, zoom, reduced motion, vi lengths, language switch), docs/editor-accessibility.md (findings F-01..F-17, owner checklist). Fixed high/medium: focus kept when a pressed button disables itself, help focus return + vi words, key announcements bounded (20 steps = 2), save status not spoken per autosave, 44 px touch targets, reduced motion. Local (Windows): lint/tsc/i18n/build/vitest green; full e2e 59 pass, 3 fail: journey step 8 and design step 6 (pdftotext encoding on Windows), editor-gestures touch at 768 fails also on baseline web/src (pre-existing flake). check:api and print-check do not run on Windows; no API/print code changed. QA: run print-check and check:api on Linux/Mac, make e2e, walk by keyboard.
+- 2026-11-18 17:44Z · leader · QA brief (leader): PR #183. Check every AC in spec 41 against the diff, not only the tests. Focus: (1) focus handling fixes (button that disables itself, keyboard help focus return) on desktop and the T-181 phone shell; (2) announcement bound (20 steps give 2 messages) does not hide a real state change; save status not spoken per autosave but still on error; (3) 44 px targets on touch tablets and reduced motion; (4) the editor-gestures keyboard spec change is a correct update, not a weakened test; (5) scripts/e2e.sh argument pass-through cannot break the CI call; (6) i18n: no hard-coded English in vi. Run vitest, lint:i18n, editor-keyboard and editor-a11y specs, and the desktop editor e2e suite on the head; check:api and print-check cannot run on Windows (no API/print change), say so. F-08..F-17 are leader follow-ups, not defects of this PR.
 
 ### T-183 — [E09] Stage 2 exit check: one journey, performance budgets, parity, docs, report against the PRD exit criteria
 - **Status:** BACKLOG
