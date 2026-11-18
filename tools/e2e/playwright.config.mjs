@@ -25,6 +25,7 @@ export default defineConfig({
     "editor-templates.spec.mjs",
     "editor-save-template.spec.mjs",
     "editor-phone.spec.mjs",
+    "editor-phone-qa.spec.mjs",
   ],
   outputDir: `${out}/results`, // traces and screenshots of a failed run; CI uploads the folder
   timeout: 240_000, // the whole journey; the budget in CI is 5 minutes including start-up
