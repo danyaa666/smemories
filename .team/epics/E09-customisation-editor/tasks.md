@@ -1212,18 +1212,18 @@ Spec: .team/epics/E09-customisation-editor/40-phone-mode.md (read it from the ma
 - 2026-11-18 12:48Z · leader · owner approved before merge (D-47)
 
 ### T-182 — [E09] Accessibility and i18n audit of the editor, with fixes
-- **Status:** QA_PASS
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
 - **Depends-on:** T-176, T-181
 - **Risk:** low
 - **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** leader
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-182-e09-accessibility-and-i18n-audit-of-the-
 - **PR:** https://github.com/danyaa666/smemories/pull/183
-- **Updated:** 2026-11-18 18:20Z by qa
+- **Updated:** 2026-11-18 18:23Z by leader
 - **Comments-seen:** 6
 
 Spec: .team/epics/E09-customisation-editor/41-editor-accessibility-i18n-audit.md (read it from the main checkout). Keyboard-only journey spec, aria snapshots, announcement bounds, contrast/zoom/target checks, hard-coded string check, vi text length, docs/editor-accessibility.md with findings table and owner screen-reader checklist; no new dependency
@@ -1244,25 +1244,30 @@ Spec: .team/epics/E09-customisation-editor/41-editor-accessibility-i18n-audit.md
   Brief points: (1) keepFocus: group fallback covers the phone bar (role=toolbar/group; pager uses aria-disabled so stays focusable); keyboard spec steps 5-6 prove Undo/Redo/Send to back; HelpSheet gives focus back. (5) scripts/e2e.sh 'npx playwright test "$@"' with no args is identical to before; CI call passes none, and I used it with spec names and -g. (6) hardcoded.test.ts AST finder has its own self-test and the editor tree has none.
   Non-blocking: make e2e stops at 'guard-test' on Windows (scrub-trace.test.mjs fails 3 of 8, pre-existing); I ran scripts/e2e.sh directly. Leader to re-run print-check/check:api on Linux or Mac if wanted (no print/API change). Not walked by hand with a real screen reader: owner checklist remains.
 - 2026-11-18 18:20Z · leader · Leader review OK (head f549c9f, CI green): web + e2e specs + docs only; scripts/e2e.sh only forwards "$@" to playwright (CI passes no args, unchanged behaviour); no server/API/dependency change. QA evidence complete for this scope (vitest 1339, e2e 62 pass, 3 fails pre-existing/Windows-only, a11y and keyboard specs green). Awaiting owner approval (D-47): look at docs/editor-accessibility.md (findings F-01..F-07 fixed, F-08..F-17 open, to become tasks) and walk the screen-reader checklist there.
+- 2026-11-18 18:23Z · human · owner approved merge
+- 2026-11-18 18:23Z · human · Owner approval given in chat 2026-11-19: "Approve t 182" (recorded by the leader under D-47).
+- 2026-11-18 18:23Z · leader · merged 9c212e2 after owner approval (D-47).
+- 2026-11-18 18:23Z · leader · owner approved before merge (D-47)
 
 ### T-183 — [E09] Stage 2 exit check: one journey, performance budgets, parity, docs, report against the PRD exit criteria
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** test
 - **Milestone:** M4
-- **Depends-on:** T-176, T-181, T-182
+- **Depends-on:** T-176, T-181, T-182, T-186
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-11-06 by leader
-- **Comments-seen:** 1
+- **Updated:** 2026-11-18 18:23Z by leader
+- **Comments-seen:** 2
 
 Spec: .team/epics/E09-customisation-editor/42-stage2-exit-check.md (read it from the main checkout). stage2-journey spec (desktop and tablet), parity for every shipped template on A5/A4/Letter, measured budgets (100 items 30 fps at 4x throttle, print time within 10%, bundle, p95s, memory), API coverage table, docs completeness, docs/stage2-exit-report.md with the owner manual checklist
 
 #### Comments
 - 2026-11-06 06:05Z · leader · Leader: docs pass (req 5) also fixes two notes from QA on T-179: docs/layout-storage-budget.md must say that reset only amplifies after a prior limited save; docs must state that a save with a layout nested exactly 16 levels is refused because the request body adds one level (Validate itself accepts 16); decide whether to align the two.
+- 2026-11-18 18:23Z · leader · T-176/T-181/T-182 done; T-186 added as a dependency because the exit check's per-template print parity needs print-check green on Linux. Dev picks it once T-186 merges.
 
 <!-- tasks:end -->
