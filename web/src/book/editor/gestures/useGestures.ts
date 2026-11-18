@@ -92,6 +92,8 @@ type Burst = { id: string; rect: Rect; deg: number; timer: number };
 const MOUSE_SLOP = 3; // screen px before a press becomes a drag (the delta still counts from the press, so there is no dead zone in the result)
 const TOUCH_SLOP = 8;
 const BURST_MS = 600; // keys closer together than this are one history step
+/** A held or repeated key says its position at most this often (T-182): 20 arrow presses are two messages, the first and the last, not twenty. */
+export const SAY_MS = 500;
 
 export type GestureOpts = {
   targets: readonly Target[];
@@ -116,6 +118,7 @@ class Controller {
   private cur: Gesture | null = null;
   private burst: Burst | null = null;
   private dragged = false;
+  private said = { at: 0, text: "", timer: 0 };
 
   constructor(private setGuides: (g: Guides) => void) {}
 
@@ -250,10 +253,14 @@ class Controller {
   /** A key on a focused target: the same maths as the pointer through `nudge`; a burst of keys is one history step. */
   key = (e: ReactKey, x: Target) => {
     const c = this.o;
-    if (e.ctrlKey || e.metaKey) return this.flush(); // undo and redo must see the burst as committed
+    if (e.ctrlKey || e.metaKey) {
+      this.silence(); // what the keys said last is stale after an undo
+      return this.flush(); // undo and redo must see the burst as committed
+    }
     if (c.readOnly || this.cur || x.hidden) return;
     if ((e.key === "Delete" || e.key === "Backspace") && x.item) {
       e.preventDefault();
+      this.silence();
       this.flush();
       if (!c.store.apply(removeItem(x.kind, x.id))) {
         c.store.select([]);
@@ -284,8 +291,30 @@ class Controller {
             n: Math.abs(n.dx || n.dy),
           })
         : undefined;
-    c.announce(describe(c.t, n.kind, next.rect, next.deg, c.pb, lead));
+    this.say(describe(c.t, n.kind, next.rect, next.deg, c.pb, lead));
   };
+
+  /** The first message of a run of keys goes at once; the ones that follow within SAY_MS collapse into the latest, sent when the interval is over. */
+  private say(text: string) {
+    const m = this.said;
+    const wait = m.at + SAY_MS - Date.now();
+    clearTimeout(m.timer);
+    m.text = text;
+    if (wait <= 0) {
+      m.at = Date.now();
+      this.o.announce(text);
+      return;
+    }
+    m.timer = window.setTimeout(() => {
+      m.at = Date.now();
+      this.o.announce(m.text);
+    }, wait);
+  }
+
+  /** The user left the item: what was still waiting to be said is stale (the next announcement is the new selection's). */
+  silence() {
+    clearTimeout(this.said.timer);
+  }
 
   /** Ends a burst of key steps as one history step. */
   flush = () => {
@@ -320,12 +349,21 @@ export function useGestures(o: GestureOpts): { guides: Guides; api: Api } {
     down: ctl.down,
     key: ctl.key,
     justDragged: ctl.justDragged,
-    blur: ctl.flush,
+    blur: () => {
+      ctl.silence();
+      ctl.flush();
+    },
   }));
   useLayoutEffect(() => {
     ctl.use(o);
   });
   useEffect(() => ctl.flush, [o.selection, ctl]); // another selection ends a burst
-  useEffect(() => () => ctl.dispose(), [ctl]);
+  useEffect(
+    () => () => {
+      ctl.silence();
+      ctl.dispose();
+    },
+    [ctl],
+  );
   return { guides, api };
 }

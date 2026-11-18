@@ -375,7 +375,8 @@ test("keyboard: select, move, resize, rotate, delete and undo without a pointer"
     const b1 = await box(item);
     expect(Math.abs(b1.l - b0.l - 3 * k)).toBeLessThanOrEqual(0.7);
     expect(Math.abs(b1.t - b0.t - 10 * k)).toBeLessThanOrEqual(0.7);
-    expect(await live()).toMatch(/Moved down 10\. Position .* percent from the left/);
+    // the first key is said at once, the last one half a second later (T-182: a run of keys is not read out press by press)
+    await expect.poll(live, { timeout: 5000 }).toMatch(/Moved down 10\. Position .* percent from the left/);
     await page.keyboard.press("ControlOrMeta+z");
     await expect.poll(async () => Math.abs((await box(item)).l - b0.l)).toBeLessThan(0.01);
     expect(Math.abs((await box(item)).t - b0.t)).toBeLessThan(0.01);

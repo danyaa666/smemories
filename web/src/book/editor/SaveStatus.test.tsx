@@ -31,6 +31,15 @@ describe("SaveStatus", () => {
     expect(say("idle", true)).toBe("Saving...");
     cleanup();
     expect(say("idle", false)).toBe("");
-    expect(screen.getByRole("status")).toHaveAttribute("data-save-state", "idle");
+  });
+  it("announces only what the student has to act on: saving and saved are shown but not in the live region (T-182)", () => {
+    const { container } = render(<SaveStatus state="saved" dirty={false} />);
+    expect(container).toHaveTextContent("Saved");
+    expect(screen.getByRole("status")).toHaveTextContent("");
+    cleanup();
+    render(<SaveStatus state="conflict" dirty />);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "This book was changed in another tab or device.",
+    );
   });
 });

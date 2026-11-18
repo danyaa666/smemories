@@ -1112,6 +1112,11 @@
     "helpButton": "Phím tắt",
     "helpTitle": "Phím tắt",
     "helpClose": "Đóng",
+    "helpKeys": {
+      "noSnap": "Alt (Mac: Option) + kéo",
+      "ratio": "Shift + kéo tay nắm",
+      "snap15": "Shift + xoay"
+    },
     "help": {
       "tab": "Chọn mục kế tiếp hoặc trước đó trên trang",
       "move": "Dời mục đang chọn 1 px",

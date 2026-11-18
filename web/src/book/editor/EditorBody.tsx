@@ -62,6 +62,7 @@ import { PropertyPanel } from "./PropertyPanel";
 import { SaveStatus } from "./SaveStatus";
 import type { Stage as DesktopStage } from "./Stage";
 import { targetsOf, type Target } from "./targets";
+import { useKeepFocus } from "./keepFocus";
 import { useLayoutEditor } from "./useLayoutEditor";
 import "../../styles/editor.css";
 
@@ -92,6 +93,7 @@ export function EditorBody({
 }) {
   const { t, i18n } = useTranslation();
   const ed = useLayoutEditor(bookId);
+  useKeepFocus();
   const size = data.yearbook.page_size;
   const tpl = getTemplate(data.yearbook.template_id);
   const spec = tpl.layout;
