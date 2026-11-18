@@ -1212,7 +1212,7 @@ Spec: .team/epics/E09-customisation-editor/40-phone-mode.md (read it from the ma
 - 2026-11-18 12:48Z · leader · owner approved before merge (D-47)
 
 ### T-182 — [E09] Accessibility and i18n audit of the editor, with fixes
-- **Status:** READY_FOR_QA
+- **Status:** QA_PASS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -1220,11 +1220,11 @@ Spec: .team/epics/E09-customisation-editor/40-phone-mode.md (read it from the ma
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** leader
 - **Branch:** task/t-182-e09-accessibility-and-i18n-audit-of-the-
 - **PR:** https://github.com/danyaa666/smemories/pull/183
-- **Updated:** 2026-11-18 17:44Z by dev
-- **Comments-seen:** 4
+- **Updated:** 2026-11-18 18:20Z by qa
+- **Comments-seen:** 6
 
 Spec: .team/epics/E09-customisation-editor/41-editor-accessibility-i18n-audit.md (read it from the main checkout). Keyboard-only journey spec, aria snapshots, announcement bounds, contrast/zoom/target checks, hard-coded string check, vi text length, docs/editor-accessibility.md with findings table and owner screen-reader checklist; no new dependency
 
@@ -1233,6 +1233,17 @@ Spec: .team/epics/E09-customisation-editor/41-editor-accessibility-i18n-audit.md
 - 2026-11-18 12:48Z · leader · deps T-176 and T-181 merged
 - 2026-11-18 17:44Z · dev · PR #183 head f549c9f. editor-keyboard.spec (3 runs green) + editor-a11y.spec (aria en/vi, contrast, 44 px touch, zoom, reduced motion, vi lengths, language switch), docs/editor-accessibility.md (findings F-01..F-17, owner checklist). Fixed high/medium: focus kept when a pressed button disables itself, help focus return + vi words, key announcements bounded (20 steps = 2), save status not spoken per autosave, 44 px touch targets, reduced motion. Local (Windows): lint/tsc/i18n/build/vitest green; full e2e 59 pass, 3 fail: journey step 8 and design step 6 (pdftotext encoding on Windows), editor-gestures touch at 768 fails also on baseline web/src (pre-existing flake). check:api and print-check do not run on Windows; no API/print code changed. QA: run print-check and check:api on Linux/Mac, make e2e, walk by keyboard.
 - 2026-11-18 17:44Z · leader · QA brief (leader): PR #183. Check every AC in spec 41 against the diff, not only the tests. Focus: (1) focus handling fixes (button that disables itself, keyboard help focus return) on desktop and the T-181 phone shell; (2) announcement bound (20 steps give 2 messages) does not hide a real state change; save status not spoken per autosave but still on error; (3) 44 px targets on touch tablets and reduced motion; (4) the editor-gestures keyboard spec change is a correct update, not a weakened test; (5) scripts/e2e.sh argument pass-through cannot break the CI call; (6) i18n: no hard-coded English in vi. Run vitest, lint:i18n, editor-keyboard and editor-a11y specs, and the desktop editor e2e suite on the head; check:api and print-check cannot run on Windows (no API/print change), say so. F-08..F-17 are leader follow-ups, not defects of this PR.
+- 2026-11-18 18:20Z · qa · QA_PASS on PR #183 head f549c9f (Windows PC, own DB smem_test_qa182, ports 18180/14273; CI go, web, security green on this head).
+  Evidence by AC:
+  AC1: editor-keyboard.spec passed 4 runs (full e2e, then 3 isolated runs); I read it: only page.keyboard after set-up, focus ring asserted on every Tab stop, Tab order asserted by name, focus return asserted for Templates, History, dialogs, help.
+  AC2: editor-a11y.spec 'accessibility tree' en and vi passed (10 states, no unnamed control, toolbar/navigation/region, complementary+heading, [pressed], aria-modal dialog, alert + polite status on error).
+  AC3: useGestures.test.tsx passed in vitest: 20 presses = 2 messages (first at once, last after 500 ms with the final place), plus undo and blur drop the pending message. SaveStatus.test: saved/saving not in the live region, conflict is. Error state e2e: save-failing is still a polite status, alert still shown.
+  AC4: a11y spec contrast, touch targets 768/1024 (44 px under pointer:coarse), reduced motion, 200% zoom and 200% text, Vietnamese 768/1024/1440, language switch keeps selection: all passed in the full e2e. docs/editor-accessibility.md has F-01..F-17 with severity/status; F-08..F-17 left open as leader follow-ups.
+  AC5 / commands: eslint --max-warnings 0 + prettier --check (web) ok; tsc ok; lint:i18n ok; npm run build ok; vitest 1339 pass, 1 fail in the first full run (editor.test.tsx 'mounts the editor for the owner', timeout under load), passed 3/3 when run alone and the pages folder rerun: flake under 8-way parallel load, not this PR. No new dependency, nothing under .team/. check:api and print-check cannot run on Windows (check:api crashes in the node tool; print-check needs Linux/Mac); no API, Go or print code changed (go CI green).
+  Full e2e (scripts/e2e.sh, head f549c9f): 62 passed, 3 failed, 7 skipped. Failures: design step 6 and journey step 8 (pdftotext on Windows, as dev said) and editor-gestures 'touch at 768 px' (first tap selects). I reproduced the gestures failure identically on develop's web/src (restored after), so it is pre-existing on Windows, not a regression. Skipped by that serial failure: gestures perf (run alone: 17-19 fps vs 30 needed; develop gives 19 fps too, so the PC, not the PR) and editor-history (needs a mysql client; I ran it with a docker-exec mysql shim: 7/7 pass on this head, incl. keyboard AC5). The gestures keyboard test passes with the poll change; it is a correct update (first key is said at once, final message after 500 ms, still asserts the final text), not a weakened test.
+  Brief points: (1) keepFocus: group fallback covers the phone bar (role=toolbar/group; pager uses aria-disabled so stays focusable); keyboard spec steps 5-6 prove Undo/Redo/Send to back; HelpSheet gives focus back. (5) scripts/e2e.sh 'npx playwright test "$@"' with no args is identical to before; CI call passes none, and I used it with spec names and -g. (6) hardcoded.test.ts AST finder has its own self-test and the editor tree has none.
+  Non-blocking: make e2e stops at 'guard-test' on Windows (scrub-trace.test.mjs fails 3 of 8, pre-existing); I ran scripts/e2e.sh directly. Leader to re-run print-check/check:api on Linux or Mac if wanted (no print/API change). Not walked by hand with a real screen reader: owner checklist remains.
+- 2026-11-18 18:20Z · leader · Leader review OK (head f549c9f, CI green): web + e2e specs + docs only; scripts/e2e.sh only forwards "$@" to playwright (CI passes no args, unchanged behaviour); no server/API/dependency change. QA evidence complete for this scope (vitest 1339, e2e 62 pass, 3 fails pre-existing/Windows-only, a11y and keyboard specs green). Awaiting owner approval (D-47): look at docs/editor-accessibility.md (findings F-01..F-07 fixed, F-08..F-17 open, to become tasks) and walk the screen-reader checklist there.
 
 ### T-183 — [E09] Stage 2 exit check: one journey, performance budgets, parity, docs, report against the PRD exit criteria
 - **Status:** BACKLOG
