@@ -1148,7 +1148,7 @@ Spec: .team/epics/E09-customisation-editor/39-bolder-notes-back-variants.md (rea
 - 2026-11-06 02:53Z · leader · squash-merged PR #175 at 8b23f641 (QA_PASS: integration 33 pkgs ok, print-check 298/298, e2e 44/44; gate mutants caught except >= vs > and full-box override boxes). Memory Book notes/back variety limit stays (content blocks cannot move): owner-level runtime decision for the stage 2 exit check.
 
 ### T-181 — [E09] Phone mode of the editor: view and light edit below 768 px
-- **Status:** BLOCKED
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -1157,10 +1157,10 @@ Spec: .team/epics/E09-customisation-editor/39-bolder-notes-back-variants.md (rea
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-11-18 06:55Z by dev
-- **Comments-seen:** 4
+- **Branch:** task/t-181-e09-phone-mode-of-the-editor-view-and-li
+- **PR:** #179
+- **Updated:** 2026-11-18 08:24Z by leader
+- **Comments-seen:** 5
 
 Spec: .team/epics/E09-customisation-editor/40-phone-mode.md (read it from the main checkout). Phone shell over the same store (bottom sheet property panel, text edited in the sheet, pager, Templates/History as dialogs, undo/redo buttons), no drag handles, shell switch at 768 px keeps state, Playwright touch spec, docs/editor-phone.md, owner manual checks iOS Safari and Gboard
 
@@ -1169,6 +1169,7 @@ Spec: .team/epics/E09-customisation-editor/40-phone-mode.md (read it from the ma
 - 2026-11-18 06:55Z · dev · BLOCKED (environment, not spec): this dev machine (Windows 10, Git Bash) has no node, npm, pnpm, make or docker on PATH (checked PATH and C:/Program Files/nodejs). T-181 is a web-only task (React shell, CSS, vitest, Playwright touch spec, eslint, tsc, i18n parity), and README s5 requires make build/test/lint green, so I cannot do or verify it. Not improvising around it. Needed: install Node (LTS matching web/package.json), npm deps, GNU make (or an agreed alternative to run the make targets), and Playwright browsers; then move T-181 back to TODO. No worktree or branch was created.
 - 2026-11-18 06:55Z · dev · Toolchain missing on dev machine (node/npm/make/docker); see comment. No code changed.
 - 2026-11-18 08:02Z · leader · Leader: toolchain installed per D-46: Go 1.27.4, Node 22.23.5 / npm 10.9.9, GNU make 4.4.1, Docker Desktop (docker 29.9.3). Pending: Windows reboot (WSL2), Docker Desktop first start, Claude app restart for the new PATH. Leader moves this back to TODO after go/node/make/docker answer in a fresh session.
+- 2026-11-18 08:24Z · leader · Toolchain installed (D-46). Code already exists: PR #179, head 406ebb3, opened 2026-11-10 from a cloud session; CI go/web/security green, MERGEABLE. Dev: do NOT rewrite. Reuse the branch (worktree.py ensure picks up origin/task/t-181-...), rebase on develop if needed, run what the PR says was not run: make test-integration for touched packages (none expected: web-only), make e2e incl. the new phone spec and editor-shell step 7, print-check if the book view changed, then READY_FOR_QA with the result lines and head SHA.
 
 ### T-182 — [E09] Accessibility and i18n audit of the editor, with fixes
 - **Status:** BACKLOG
