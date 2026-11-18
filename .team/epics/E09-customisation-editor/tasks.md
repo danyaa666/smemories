@@ -1160,7 +1160,7 @@ Spec: .team/epics/E09-customisation-editor/39-bolder-notes-back-variants.md (rea
 - **Branch:** —
 - **PR:** —
 - **Updated:** 2026-11-18 06:55Z by dev
-- **Comments-seen:** 1
+- **Comments-seen:** 3
 
 Spec: .team/epics/E09-customisation-editor/40-phone-mode.md (read it from the main checkout). Phone shell over the same store (bottom sheet property panel, text edited in the sheet, pager, Templates/History as dialogs, undo/redo buttons), no drag handles, shell switch at 768 px keeps state, Playwright touch spec, docs/editor-phone.md, owner manual checks iOS Safari and Gboard
 
