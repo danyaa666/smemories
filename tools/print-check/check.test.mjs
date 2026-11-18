@@ -1073,17 +1073,6 @@ describe("layout layer: the printed page is the page on screen (T-154)", () => {
   }
 
   /** The extent of the dark pixels (grey below 110) inside a box in pixels, and how many there are. */
-  /** T-185 diagnostic: per row from 3 above to 10 below `y0`, the count of dark pixels and the darkest grey in the box. */
-  function rowsOf(pic, box, y0) {
-    const out = [];
-    for (let y = y0 - 3; y <= y0 + 10; y++) {
-      let n = 0, min = 255;
-      for (let x = Math.max(0, Math.floor(box.x0)); x < Math.min(pic.w, Math.ceil(box.x1)); x++) { const v = pic.px[y * pic.w + x]; if (v < 110) n++; if (v < min) min = v; }
-      out.push(`${y}:${n}/${min}`);
-    }
-    return out.join(" ");
-  }
-
   function inkBox(pic, box) {
     const r = { n: 0, x0: Infinity, y0: Infinity, x1: -1, y1: -1 };
     for (let y = Math.max(0, Math.floor(box.y0)); y < Math.min(pic.h, Math.ceil(box.y1)); y++)
@@ -1185,7 +1174,7 @@ describe("layout layer: the printed page is the page on screen (T-154)", () => {
           checked++;
           // the placed item: its top-left corner of ink, and for a picture or a shape also the bottom-right (the end of a text is where wrapping may differ by a letter)
           const edges = /^(longtx|clipped|prof01|note01|back01)$/.test(b.id) ? ["x0", "y0"] : ["x0", "y0", "x1", "y1"];
-          for (const k of edges) assert.ok(Math.abs(a[k] - p[k]) <= 2, `${size} ${label} item ${b.id}: ${k} ${a[k]} on screen against ${p[k]} in print (192 dpi)${Math.abs(a[k] - p[k]) <= 2 ? "" : " T185DIAG " + JSON.stringify({ box, a, p, scr: rowsOf(scr, box, a.y0), pdf: rowsOf(pdfPic, box, p.y0) })}`);
+          for (const k of edges) assert.ok(Math.abs(a[k] - p[k]) <= 2, `${size} ${label} item ${b.id}: ${k} ${a[k]} on screen against ${p[k]} in print (192 dpi)`);
         }
         assert.ok(checked >= (label === "cover" ? 3 : 1), `${label}: ${checked} items were followed`);
       }
