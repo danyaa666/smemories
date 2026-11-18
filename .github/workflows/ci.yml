@@ -161,7 +161,7 @@ jobs:
     # D-37 (T-132): paused on push and pull request, runs by hand only (gh workflow run ci.yml --ref <branch>); delete this `if:` to switch it back on.
     if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 25 # the journey itself is limited to 240 s (tools/e2e/playwright.config.mjs), print-check to 15 min
+    timeout-minutes: 60 # the journey itself is limited to 240 s (tools/e2e/playwright.config.mjs), print-check to 30 min (T-185)
     env:
       # Throwaway services on the runner, loopback only; obviously fake values, not secrets (same as go-integration).
       SMEM_DB_DSN: root:ci-only-fake-root-pw@tcp(127.0.0.1:3306)/smem_e2e
@@ -248,16 +248,21 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+      # T-185: on 2026-11-18 the runner's apt mirror (us-east-2.ec2.archive.ubuntu.com) served the font packages at about 60 KB/s; the first attempt
+      # was cut after 150 s, and the root apt-get it had started kept running and held the dpkg lock, so attempt 2 failed at once ("Could not get
+      # lock"). Now apt retries and waits for the lock, an attempt ends by killing the apt-get it left behind, and there are three attempts.
       - name: Install Chromium
-        timeout-minutes: 6
+        timeout-minutes: 12
         env:
           CACHE_HIT: ${{ steps.pwcache.outputs.cache-hit }}
         run: |
+          printf 'Acquire::Retries "3";\nAcquire::http::Timeout "20";\nDPkg::Lock::Timeout "120";\n' | sudo tee /etc/apt/apt.conf.d/99ci-retry >/dev/null
           if [ "$CACHE_HIT" = "true" ]; then cmd="install-deps chromium"; else cmd="install --with-deps chromium"; fi
-          for attempt in 1 2; do
+          for attempt in 1 2 3; do
             start=$SECONDS
-            if timeout -k 5 150 npx playwright $cmd; then echo "playwright $cmd: ${attempt} attempt(s), $((SECONDS - start)) s, cache-hit=${CACHE_HIT:-false}"; exit 0; fi
+            if timeout -k 5 200 npx playwright $cmd; then echo "playwright $cmd: ${attempt} attempt(s), $((SECONDS - start)) s, cache-hit=${CACHE_HIT:-false}"; exit 0; fi
             echo "::warning::playwright $cmd failed or timed out (attempt $attempt)"
+            sudo pkill -x apt-get || true; sleep 2; sudo dpkg --configure -a || true
           done
           exit 1
         working-directory: tools/e2e
@@ -271,7 +276,7 @@ jobs:
       # prints fixture books to PDF and inspects them, so a change that drops photos or text from the printed book fails the PR.
       # T-116 broke it unnoticed because it only ran by hand. The whole suite runs; its time is printed so it can be watched.
       - name: Print check
-        timeout-minutes: 15
+        timeout-minutes: 30
         working-directory: tools/print-check
         run: |
           start=$SECONDS
