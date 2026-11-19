@@ -13,7 +13,7 @@
 | BACKLOG | 5 | T-023, T-024, T-025, T-031, T-050 |
 | TODO | 1 | T-191 |
 | IN_PROGRESS | 1 | T-183 |
-| READY_FOR_QA | 1 | T-189 |
+| QA_PASS | 1 | T-189 |
 | MERGED | 32 | T-184, T-150, T-151, T-152, T-153, T-154, T-155, T-156, T-157, T-158, T-159, T-160, T-161, T-162, T-163, T-164, T-165, T-166, T-167, T-168, T-169, T-170, T-171, T-172, T-173, T-174, T-175, T-176, T-177, T-178, T-179, T-180 |
 | DONE | 143 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138, T-139, T-140, T-141, T-142, T-143, T-144, T-145, T-146, T-147, T-185, T-186, T-190, T-187, T-188, T-149, T-148, T-181, T-182 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
@@ -24,7 +24,7 @@
 
 **Open questions for you:** Q-064 (Doory templates: licence route, studio, and template colours (ADR 0005, T-169)); Q-065 (Storage cap per user for layout history (T-179, docs/layout-storage-budget.md): cap now, or watch and decide at go-live?); Q-067 (After the stage 2 exit check (T-183): go live (M2) next, or class yearbook (M3) first?)
 
-_Board last written 2026-11-19 16:51Z_
+_Board last written 2026-11-19 17:51Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -6667,7 +6667,7 @@ Spec: .team/epics/E01-foundation/18-print-check-linux-parity.md (read it from th
 - 2026-11-19 15:26Z · leader · Board sync PR #188 merged f87dda8 (owner approved in the same message).
 
 ### T-189 — [E01] Print check: the notes-page item check cannot see a moved note text
-- **Status:** READY_FOR_QA
+- **Status:** QA_PASS
 - **Priority:** P2
 - **Type:** test
 - **Milestone:** M4
@@ -6675,17 +6675,25 @@ Spec: .team/epics/E01-foundation/18-print-check-linux-parity.md (read it from th
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** leader
 - **Branch:** task/t-189-e01-print-check-the-notes-page-item-chec
 - **PR:** https://github.com/danyaa666/smemories/pull/190
-- **Updated:** 2026-11-19 16:25Z by dev
-- **Comments-seen:** 2
+- **Updated:** 2026-11-19 17:51Z by qa
+- **Comments-seen:** 4
 
 Spec: .team/epics/E01-foundation/19-print-check-notes-text-position.md (read it from the main checkout). QA on T-186: a 5-20 px note text shift passes because the check measures the ruled lines.
 
 #### Comments
 - 2026-11-19 16:25Z · dev · PR #190 head c0c639e. New noteTextCheck measures the note text ink (left/top/bottom, 192 dpi, <=2 px; Linux A5 3 px, numbers in PR) for Memory Book and Navy fixture layouts on A5/A4/Letter. 5 px print shift fails all 6 tests (Memory Book: only the new check), reverted. Container full print-check 298/298 (1952 s). Manual CI run 44559488055: go, web, security, go-integration, e2e success; image FAILED on Trivy stdlib CVE-2026-97054 (HIGH, Go 1.26.10 -> 1.26.11), unrelated, needs toolchain bump (leader).
 - 2026-11-19 16:51Z · leader · QA brief (leader): PR #190 head c0c639e. Verify: (1) the new noteTextCheck measures text ink, not the ruled lines, on A5/A4/Letter for Memory Book and Navy; (2) your own 5 px and 20 px note-text shift in print CSS fails on each size (then revert); (3) the Linux A5 3 px tolerance is backed by the PR's numbers and applies only to Linux A5; no existing budget loosened (diff check); (4) full print-check in the Linux container (scripts/print-check-linux.sh) with counts; (5) CI run 44559488055: e2e green; the image job failure (Go stdlib CVE) is out of scope and filed as T-191. Own compose project/ports; never down -v the main project.
+- 2026-11-19 17:51Z · qa · QA_PASS, PR #190 head c0c639edcca6fea19a80fbc9c40f39bb4862688e (worktree clean, equals PR head). Test-only diff: tools/print-check/check.test.mjs (+32/-1) and docs/e2e.md (+1); no product code, no CSS.
+  Brief (1) text ink, not ruled lines: noteTextCheck hides every sheet element except text items ([data-layout-item]:has([data-fit])), forces black, and measures ink box left/top/bottom at 192 dpi, screen vs poppler raster, on both notes pages. Full run printed 12 'text ink' lines (A5/A4/Letter x Memory Book/Navy x notes#0/#1), my numbers equal the PR's (e.g. A5 memory y0 1483/1481 y1 1507/1504; A4 navy y1 337/336; Letter memory x0 103/102).
+  (2) Shift in book.css print CSS (my own, reverted, worktree clean): 5px '@media print{[data-layout-item=note01]{margin:5px 0 0 5px}}' in Linux container (--test-name-pattern 'fixture layout prints'): all 6 fail (A5/A4/Letter x Memory/Navy); Memory text ink A5 x0 71/76 y0 1483/1489, A4 100/108 2095/2103, Letter 103/112 1968/1977, failing in the new check (the 'text ink' line is only printed by it, i.e. old per-item check passed). 20px: all 6 fail; Memory fail messages are 'A5/A4/Letter notes#0 note text note01: x0 71 vs 97 / 100 vs 138 / 103 vs 142'. Observation (non-blocking): on Navy the older per-item check already fails first ('notes item note01: x0 ... in print'), so the shift never reaches the new check there; the new check on Navy is proven only at baseline (passes, numbers above), not by a failure. Memory Book is the real blind spot and is covered.
+  (3) Tolerance: 2 px for x0/y0/y1 everywhere; LINUX_NOTE_TEXT = {A5: 3} applies only when LINUX and size A5 (A5 measured: top 2, bottom 3 in all runs, matches PR numbers). Diff check: LINUX_EDGE, LINUX_EXTRA and all existing budgets untouched; only itemBoxes gained a 'text' field.
+  (4) Full print-check, Linux container scripts/print-check-linux.sh, head c0c639e: tests 298, pass 298, fail 0, cancelled 0, skipped 0, 2342 s.
+  (5) CI: PR run 44565842494 go/web/security pass (e2e/go-integration/image skipped by D-37/D-38); manual run 44559488055 on c0c639e: go, web, security, go-integration, e2e success, image failure = Trivy stdlib CVE-2026-97054, out of scope (T-191).
+  Not run: native Windows print-check, make test-integration (no Go change). Own docker containers only; no compose project touched; containers killed after runs.
+- 2026-11-19 17:51Z · leader · review OK; awaiting owner approval: PR #190 head c0c639e, +32/-1 (tools/print-check/check.test.mjs, docs/e2e.md). New noteTextCheck measures only the note text ink (x0/y0/y1 within 2 px at 192 dpi; Linux A5 3 px from 4 of 4 runs); asserts the text has ink and that at least 2 items were followed; no existing budget changed. QA: container 298/298 on the head, own 5 px and 20 px shifts fail all 6 layout tests (Memory Book only through the new check). Image job red is the Go stdlib CVE, T-191.
 
 ### T-190 — [E01] internal/notes: two integration tests fail on develop
 - **Status:** DONE
