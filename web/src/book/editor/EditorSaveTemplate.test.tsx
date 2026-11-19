@@ -188,11 +188,16 @@ describe("the dialog", () => {
       "This saves the cover as it is now: 1 item, 1 moved element, a background. 2 images are not saved (your own images are not copied to templates).",
     );
     expect(dialog()).toHaveTextContent("10 of 60 characters");
-    // F-13: the counter is silent on every key and speaks only when the limit is near or passed
-    const counter = () => within(dialog()).getByText(/of 60 characters/);
-    expect(counter()).toHaveAttribute("aria-live", "off");
+    // F-13: a live region that is live from the start, empty on every key until the limit is near, then written into
+    const live = within(dialog()).getByTestId("name-counter-live");
+    expect(live).toHaveAttribute("aria-live", "polite");
+    expect(live).toBeEmptyDOMElement();
+    fireEvent.change(nameField(), { target: { value: "x".repeat(54) } });
+    expect(live).toBeEmptyDOMElement();
     fireEvent.change(nameField(), { target: { value: "x".repeat(55) } });
-    expect(counter()).toHaveAttribute("aria-live", "polite");
+    expect(within(dialog()).getByTestId("name-counter-live")).toBe(live); // same node: it was already live
+    expect(live).toHaveAttribute("aria-live", "polite");
+    expect(live).toHaveTextContent("55 of 60 characters");
     await userEvent.keyboard("{Escape}");
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(saveButton()).toHaveFocus();

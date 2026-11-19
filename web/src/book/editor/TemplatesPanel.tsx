@@ -546,12 +546,15 @@ export function TemplatesPanel({
               void submitSave();
             }}
           />
-          <p
-            className={`ed-hint${nameLength(name) > NAME_MAX ? " error" : ""}`}
-            aria-live={nameLength(name) >= NAME_MAX - 5 ? "polite" : "off"} // silent on every key until the limit is near (F-13)
-          >
+          <p className={`ed-hint${nameLength(name) > NAME_MAX ? " error" : ""}`}>
             {t("editor.templates.save.counter", { used: nameLength(name), max: NAME_MAX })}
           </p>
+          {/* Always live, empty until the limit is near, so the first warning is written into a region that is already live (F-13) */}
+          <span className="visually-hidden" aria-live="polite" data-testid="name-counter-live">
+            {nameLength(name) >= NAME_MAX - 5
+              ? t("editor.templates.save.counter", { used: nameLength(name), max: NAME_MAX })
+              : ""}
+          </span>
           {saveFailure && (
             <p role="alert" className="error">
               {saveErrorText(saveFailure)}

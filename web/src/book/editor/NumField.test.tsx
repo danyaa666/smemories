@@ -23,6 +23,24 @@ describe("shown and typed", () => {
     expect(typed(" 12.5 ")).toBe(12.5);
     expect(typed("1,2,3")).toBeNaN();
     expect(typed("abc")).toBeNaN();
+    for (const bad of [
+      "0x10",
+      "1e1",
+      "1E2",
+      "+5",
+      "Infinity",
+      "",
+      " ",
+      "1.2.3",
+      "1,2.3",
+      "--1",
+      "5-",
+      ".",
+    ])
+      expect(typed(bad), bad).toBeNaN();
+    expect(typed("-3")).toBe(-3);
+    expect(typed("7.")).toBe(7);
+    expect(typed(".5")).toBe(0.5);
   });
 });
 

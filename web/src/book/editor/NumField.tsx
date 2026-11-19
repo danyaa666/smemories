@@ -6,7 +6,10 @@ export const tenth = (v: number) => String(Math.round(v * 10) / 10);
 export const shown = (lng: string, v: number) =>
   new Intl.NumberFormat(lng, { maximumFractionDigits: 1, useGrouping: false }).format(v);
 /** What the user typed, with a decimal point or a decimal comma; NaN when it is not a plain number. */
-export const typed = (s: string) => Number(s.trim().replace(",", "."));
+export const typed = (s: string) => {
+  const t = s.trim().replace(",", ".");
+  return /^-?(\d+\.?\d*|\.\d+)$/.test(t) ? Number(t) : NaN; // no '0x10', '1e1', '+5', 'Infinity'
+};
 
 /**
  * A number that is committed on Enter or when it loses the focus: one history step per committed input. `onCommit` returns false when the change was refused.
