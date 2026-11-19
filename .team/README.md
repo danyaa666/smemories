@@ -12,7 +12,7 @@
 |---|---:|---|
 | BACKLOG | 5 | T-023, T-024, T-025, T-031, T-050 |
 | TODO | 2 | T-186, T-183 |
-| IN_PROGRESS | 1 | T-188 |
+| READY_FOR_QA | 1 | T-188 |
 | QA_PASS | 1 | T-187 |
 | MERGED | 32 | T-184, T-150, T-151, T-152, T-153, T-154, T-155, T-156, T-157, T-158, T-159, T-160, T-161, T-162, T-163, T-164, T-165, T-166, T-167, T-168, T-169, T-170, T-171, T-172, T-173, T-174, T-175, T-176, T-177, T-178, T-179, T-180 |
 | DONE | 139 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138, T-139, T-140, T-141, T-142, T-143, T-144, T-145, T-146, T-147, T-185, T-149, T-148, T-181, T-182 |
@@ -24,7 +24,7 @@
 
 **Open questions for you:** Q-064 (Doory templates: licence route, studio, and template colours (ADR 0005, T-169)); Q-065 (Storage cap per user for layout history (T-179, docs/layout-storage-budget.md): cap now, or watch and decide at go-live?)
 
-_Board last written 2026-11-19 05:41Z_
+_Board last written 2026-11-19 05:48Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -6669,7 +6669,7 @@ Spec: .team/epics/E09-customisation-editor/43-skip-link-and-route-focus.md (read
 - 2026-11-19 05:41Z · leader · Leader review OK (head 7fa068c; product code unchanged since fbfdbb0, whose CI is green; CI on 7fa068c was still running at review, merge only once it is green). QA's two test commits are correct: app-a11y.spec.mjs is now in playwright testMatch (it never ran before) and editor-keyboard step 2 now asserts the new behaviour (h1 focused after the route change, Shift+Tab to the back link), which is stronger, not weaker. Awaiting owner approval (D-47): try Tab once on any page (skip link appears) and navigate with the keyboard (focus lands on the page title).
 
 ### T-188 — [E09] Editor screen-reader polish: numbers, live regions, roles, handles
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P3
 - **Type:** feature
 - **Milestone:** M4
@@ -6677,17 +6677,19 @@ Spec: .team/epics/E09-customisation-editor/43-skip-link-and-route-focus.md (read
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-188-e09-editor-screen-reader-polish-numbers-
-- **PR:** —
-- **Updated:** 2026-11-19 04:44Z by dev
-- **Comments-seen:** 2
+- **PR:** https://github.com/danyaa666/smemories/pull/186
+- **Updated:** 2026-11-19 05:47Z by dev
+- **Comments-seen:** 4
 
 Spec: .team/epics/E09-customisation-editor/44-editor-screen-reader-polish.md (read it from the main checkout). Findings F-10, F-13..F-17 of the T-182 audit.
 
 #### Comments
 - 2026-11-19 04:43Z · dev · Claimed by mistake (the gate went SLEEP in the same command). No work done, no branch. Leader: please set it back to TODO. Also note Docker Desktop was down on this wake-up, so e2e could not run.
 - 2026-11-19 04:43Z · leader · reset by leader: the dev run claimed it but its gate said SLEEP (stale cache); no branch exists
+- 2026-11-19 05:47Z · dev · PR #186 head 32d4c5e. F-10,F-13..F-17 done; docs rows marked. Verify: vitest (NumField.test.tsx new), e2e editor-a11y/gestures/templates/save-template/palette/phone/flow/navy/shell/keyboard pass locally. Known: gestures touch@768, editor-text 0.67% (pre-existing); editor-history not run here (no mysql client on PATH); pages/editor.test 'mounts the editor' fails on develop too. Number fields are now type=text role=spinbutton with arrow stepping (needed for the vi decimal comma).
+- 2026-11-19 05:48Z · leader · QA brief (leader): PR #186. Check every F-row against the spec, not only the tests. Focus: (1) NumField is now type=text role=spinbutton: aria-valuenow/min/max, ArrowUp/Down, Home/End if the spec's pattern needs them, typing '12,4' in vi and '12.4' in en both parse, invalid input does not move the item; (2) cards and history rows as aria-pressed buttons: arrow/Enter behaviour, Apply/Delete reachable, screen-reader name; (3) live regions: counter silent until near the limit, search count debounced (~600 ms); (4) handles aria-hidden yet gestures specs green; (5) editor.test.tsx 'mounts the editor for the owner': dev says it fails on develop too; run it alone 3x on develop and on the head and say whether it is a real failure or a load flake; (6) run editor-history (row locators changed; use your docker-exec mysql shim).
 
 <!-- tasks:end -->
 
