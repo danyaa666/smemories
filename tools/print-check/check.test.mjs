@@ -17,6 +17,7 @@ import { BASE, LINUX, fitBoxes, inkIn, inspect, open, openClassBook, openEditor,
 // PDF is laid out as drawn. These are the measured exceptions (docs/e2e.md, "Print check on Linux"); every other page and item keeps the strict budget on every platform.
 const LINUX_EDGE = { note01: 4 }; // A5 notes page, the first ink of the note box is its ruled line: 3 px apart in 4 of 4 runs
 const LINUX_EXTRA = { "A4 notes-doodle#1": 0.015, "A4 notes-stickers#1": 0.015, "A4 notes-tape#1": 0.015, "A4 profile-tilted#0": 0.003 }; // extra share of pixels over the 0.5 %: measured 1.61 % and 0.62 % over the plain page, same in 4 of 4 runs
+const LINUX_NOTE_TEXT = { A5: 3 }; // T-189: the note text of an A5 notes page is 2 px (top) and 3 px (bottom) lower on screen than in print at 192 dpi, same in 4 of 4 runs (memory-book and navy-classic); A4 and Letter: 0 to 2 px
 const squash = (x) => x.replace(/\s+/g, "");
 const PT = { A5: [419.53, 595.28], A4: [595.28, 841.89], Letter: [612, 792] }; // exact sizes in points
 const tmp = mkdtempSync(path.join(os.tmpdir(), "print-check-"));
@@ -1086,6 +1087,33 @@ describe("layout layer: the printed page is the page on screen (T-154)", () => {
     return r;
   }
 
+  /**
+   * T-189: the note text of a notes page, measured on its own. A note box holds ruled lines, so the first ink inside it was the line and a text moved by 5 px still passed. Everything but the
+   * text items of the layout is hidden here and the text is black, on the screen and in the PDF, so the ink box left in the item's box is the text's own: its left, top and bottom edges
+   * must be within 2 px (192 dpi) on screen and in print. Call it last: it changes the page.
+   */
+  async function noteTextCheck(r, size, name, pdfPages) {
+    await r.page.addStyleTag({ content: `.bk-sheet { background: #fff !important; background-image: none !important }
+      .bk-sheet::before, .bk-sheet::after { display: none !important }
+      .bk-sheet * { visibility: hidden !important }
+      .bk-sheet [data-layout-item]:has([data-fit]), .bk-sheet [data-layout-item]:has([data-fit]) * { visibility: visible !important; color: #000 !important; opacity: 1 !important; text-shadow: none !important }` });
+    const file = path.join(tmp, `${name}-note-text.pdf`);
+    await savePdf(r.page, file);
+    let followed = 0;
+    for (const [nth, pdfPage] of pdfPages.entries()) {
+      const pdfPic = raster(file, pdfPage, DPI), scr = await sheetPicture(r.page, "notes", nth);
+      for (const b of (await itemBoxes(r.page, "notes", nth, scr)).filter((x) => x.text)) {
+        const box = { x0: b.x0 - 6, y0: b.y0 - 6, x1: b.x1 + 6, y1: b.y1 + 6 };
+        const a = inkBox(scr, box), p = inkBox(pdfPic, box);
+        console.log(`# ${size} ${name} notes#${nth} ${b.id}: text ink ${a.n}/${p.n} px, x0 ${a.x0}/${p.x0} y0 ${a.y0}/${p.y0} y1 ${a.y1}/${p.y1} (screen/print, 192 dpi)`);
+        assert.ok(a.n >= 100 && p.n >= 100, `${size} notes#${nth} ${b.id}: the note text has ink (${a.n} on screen, ${p.n} in print)`);
+        for (const k of ["x0", "y0", "y1"]) assert.ok(Math.abs(a[k] - p[k]) <= ((LINUX && LINUX_NOTE_TEXT[size]) || 2), `${size} notes#${nth} note text ${b.id}: ${k} ${a[k]} on screen against ${p[k]} in print (192 dpi)`);
+        followed++;
+      }
+    }
+    assert.ok(followed >= 2, `the note text was followed on ${pdfPages.length} notes pages: ${followed} items`);
+  }
+
   /** Opens the book, prints it, and shows the sheets at paper size and 2x pixels, the way the PDF is rasterised. */
   async function printAndShow(book, size, name) {
     const page = await browser.newPage({ viewport: { width: 1400, height: 1900 }, deviceScaleFactor: 2 });
@@ -1128,7 +1156,7 @@ describe("layout layer: the printed page is the page on screen (T-154)", () => {
       const s = sheet.getBoundingClientRect();
       return [...sheet.querySelectorAll("[data-layout-item]")].map((e) => {
         const r = e.getBoundingClientRect();
-        return { id: e.dataset.layoutItem, x0: ((r.left - s.left) / s.width) * w, y0: ((r.top - s.top) / s.height) * h, x1: ((r.right - s.left) / s.width) * w, y1: ((r.bottom - s.top) / s.height) * h };
+        return { id: e.dataset.layoutItem, text: !!e.querySelector("[data-fit]"), x0: ((r.left - s.left) / s.width) * w, y0: ((r.top - s.top) / s.height) * h, x1: ((r.right - s.left) / s.width) * w, y1: ((r.bottom - s.top) / s.height) * h };
       });
     }, [label, nth, pic.w, pic.h]);
   }
@@ -1189,6 +1217,7 @@ describe("layout layer: the printed page is the page on screen (T-154)", () => {
         }
         assert.ok(checked >= (label === "cover" ? 3 : 1), `${label}: ${checked} items were followed`);
       }
+      await noteTextCheck(r, size, "memory", [3, 4]);
       // the geometry: each item sits where the draw rule puts it (left = x * W, centre = cy * H), inside the page
       const boxes = await r.page.evaluate(() => [...document.querySelectorAll('.bk-sheet[data-page="cover"] [data-layout-item]')].map((e) => {
         const s = e.closest(".bk-sheet").getBoundingClientRect(), b = e.getBoundingClientRect(), cs = getComputedStyle(e);
@@ -1242,6 +1271,7 @@ describe("layout layer: the printed page is the page on screen (T-154)", () => {
           for (const k of edges) assert.ok(Math.abs(a[k] - p[k]) <= 2, `${size} ${label} item ${b.id}: ${k} ${a[k]} on screen against ${p[k]} in print (192 dpi)`);
         }
       }
+      await noteTextCheck(r, size, "navy", [3, 4]);
       await r.page.close();
     });
   }
