@@ -883,7 +883,8 @@ func TestConnectionCapAndFlatMemory(t *testing.T) {
 	e.waitFor("48 MiB on disk", func() bool {
 		spooledBytes = 0
 		for _, f := range e.spooled() {
-			if fi, err := f.Info(); err == nil {
+			// os.Stat, not f.Info(): on Windows a DirEntry carries the size cached in the directory, stale for a file still being written
+			if fi, err := os.Stat(filepath.Join(e.tmp, f.Name())); err == nil {
 				spooledBytes += fi.Size()
 			}
 		}
@@ -1237,17 +1238,21 @@ func TestSweepSpoolAtStartup(t *testing.T) {
 	if n := next.SweepSpool(); n != 0 || len(e.spooled()) != 1 {
 		t.Fatalf("a live upload's file was swept (removed %d)", n)
 	}
-	// the process dies: the handler never runs its cleanup; the file ages
-	name := filepath.Join(e.tmp, e.spooled()[0].Name())
+	// a process died earlier: its file is left behind and ages. It is written by the test, not taken from the live
+	// upload, because Windows cannot delete a file another handle still has open (which a dead process no longer has).
+	name := filepath.Join(e.tmp, spoolPrefix+"orphan")
+	if err := os.WriteFile(name, []byte("left behind"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	aged := time.Now().Add(-spoolMaxAge - time.Minute)
 	if err := os.Chtimes(name, aged, aged); err != nil {
 		t.Fatal(err)
 	}
-	if n := next.SweepSpool(); n != 1 {
-		t.Fatalf("removed %d, want 1", n)
+	if n := next.SweepSpool(); n != 1 || len(e.spooled()) != 1 {
+		t.Fatalf("removed %d, want 1 (the orphan only; the live upload's file stays)", n)
 	}
-	e.noSpool()
 	_ = conn.Close()
+	e.noSpool()
 	e.waitFor("slot released", func() bool { return e.inProgress() == 0 })
 }
 
