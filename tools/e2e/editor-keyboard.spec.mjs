@@ -210,10 +210,11 @@ test("keyboard only: the whole editor", async ({ browser }) => {
     await key("Enter");
     expect((await focused(page)).name, "the button that just became disabled does not take the focus with it").toBe("Bring forward");
     // the reorder is real: the text is drawn above the sticker now (items are in drawing order)
-    await expect.poll(async () => (await stored(page)).layout.pages.cover.items.map((i) => i.t)).toEqual(["asset", "text"]);
+    // T-186: the autosave has not stored the sticker yet when the poll first runs on the slower CI runner; a missing layout is "not yet", not an error (a TypeError ends expect.poll at once)
+    await expect.poll(async () => (await stored(page)).layout?.pages?.cover?.items?.map((i) => i.t)).toEqual(["asset", "text"]);
   });
 
-  const order = async () => (await stored(page)).layout.pages.cover.items.map((i) => i.t);
+  const order = async () => (await stored(page)).layout?.pages?.cover?.items?.map((i) => i.t);
   await step("6. undo and redo from the toolbar buttons, with Enter", async () => {
     await tabTo(page, "Undo", { back: true });
     await key("Enter");

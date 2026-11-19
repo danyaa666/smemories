@@ -49,6 +49,7 @@ async function step(title, body) {
 }
 
 const norm = (s) => s.normalize("NFC").replace(/\s+/g, " ").trim().toLocaleLowerCase("vi"); // the cover may set the title in capitals
+const flat = (s) => norm(s).replace(/\s+/g, ""); // pdftotext on Linux may split a glyph run, so PDF text is compared without whitespace
 
 /** Deletes what the run created (the account itself stays: there is no endpoint for that). Never fails the test. */
 async function cleanUp() {
@@ -257,10 +258,10 @@ test("M1 journey: sign up, build a book, collect notes, print the PDF", async ({
     await owner.emulateMedia({ media: null });
     expect(sigPages.map((x) => x.page), "the signature is on the first note's page").toEqual([3]);
     expect(inkIn(raster(file, 3), sigPages[0].box), "ink inside the signature box of the PDF").toBeGreaterThan(50);
-    const all = norm(text(file));
+    const all = flat(text(file));
     for (const s of [TITLE, OWNER.name, ...NOTES.flatMap((n) => [n.name, n.message])])
-      expect(all, `the PDF contains "${s}"`).toContain(norm(s));
-    expect(all.indexOf(norm(NOTES[0].name)) < all.indexOf(norm(NOTES[2].name)) && all.indexOf(norm(NOTES[2].name)) < all.indexOf(norm(NOTES[1].name)), "notes follow the book order").toBe(true);
+      expect(all, `the PDF contains "${s}"`).toContain(flat(s));
+    expect(all.indexOf(flat(NOTES[0].name)) < all.indexOf(flat(NOTES[2].name)) && all.indexOf(flat(NOTES[2].name)) < all.indexOf(flat(NOTES[1].name)), "notes follow the book order").toBe(true);
     for (const [i, p] of words(file).entries()) {
       const out = p.words.filter((w) => w.x0 < -1 || w.y0 < -1 || w.x1 > p.w + 1 || w.y1 > p.h + 1);
       expect(out.map((w) => w.t), `page ${i + 1}: text outside the page`).toEqual([]);
