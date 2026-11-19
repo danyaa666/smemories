@@ -170,11 +170,11 @@ export function inspect(file) {
   };
 }
 
-export const text = (file) => run("pdftotext", "-layout", file, "-").normalize("NFC");
+export const text = (file) => run("pdftotext", "-enc", "UTF-8", "-layout", file, "-").normalize("NFC");
 
 /** Every word of the PDF with its box in points, per page: [{ w, h, words: [{ t, x0, y0, x1, y1 }] }] (pdftotext -bbox). */
 export function words(file) {
-  const xml = run("pdftotext", "-bbox", file, "-");
+  const xml = run("pdftotext", "-enc", "UTF-8", "-bbox", file, "-");
   return [...xml.matchAll(/<page width="([\d.]+)" height="([\d.]+)">([\s\S]*?)<\/page>/g)].map(([, w, h, body]) => ({
     w: +w,
     h: +h,
