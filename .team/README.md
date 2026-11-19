@@ -11,20 +11,20 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 5 | T-023, T-024, T-025, T-031, T-050 |
-| READY_FOR_QA | 1 | T-191 |
+| READY_FOR_QA | 2 | T-191, T-192 |
 | IN_QA | 1 | T-183 |
 | QA_PASS | 1 | T-189 |
 | MERGED | 32 | T-184, T-150, T-151, T-152, T-153, T-154, T-155, T-156, T-157, T-158, T-159, T-160, T-161, T-162, T-163, T-164, T-165, T-166, T-167, T-168, T-169, T-170, T-171, T-172, T-173, T-174, T-175, T-176, T-177, T-178, T-179, T-180 |
 | DONE | 143 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138, T-139, T-140, T-141, T-142, T-143, T-144, T-145, T-146, T-147, T-185, T-186, T-190, T-187, T-188, T-149, T-148, T-181, T-182 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Epics (done/total):** E06-go-live 1/1; E09-customisation-editor 34/35; (unfiled) 140/155
+**Epics (done/total):** E06-go-live 1/1; E09-customisation-editor 34/35; (unfiled) 140/156
 
 **Awaiting your review (MERGED):** T-184 ([E01] Unit tests pass on a Windows dev machine (make test with -race)); T-150 ([E09] Spike: layout editor architecture and ADR 0004); T-151 ([E09] Asset pack and registry for stickers, shapes and frames); T-152 ([E09] Backend: student-uploaded design images (backgrounds and decorations)); T-153 ([E09] Layout document model and API (backend)); T-154 ([E09] Web layout runtime: the book draws a layout (Memory Book)); T-155 ([E09] Fix three stale Postman assertions in the customisation-editor collection); T-156 ([E09] Layout version must never go back (reset / template change)); T-157 ([E09] print-check: refuse a foreign server on its port; refresh test counts in docs); T-158 ([E09] Editor state: document store, undo/redo, autosave and conflict handling (web)); T-159 ([E09] Editor route and shell: page strip, zoom, selection overlay, property panel (web)); T-160 ([E09] Editor gestures: move, resize, rotate, snap, guides, with keyboard control (web)); T-161 ([E09] Editor text boxes: add, type in place, font, size, colour, align (web)); T-162 ([E09] Editor palette: stickers, shapes, frames, own images and the page background (web)); T-163 ([E09] Layout version history and restore (backend)); T-164 ([E09] Palette follow-ups: copy, history edge, distinct cap/quota code (web + one small API change)); T-165 ([E09] Editor version history panel: list, preview and restore (web)); T-166 ([E09] Navy Classic: page kinds and editable elements for the layout editor (web + manifest)); T-167 ([E09] Class book carries each member's layout (server cap, privacy, web wiring)); T-168 ([E09] History e2e hardening: friendly mysql-missing message, QA probe cases (tests only)); T-169 ([E09] Spike: Doory-template import and a Fabric.js image studio beside the DOM editor (ADR 0005)); T-170 ([E09] Editor flow: page by page, Save and done, Print, back to the book manage page (web)); T-171 ([E09] Stretching shapes: rectangle and ellipse that fill their box (registry + web)); T-172 ([E09] Page templates: model, shipped storage, validator gate and read route (Go + web preview)); T-173 ([E09] Own page templates and the apply API (Go): save my page, apply a template per section); T-174 ([E09] Stabilise the editor-gestures touch test (flake: 2 to 3 px against 0.5 allowed)); T-175 ([E09] Template gallery and apply, per section (web): shipped and own templates, preview, apply, delete own); T-176 ([E09] Save my page as a template (web): name it, see what is kept, use it again); T-177 ([E09] Shipped page templates for Memory Book: four or more looks per page kind, authored by us); T-178 ([E09] Shipped page templates for Navy Classic: four or more looks per page kind, authored by us); T-179 ([E09] Stage 2 hardening: fuzz the layout parsers, storage budget per user, abuse limits, no content in logs); T-180 ([E09] Make the profile, notes and back template choices a real choice (Memory Book and Navy Classic))
 
 **Open questions for you:** Q-064 (Doory templates: licence route, studio, and template colours (ADR 0005, T-169)); Q-065 (Storage cap per user for layout history (T-179, docs/layout-storage-budget.md): cap now, or watch and decide at go-live?); Q-067 (After the stage 2 exit check (T-183): go live (M2) next, or class yearbook (M3) first?)
 
-_Board last written 2026-11-19 19:27Z_
+_Board last written 2026-11-19 20:07Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -6751,7 +6751,7 @@ Spec: .team/epics/E01-foundation/21-go-stdlib-cve-image-pin.md (read it from the
 - 2026-11-19 19:27Z · leader · QA brief (leader): PR #192, Dockerfile builder re-pinned to Go 1.26.11 (no go.mod change). Verify: (1) the digest is the official golang:1.26.11-bookworm multi-arch index (docker buildx imagetools inspect) and the comment matches; (2) final state of manual run 44595094942: image job green with Trivy reporting no CVE-2026-97054 (quote the scan summary line), e2e result; (3) the binary in the built image reports go1.26.11 (go version -m on the binary, or the image-smoke output); (4) nothing else in the diff. Local make image-scan may time out on the Trivy DB mirror here; the CI scan is acceptable evidence.
 
 ### T-192 — [E01] make image-smoke fails on the Windows dev PC (curl file upload path)
-- **Status:** TODO
+- **Status:** READY_FOR_QA
 - **Priority:** P3
 - **Type:** chore
 - **Milestone:** M4
@@ -6760,14 +6760,16 @@ Spec: .team/epics/E01-foundation/21-go-stdlib-cve-image-pin.md (read it from the
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-11-19 19:40Z by leader
-- **Comments-seen:** 0
+- **Branch:** task/t-192-e01-make-image-smoke-fails-on-the-window
+- **PR:** https://github.com/danyaa666/smemories/pull/193
+- **Updated:** 2026-11-19 20:07Z by dev
+- **Comments-seen:** 2
 
 Spec: .team/epics/E01-foundation/22-image-smoke-on-windows.md (read it from the main checkout). Native curl.exe cannot read the MSYS /tmp path in scripts/image-smoke.sh.
 
 #### Comments
+- 2026-11-19 20:07Z · dev · One-line fix in scripts/image-smoke.sh (cygpath -m for the -F file=@ path). make image-smoke passes on Windows PC. Manual CI run 44603642660 head 09c3967: image-smoke step green; image job red only at image-scan (Go stdlib CVE-2026-97054, T-191 scope). Re-run CI after T-191 merges for a fully green image job.
+- 2026-11-19 20:07Z · leader · QA brief (leader): PR #193 head 09c3967, one line in scripts/image-smoke.sh (cygpath -m when present). Verify: make image-smoke passes on this PC on the head and fails at the upload step on develop; the CI image-smoke step is green in run 44603642660 (the image-scan red there is the Go CVE, T-191, accepted for this task; requirement 2 is met once T-191 merges and a rerun is green); no other change in what the smoke test checks.
 
 ### T-187 — [E09] Skip link and focus on route change (app-wide)
 - **Status:** DONE
