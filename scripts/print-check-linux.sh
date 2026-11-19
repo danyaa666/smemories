@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # T-186: run tools/print-check in an ubuntu-24.04 container (Docker), so the Linux CI result can be reproduced on a Mac or Windows PC in minutes.
 #   scripts/print-check-linux.sh                       the whole suite
-#   scripts/print-check-linux.sh --test-name-pattern 'note01'   extra arguments go to `node --test`
+#   scripts/print-check-linux.sh --test-name-pattern 'note01'   extra arguments (node --test options) go before the test files
 # The checkout is copied into the container (no node_modules or .git from the host), so nothing on the host is touched.
 set -euo pipefail
 # NODE_OPTIONS below: inside Docker "localhost" lists ::1 and 127.0.0.1, vite takes one and node fetch the other, so "vite did not start"
@@ -14,7 +14,8 @@ docker run --rm --ipc=host -e NODE_OPTIONS=--dns-result-order=ipv4first -v "$ROO
   (cd /work/web && npm ci --no-audit --no-fund --loglevel=error)
   cd /work/tools/print-check && npm ci --no-audit --no-fund --loglevel=error
   start=$SECONDS
-  npm test -- "$@" || rc=$?
+  # node options must come before the file names, so `npm test -- args` would silently run everything; same files as the "test" script of tools/print-check/package.json
+  node --test "$@" server.test.mjs check.test.mjs templates-navy.test.mjs || rc=$?
   echo "print-check: $((SECONDS - start)) s"
   exit ${rc:-0}
 ' _ "$@"
