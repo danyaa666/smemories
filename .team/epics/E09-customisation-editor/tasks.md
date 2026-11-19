@@ -1307,7 +1307,7 @@ Spec: .team/epics/E09-customisation-editor/45-print-time-at-maximum-layout.md (r
 
 ### T-194 — [E09] Stage 2 tests: A4 editor-stage parity flake, and the drag-fps test on slow machines
 - **Status:** BACKLOG
-- **Priority:** P3
+- **Priority:** P2
 - **Type:** test
 - **Milestone:** M4
 - **Depends-on:** T-183
@@ -1317,11 +1317,12 @@ Spec: .team/epics/E09-customisation-editor/45-print-time-at-maximum-layout.md (r
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-11-19 22:50Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-11-19 22:12Z by leader
+- **Comments-seen:** 1
 
 Spec: .team/epics/E09-customisation-editor/46-stage2-test-flake-and-slow-machine.md (read it from the main checkout). QA on T-183: flaky A4 editor-stage picture, drag-fps test always fails on the Windows PC, editor-text 0.62 % on Windows.
 
 #### Comments
+- 2026-11-19 22:12Z · leader · Leader: the editor-stage vs book-screen flake also happens on the Linux CI runner (run 44603642660, T-192 head: 'Letter cover: the stage differs from the book screen by 28.592 %', test 69), after QA saw A4 30.2 % once in the container. It is not a slow-machine issue and it makes manual CI runs red at random: priority raised to P2; do requirement 1 first.
 
 <!-- tasks:end -->
