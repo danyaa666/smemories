@@ -36,7 +36,7 @@ note and book-data routes, (9) as student A: none of B's notes, name or email ap
 
 **Step 7c (T-167)** is the free layout reaching the class book. Student B switches to `memory-book` and saves a layout through the API (the profile heading moved, a typed text and a doodle sticker on the profile page); the admin's `class-book/get` carries it as that member's `layout` (the document only, no version; A has `null`; `truncated_layouts` is `[]`), the admin's class print shows the moved heading, the text and the sticker on B's profile sheet and nowhere else, `page.pdf()` makes a PDF of it, and **students A and B get 403** on `class-book/get` with nothing of the layout in the answer; step 9 also checks that A's screens and probes never show B's layout text.
 
-Registration is limited to 5 per address and hour, and the five specs together register 7 accounts (M1: 1, the gallery check: 1, the class journey: 3, the customisation journey: 1, the layout editor journey: 1, the editor specs of T-160 to T-166: 1 each, T-175: 1, T-176: 1, T-181: 1, T-182: 2). `scripts/e2e.sh` therefore starts the test API with `SMEM_RATE_REGISTER_PER_HOUR=20`, whatever `.env` says (`make` exports `.env`, whose 5 would otherwise win); to change it set `SMEM_E2E_RATE_REGISTER_PER_HOUR`, a variable `.env` never sets (test API only, the default stays 5), and `make e2e` still resets the limits first; after several direct `scripts/e2e.sh` runs
+Registration is limited to 5 per address and hour, and the five specs together register 7 accounts (M1: 1, the gallery check: 1, the class journey: 3, the customisation journey: 1, the layout editor journey: 1, the editor specs of T-160 to T-166: 1 each, T-175: 1, T-176: 1, T-181: 1, T-182: 2, T-187: 1). `scripts/e2e.sh` therefore starts the test API with `SMEM_RATE_REGISTER_PER_HOUR=20`, whatever `.env` says (`make` exports `.env`, whose 5 would otherwise win); to change it set `SMEM_E2E_RATE_REGISTER_PER_HOUR`, a variable `.env` never sets (test API only, the default stays 5), and `make e2e` still resets the limits first; after several direct `scripts/e2e.sh` runs
 use `make reset-limits SMEM_ENV=test`. `class-book/get` is limited to 30 reads an hour per user once T-133 is in; the journey reads it about six times. The run deletes the class and the students' yearbooks at the end (the accounts stay).
 
 ## The customisation journey (T-147)
@@ -163,7 +163,7 @@ Redis db, and run again.
 
 **The `e2e` job is paused (D-37, T-132; `image` and `go-integration` are paused too, see [ci.md](ci.md)):** it does not run on pushes and pull requests (it shows as skipped) and runs only by hand with `gh workflow run ci.yml --ref <branch>`. QA runs the same commands locally (`make e2e` and the print-check, see CLAUDE.md "CI scope"). To switch it back on, delete the `if:` line above the job.
 
-The print-check suite has 181 tests (run `make print-check` for the current number) and takes about 5-6 min locally (about 319 s); the job's "Print check" step is limited to 15 min and the whole job to 25 min (T-149), and the step prints `print-check: N s`.
+The print-check suite has 298 tests (run `make print-check` for the current number) and takes about 5-6 min on a Mac but 19-21 min on the CI runner (T-185: the 15 min limit cut it off, it did not hang); the job's "Print check" step is limited to 30 min and the whole job to 60 min (T-149, T-185), and the step prints `print-check: N s`.
 
 The `e2e` job in `.github/workflows/ci.yml` starts MySQL, the S3 store and Valkey like `go-integration`, then runs `scripts/e2e.sh`. The
 error starts with `STEP FAILED: <n. title>`, then Playwright's own message and code frame. On failure the artifact `e2e-failure`
@@ -173,7 +173,7 @@ A trace holds every request, response body and page snapshot, so it would contai
 `token=...`, `/c/<token>`, `/join/<token>`, `"token":"..."` and the `__Host-smem_session` cookie by `REDACTED`, and packs it again without directory entries (Playwright's reader fails on them; needs `unzip`, `zip` and `perl`; the
 runner and macOS have them). It fails closed: a `trace.zip` that cannot be scrubbed and checked is deleted and the reason printed, so it is never uploaded; the run's exit code is kept. `npm run guard-test` in `tools/e2e` tests the script. The trace stays useful (steps, screenshots, request URLs and statuses) and the artifact expires after 3 days. The token
 is also never printed to the job log (every error leaving a step is scrubbed of it). To check it:
-`unzip -q out/results/*/trace.zip -d /tmp/t && grep -rE 'get-content\?token=[^R]' /tmp/t` finds nothing. A new bearer secret in the app needs a rule in the script. The job has a 25 minute limit (the journey itself 240 s per spec, the print check 15 min) and caches the Chromium download per
+`unzip -q out/results/*/trace.zip -d /tmp/t && grep -rE 'get-content\?token=[^R]' /tmp/t` finds nothing. A new bearer secret in the app needs a rule in the script. The job has a 60 minute limit (the journey itself 240 s per spec, the print check 30 min) and caches the Chromium download per
 Playwright version.
 
 ## Changing the journey when a screen changes
@@ -212,3 +212,7 @@ Real iOS Safari and Android Gboard (Telex/VNI) are manual owner checks: [editor-
 (4) `prefers-reduced-motion: reduce` gives no animation and no transition; (5) 200 % browser zoom (a 640 px wide page: the phone shell, with "Done" and "Undo" on screen) and 200 % text size at 1280 px (every font size of the editor doubled) leave no clipped, overlapping or sideways-scrolling control;
 (6) Vietnamese at 768, 1024 and 1440 px in 9 states: the same layout check (screenshots of two states per width are attached); (7) the language switch in the middle of an edit keeps the selected item, the saved document and the typed text.
 The layout check ignores what is scrolled out of its container and, when a modal dialog is open, everything behind it.
+
+## Skip link and route focus (T-187)
+
+`tools/e2e/app-a11y.spec.mjs` runs in the same `make e2e` (about 10 s). One account, keyboard only, in English and Vietnamese: on `/yearbooks` the first Tab stop is the skip link (named "Skip to content" / "Bỏ qua đến nội dung", on screen when focused), Enter moves the focus to `<main>` without changing the URL, and a sidebar link opened with Enter lands on `/classes` with the focus on the page's `<h1>` (`tabindex=-1`); the next Tab goes on inside `<main>`.

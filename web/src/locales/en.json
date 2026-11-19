@@ -24,6 +24,7 @@
     "working": "Please wait…"
   },
   "nav": {
+    "skip": "Skip to content",
     "label": "Account",
     "signIn": "Sign in",
     "register": "Create account",

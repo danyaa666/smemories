@@ -340,8 +340,8 @@ test("414x896 portrait and 667x375 landscape: the sheet opens, the selection sur
       Object.defineProperty(vv, "height", { value: 500, configurable: true });
       vv.dispatchEvent(new Event("resize"));
     });
-    const kb = await page.evaluate(() => document.querySelector(".ed-bottom").style.getPropertyValue("--kb"));
-    expect(parseInt(kb)).toBeGreaterThan(300);
+    // React renders the new inset after the event, so poll: a single read right after dispatchEvent raced it on the Linux runner (T-185)
+    await expect.poll(() => page.evaluate(() => parseInt(document.querySelector(".ed-bottom").style.getPropertyValue("--kb")))).toBeGreaterThan(300);
     await expect(ta).toBeVisible();
   });
 });

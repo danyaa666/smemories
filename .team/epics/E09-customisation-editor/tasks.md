@@ -1148,19 +1148,19 @@ Spec: .team/epics/E09-customisation-editor/39-bolder-notes-back-variants.md (rea
 - 2026-11-06 02:53Z · leader · squash-merged PR #175 at 8b23f641 (QA_PASS: integration 33 pkgs ok, print-check 298/298, e2e 44/44; gate mutants caught except >= vs > and full-box override boxes). Memory Book notes/back variety limit stays (content blocks cannot move): owner-level runtime decision for the stage 2 exit check.
 
 ### T-181 — [E09] Phone mode of the editor: view and light edit below 768 px
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
 - **Depends-on:** T-170, T-175, T-165
 - **Risk:** low
 - **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** dev
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-181-e09-phone-mode-of-the-editor-view-and-li
 - **PR:** #179
-- **Updated:** 2026-11-18 09:39Z by dev
-- **Comments-seen:** 5
+- **Updated:** 2026-11-18 12:48Z by leader
+- **Comments-seen:** 15
 
 Spec: .team/epics/E09-customisation-editor/40-phone-mode.md (read it from the main checkout). Phone shell over the same store (bottom sheet property panel, text edited in the sheet, pager, Templates/History as dialogs, undo/redo buttons), no drag handles, shell switch at 768 px keeps state, Playwright touch spec, docs/editor-phone.md, owner manual checks iOS Safari and Gboard
 
@@ -1170,45 +1170,104 @@ Spec: .team/epics/E09-customisation-editor/40-phone-mode.md (read it from the ma
 - 2026-11-18 06:55Z · dev · Toolchain missing on dev machine (node/npm/make/docker); see comment. No code changed.
 - 2026-11-18 08:02Z · leader · Leader: toolchain installed per D-46: Go 1.27.4, Node 22.23.5 / npm 10.9.9, GNU make 4.4.1, Docker Desktop (docker 29.9.3). Pending: Windows reboot (WSL2), Docker Desktop first start, Claude app restart for the new PATH. Leader moves this back to TODO after go/node/make/docker answer in a fresh session.
 - 2026-11-18 08:24Z · leader · Toolchain installed (D-46). Code already exists: PR #179, head 406ebb3, opened 2026-11-10 from a cloud session; CI go/web/security green, MERGEABLE. Dev: do NOT rewrite. Reuse the branch (worktree.py ensure picks up origin/task/t-181-...), rebase on develop if needed, run what the PR says was not run: make test-integration for touched packages (none expected: web-only), make e2e incl. the new phone spec and editor-shell step 7, print-check if the book view changed, then READY_FOR_QA with the result lines and head SHA.
+- 2026-11-18 10:38Z · dev · PR #179 head 23addd2 (merge of develop 2f89947 + 2 test-only commits; no force push; all changed files i/lf). Windows 10 local results: web vitest 1327/1327 pass (needs testTimeout 20s from T-184 and LF checkout); eslint/tsc/i18n/check:api green, prettier ok. make e2e (guard-test step skipped: scrub-trace tests need zip/bash, Windows-only): 46 passed, 3 failed, 7 skipped, 1 not run. T-181 specs: editor-phone 4/4 pass, editor-shell (incl step 7) pass, editor-gestures mouse/keyboard pass. Failures NOT from T-181: journey and design (pdfinfo not installed: no poppler on this machine, so print/PDF steps cannot run here), editor-gestures 'touch at 768 px' (fails identically on a clean develop 2f89947 on Windows: CDP touch tap does not select). QA on Linux/mac should run those three. Spec fixes in editor-phone.spec.mjs (found by running it for the first time): History stays open after a restore (as on desktop) and covered Done, so the test closes it; landscape case 812x375 is >=768 px = desktop shell, changed to 667x375; 40-item ids many0..many9 were 5 chars (ids need 6 to 26 alnum), now many00..many39; the open sheet covered the item tapped under 4x throttle, closed first (tap-to-select 292 ms). Not run: print-check (book view untouched, poppler missing), make test-integration (web only).
+- 2026-11-18 10:38Z · dev · head 23addd2; phone e2e 4/4, vitest 1327/1327; journey/design need poppler, gestures 768 touch fails on develop too (Windows); see comment
+- 2026-11-18 11:16Z · qa · QA_PASS T-181 (PR #179). Tested head 23addd2 (full suite); QA then pushed test-only commit d1a4909 (editor-phone-qa.spec.mjs + one line in playwright.config.mjs, no product code). Windows 10 local, Chromium, stack smemories. GitHub CI on 23addd2: go, web, security green; e2e/go-integration/image skipped (D-37/D-38).
+  
+  RESULT LINES
+  - web vitest: 69 files, 1327/1327 pass. tsc --noEmit ok. eslint --max-warnings 0 ok. prettier ok on every changed file (the whole-tree `prettier --check` warns on 246 files only because of the CRLF checkout on this machine). lint:i18n ok. build ok (vite build inside e2e.sh).
+  - make e2e (scripts/e2e.sh, guard-test step skipped: needs zip) on 23addd2: 45 passed, 4 failed, 7 skipped, 1 not run. editor-phone 4/4, editor-shell incl. step 7, editor-flow, -templates, -palette, -text (except 1 below), -save-template, -navy, class, h2-gallery all pass.
+  - QA spec on d1a4909: editor-phone-qa 6/6 pass.
+  
+  THE FAILURES (dev's "pre-existing" claim checked on a clean detached worktree of develop 2f89947)
+  1. journey.spec and design.spec: spawnSync pdfinfo ENOENT (no poppler). Environmental, NOT RUN here. Not checked on develop (cannot pass there either).
+  2. editor-gestures "touch at 768 px" (tap does not select, Sticker aria-pressed false): fails identically on clean develop 2f89947. CONFIRMED pre-existing. It also makes the gestures perf test (100 items) skip, so that test is NOT RUN either.
+  3. NEW vs dev's report: editor-text "the edit view equals the printed view" (A5/A4 rotated -4, 500 runes, changed pixels 0.67..0.75 % vs limit 0.6 %). On the PR head it failed in 6 of 6 runs (full run + 5 single-file runs: 0.69, 0.75, 0.67, 0.75, 0.73). On clean develop it failed in 2 of 5 runs (0.68, 0.67) and passed 3. Dev's own run passed it. So it is a borderline Windows font-rendering threshold that is already flaky on develop; the PR is somewhat worse in my sample (not statistically conclusive). I did not find a cause in the diff (the desktop stage/CSS change is a move behind lazy import). Not treated as a T-181 defect, but please run editor-text.spec on Linux/CI before merge; if it fails there on the PR and not on develop it is a regression.
+  - Not run (no mysql client): editor-history.spec (6 tests skipped, incl. History panel on desktop). Not run: print-check (no poppler; book view untouched), make test-integration (web-only task, no Go change), check:api (script fails on Windows: spawnSync npx ENOENT; no api/ change in the PR), the 100-item phone scroll (see below), real on-screen keyboard / iOS / Gboard (owner manual checks in docs/editor-phone.md).
+  
+  AC EVIDENCE
+  - AC1: editor-phone test 1 (375x812 touch): open from manage page, select cover title, move right + wider via sheet (one save, panel width matches), Vietnamese text typed in the sheet textarea (16 px font, saved, drawn), sticker added + undo, pager to profile, own template applied, History restore, Done, reload, same document at 1024 px. PASS.
+  - AC2: spec swipe starting on the title: stored layout and version unchanged after 2 s, Undo disabled, touch-action not none. QA probe: 20 items, swipe up 150 px starting on an item: window.scrollY 0 -> 135, layout identical, no save. 0 .ed-handle in the phone DOM. PASS.
+  - AC3: editor-phone test 3 (crossing 768 px keeps selection and typed text) pass; 414x896 -> 667x375 rotation keeps selection and open sheet pass; editor-shell step 7 (700 px = phone shell, no Pages nav) pass; desktop suite at >=768 px passes except the two failures above that also fail/flake on develop. PASS.
+  - AC4: PR body reports initial JS (28.32 -> 27.60 kB gzip) and that the Stage chunk (gestures, setPointerCapture) is lazy and desktop only; spec asserts no desktop stage chunk is fetched on a phone (pass). 100-item check was done with 40 items (server cap) in the phone spec: tap-to-select 292 / 301 ms under 4x CPU throttle in two runs. Gap: spec says 100 items; editor-gestures serves 100 via page.route, the phone spec does not (non-blocking, see below).
+  - AC5: lint/prettier/tsc/vitest/i18n/build/e2e as above; no new dependency; nothing under .team in the PR (diff list checked: web, tools/e2e, docs only). check:api and print-check not run (reasons above).
+  
+  OTHER CHECKS
+  - Leader's 44 px fix for .ed-panel dialogs: `.ed-panel .dialog button` added to the coarse-pointer block. QA spec at 768x1024 hasTouch+isMobile (matchMedia pointer:coarse true, desktop shell): Templates delete dialog Cancel/Delete = 44 px, apply dialog Cancel/Apply template = 44 px. At 375 px the spec's apply Confirm >= 43.5. PASS. (Negative control on develop not run; the vitest test for it is only a CSS regex, the e2e probe above is the real check.)
+  - 320x640 portrait: no sideways scroll, no button under 44 px, bottom bar on screen; same with root font-size 200 % (scrollWidth = 320, all buttons >= 44, Done reachable). PASS.
+  - Delete: sheet Delete opens a confirm; Cancel keeps the item; confirm deletes (200 save); one Undo restores. PASS.
+  - Conflict: another tab saves first, then phone Move right: "changed in another tab or device" banner shows. PASS.
+  - Dev's spec edits do not weaken the proof: (a) History closed before Done and (b) the open sheet closed before the throttled tap are test-flow fixes, the assertions on restore and on tap time are kept; (c) 812x375 -> 667x375: 812 px is >= 768 = desktop shell, so 667 is the correct landscape phone case (the "keeps selection and open sheet across rotation" assertions are kept); (d) item ids many0..many39 -> many00..many39 satisfies the server's 6..26 char id rule, same 40 items. editor-shell step 7 now asserts the phone shell mounts at 700 px (stronger than before, not weaker).
+  
+  NON-BLOCKING OBSERVATIONS
+  - A restore leaves History open and on a phone the dialog covers Done; the test closes it. Same as desktop, but a student may look for Done. Minor UX.
+  - docs say the 100-item scroll check is not run; the spec asks for 100. Serve 100 items through page.route in a follow-up if the leader wants it.
+  - Not run in a browser: visualViewport keyboard shrink (code and --kb read only), two real browsers, hardware Back. Owner manual checks in docs/editor-phone.md cover iOS Safari and Gboard.
+- 2026-11-18 11:17Z · leader · Leader review in progress (head d1a4909 = QA's 23addd2 + QA test-only commit). Scope OK: web + e2e + docs only, no server/API/dependency change; EditorShell split into EditorBody (restructure, not rewrite). Open before review verdict: editor-text 'edit view equals printed view' failed 6/6 on Windows on the PR vs 2/5 on develop; manual full CI run 44293267820 (Linux, e2e incl. journey/design with pdfinfo) decides regression vs Windows flake. Then: review OK -> owner approval (D-47) -> merge.
+- 2026-11-18 11:49Z · leader · Leader: manual CI 44293267820 on d1a4909 (Linux): go, go-integration, web, security, image green; e2e journey 63/63 pass incl. editor-text (so the 6/6 Windows failure is a Windows flake, not a regression). Print check FAILED: 'A5 notes item note01: y0 1516 on screen against 1513 in print (192 dpi)', then the step timed out at 15 min. Print check never ran on develop by hand before; baseline run 44298102605 on develop decides whether this is T-181's.
+- 2026-11-18 12:45Z · leader · Leader review OK (head d1a4909). Scope: web + e2e + docs only; EditorShell restructured into EditorBody + phone shell, all new CSS under .ed, nothing outside the editor imports the changed files. Linux CI 44293267820: go, go-integration, web, security, image green; journey e2e 63/63 incl. editor-text (Windows 6/6 failure = Windows flake). Print check failure is NOT from this PR (cannot reach the book view); filed as T-185. Awaiting owner approval (D-47): look at the phone editor on a real phone (iOS Safari, Gboard: docs/editor-phone.md checklist) and the 44 px dialog buttons at 768 px.
+- 2026-11-18 12:48Z · human · owner approved merge
+- 2026-11-18 12:48Z · human · Owner approval given in chat 2026-11-18: "Approve T-181" (recorded by the leader under D-47).
+- 2026-11-18 12:48Z · leader · merged 02bfdcd after owner approval (D-47). Review: web + e2e + docs only; Linux CI green except print-check (T-185, not this PR). Owner checklist: docs/editor-phone.md (iOS Safari, Gboard).
+- 2026-11-18 12:48Z · leader · owner approved before merge (D-47)
 
 ### T-182 — [E09] Accessibility and i18n audit of the editor, with fixes
-- **Status:** BACKLOG
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
 - **Depends-on:** T-176, T-181
 - **Risk:** low
 - **Rework:** 0
-- **Owner-approved:** —
+- **Owner-approved:** yes
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-11-06 by leader
-- **Comments-seen:** 1
+- **Branch:** task/t-182-e09-accessibility-and-i18n-audit-of-the-
+- **PR:** https://github.com/danyaa666/smemories/pull/183
+- **Updated:** 2026-11-18 18:23Z by leader
+- **Comments-seen:** 6
 
 Spec: .team/epics/E09-customisation-editor/41-editor-accessibility-i18n-audit.md (read it from the main checkout). Keyboard-only journey spec, aria snapshots, announcement bounds, contrast/zoom/target checks, hard-coded string check, vi text length, docs/editor-accessibility.md with findings table and owner screen-reader checklist; no new dependency
 
 #### Comments
 - 2026-11-06 06:54Z · leader · Leader: include the dialog buttons of the Templates/History panels (save, delete, apply confirm: 36 px high on touch, QA on T-176) in the target-size measurement; if T-181 has not already fixed them, fix them here.
+- 2026-11-18 12:48Z · leader · deps T-176 and T-181 merged
+- 2026-11-18 17:44Z · dev · PR #183 head f549c9f. editor-keyboard.spec (3 runs green) + editor-a11y.spec (aria en/vi, contrast, 44 px touch, zoom, reduced motion, vi lengths, language switch), docs/editor-accessibility.md (findings F-01..F-17, owner checklist). Fixed high/medium: focus kept when a pressed button disables itself, help focus return + vi words, key announcements bounded (20 steps = 2), save status not spoken per autosave, 44 px touch targets, reduced motion. Local (Windows): lint/tsc/i18n/build/vitest green; full e2e 59 pass, 3 fail: journey step 8 and design step 6 (pdftotext encoding on Windows), editor-gestures touch at 768 fails also on baseline web/src (pre-existing flake). check:api and print-check do not run on Windows; no API/print code changed. QA: run print-check and check:api on Linux/Mac, make e2e, walk by keyboard.
+- 2026-11-18 17:44Z · leader · QA brief (leader): PR #183. Check every AC in spec 41 against the diff, not only the tests. Focus: (1) focus handling fixes (button that disables itself, keyboard help focus return) on desktop and the T-181 phone shell; (2) announcement bound (20 steps give 2 messages) does not hide a real state change; save status not spoken per autosave but still on error; (3) 44 px targets on touch tablets and reduced motion; (4) the editor-gestures keyboard spec change is a correct update, not a weakened test; (5) scripts/e2e.sh argument pass-through cannot break the CI call; (6) i18n: no hard-coded English in vi. Run vitest, lint:i18n, editor-keyboard and editor-a11y specs, and the desktop editor e2e suite on the head; check:api and print-check cannot run on Windows (no API/print change), say so. F-08..F-17 are leader follow-ups, not defects of this PR.
+- 2026-11-18 18:20Z · qa · QA_PASS on PR #183 head f549c9f (Windows PC, own DB smem_test_qa182, ports 18180/14273; CI go, web, security green on this head).
+  Evidence by AC:
+  AC1: editor-keyboard.spec passed 4 runs (full e2e, then 3 isolated runs); I read it: only page.keyboard after set-up, focus ring asserted on every Tab stop, Tab order asserted by name, focus return asserted for Templates, History, dialogs, help.
+  AC2: editor-a11y.spec 'accessibility tree' en and vi passed (10 states, no unnamed control, toolbar/navigation/region, complementary+heading, [pressed], aria-modal dialog, alert + polite status on error).
+  AC3: useGestures.test.tsx passed in vitest: 20 presses = 2 messages (first at once, last after 500 ms with the final place), plus undo and blur drop the pending message. SaveStatus.test: saved/saving not in the live region, conflict is. Error state e2e: save-failing is still a polite status, alert still shown.
+  AC4: a11y spec contrast, touch targets 768/1024 (44 px under pointer:coarse), reduced motion, 200% zoom and 200% text, Vietnamese 768/1024/1440, language switch keeps selection: all passed in the full e2e. docs/editor-accessibility.md has F-01..F-17 with severity/status; F-08..F-17 left open as leader follow-ups.
+  AC5 / commands: eslint --max-warnings 0 + prettier --check (web) ok; tsc ok; lint:i18n ok; npm run build ok; vitest 1339 pass, 1 fail in the first full run (editor.test.tsx 'mounts the editor for the owner', timeout under load), passed 3/3 when run alone and the pages folder rerun: flake under 8-way parallel load, not this PR. No new dependency, nothing under .team/. check:api and print-check cannot run on Windows (check:api crashes in the node tool; print-check needs Linux/Mac); no API, Go or print code changed (go CI green).
+  Full e2e (scripts/e2e.sh, head f549c9f): 62 passed, 3 failed, 7 skipped. Failures: design step 6 and journey step 8 (pdftotext on Windows, as dev said) and editor-gestures 'touch at 768 px' (first tap selects). I reproduced the gestures failure identically on develop's web/src (restored after), so it is pre-existing on Windows, not a regression. Skipped by that serial failure: gestures perf (run alone: 17-19 fps vs 30 needed; develop gives 19 fps too, so the PC, not the PR) and editor-history (needs a mysql client; I ran it with a docker-exec mysql shim: 7/7 pass on this head, incl. keyboard AC5). The gestures keyboard test passes with the poll change; it is a correct update (first key is said at once, final message after 500 ms, still asserts the final text), not a weakened test.
+  Brief points: (1) keepFocus: group fallback covers the phone bar (role=toolbar/group; pager uses aria-disabled so stays focusable); keyboard spec steps 5-6 prove Undo/Redo/Send to back; HelpSheet gives focus back. (5) scripts/e2e.sh 'npx playwright test "$@"' with no args is identical to before; CI call passes none, and I used it with spec names and -g. (6) hardcoded.test.ts AST finder has its own self-test and the editor tree has none.
+  Non-blocking: make e2e stops at 'guard-test' on Windows (scrub-trace.test.mjs fails 3 of 8, pre-existing); I ran scripts/e2e.sh directly. Leader to re-run print-check/check:api on Linux or Mac if wanted (no print/API change). Not walked by hand with a real screen reader: owner checklist remains.
+- 2026-11-18 18:20Z · leader · Leader review OK (head f549c9f, CI green): web + e2e specs + docs only; scripts/e2e.sh only forwards "$@" to playwright (CI passes no args, unchanged behaviour); no server/API/dependency change. QA evidence complete for this scope (vitest 1339, e2e 62 pass, 3 fails pre-existing/Windows-only, a11y and keyboard specs green). Awaiting owner approval (D-47): look at docs/editor-accessibility.md (findings F-01..F-07 fixed, F-08..F-17 open, to become tasks) and walk the screen-reader checklist there.
+- 2026-11-18 18:23Z · human · owner approved merge
+- 2026-11-18 18:23Z · human · Owner approval given in chat 2026-11-19: "Approve t 182" (recorded by the leader under D-47).
+- 2026-11-18 18:23Z · leader · merged 9c212e2 after owner approval (D-47).
+- 2026-11-18 18:23Z · leader · owner approved before merge (D-47)
 
 ### T-183 — [E09] Stage 2 exit check: one journey, performance budgets, parity, docs, report against the PRD exit criteria
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** test
 - **Milestone:** M4
-- **Depends-on:** T-176, T-181, T-182
+- **Depends-on:** T-176, T-181, T-182, T-186
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-11-06 by leader
-- **Comments-seen:** 1
+- **Updated:** 2026-11-18 18:23Z by leader
+- **Comments-seen:** 2
 
 Spec: .team/epics/E09-customisation-editor/42-stage2-exit-check.md (read it from the main checkout). stage2-journey spec (desktop and tablet), parity for every shipped template on A5/A4/Letter, measured budgets (100 items 30 fps at 4x throttle, print time within 10%, bundle, p95s, memory), API coverage table, docs completeness, docs/stage2-exit-report.md with the owner manual checklist
 
 #### Comments
 - 2026-11-06 06:05Z · leader · Leader: docs pass (req 5) also fixes two notes from QA on T-179: docs/layout-storage-budget.md must say that reset only amplifies after a prior limited save; docs must state that a save with a layout nested exactly 16 levels is refused because the request body adds one level (Validate itself accepts 16); decide whether to align the two.
+- 2026-11-18 18:23Z · leader · T-176/T-181/T-182 done; T-186 added as a dependency because the exit check's per-template print parity needs print-check green on Linux. Dev picks it once T-186 merges.
 
 <!-- tasks:end -->

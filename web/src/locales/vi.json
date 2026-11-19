@@ -24,6 +24,7 @@
     "working": "Vui lòng chờ…"
   },
   "nav": {
+    "skip": "Bỏ qua đến nội dung",
     "label": "Tài khoản",
     "signIn": "Đăng nhập",
     "register": "Tạo tài khoản",

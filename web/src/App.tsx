@@ -6,6 +6,7 @@ import { AuthNav } from "./components/AuthNav";
 import { LanguageSwitcher } from "./components/LanguageSwitcher";
 import { YearbookLayout } from "./components/YearbookLayout";
 import { LegalLinks } from "./components/LegalConsent";
+import { MAIN_ID, RouteFocus, SkipLink } from "./components/RouteA11y";
 import { LegalPage } from "./legal/LegalPage";
 import { AcceptTerms } from "./pages/AcceptTerms";
 import { Account } from "./pages/Account";
@@ -38,80 +39,83 @@ const ContactSheet = import.meta.env.DEV ? lazy(() => import("./book/assets/Cont
 
 export function App() {
   return (
-    <Routes>
-      <Route path="/c/:token" element={<NoteForm />} />
-      {ContactSheet && (
-        <Route
-          path="/dev/assets"
-          element={
-            <Suspense fallback={null}>
-              <ContactSheet />
-            </Suspense>
-          }
-        />
-      )}
-      <Route element={<PublicLayout />}>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/terms" element={<LegalPage doc="terms" />} />
-        <Route path="/join/:token" element={<JoinClass />} />
-        <Route path="/privacy" element={<LegalPage doc="privacy" />} />
+    <>
+      <RouteFocus />
+      <Routes>
+        <Route path="/c/:token" element={<NoteForm />} />
+        {ContactSheet && (
+          <Route
+            path="/dev/assets"
+            element={
+              <Suspense fallback={null}>
+                <ContactSheet />
+              </Suspense>
+            }
+          />
+        )}
+        <Route element={<PublicLayout />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/terms" element={<LegalPage doc="terms" />} />
+          <Route path="/join/:token" element={<JoinClass />} />
+          <Route path="/privacy" element={<LegalPage doc="privacy" />} />
+          <Route element={<RequireAuth />}>
+            <Route path="/verify-email" element={<VerifyEmail />} />
+            <Route path="/accept-terms" element={<AcceptTerms />} />
+          </Route>
+          <Route path="*" element={<NotFound />} />
+        </Route>
         <Route element={<RequireAuth />}>
-          <Route path="/verify-email" element={<VerifyEmail />} />
-          <Route path="/accept-terms" element={<AcceptTerms />} />
+          <Route element={<YearbookLayout />}>
+            <Route path="/account" element={<Account />} />
+            <Route path="/classes" element={<Classes />} />
+            <Route path="/classes/new" element={<ClassNew />} />
+            <Route path="/classes/:id" element={<ClassDetail />} />
+            <Route path="/classes/:id/assemble" element={<ClassAssemble />} />
+            <Route
+              path="/classes/:id/book"
+              element={
+                <Suspense fallback={null}>
+                  <ClassBook />
+                </Suspense>
+              }
+            />
+            <Route path="/yearbooks" element={<Yearbooks />} />
+            <Route path="/yearbooks/new" element={<YearbookNew />} />
+            <Route path="/yearbooks/:id" element={<YearbookEdit />} />
+            <Route path="/yearbooks/:id/notes" element={<NotesInbox />} />
+            <Route path="/yearbooks/:id/note-links" element={<NoteLinks />} />
+            <Route
+              path="/yearbooks/:id/book"
+              element={
+                <Suspense fallback={null}>
+                  <Book />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/yearbooks/:id/customise"
+              element={
+                <Suspense fallback={null}>
+                  <Customise />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/yearbooks/:id/editor"
+              element={
+                <Suspense fallback={null}>
+                  <Editor />
+                </Suspense>
+              }
+            />
+          </Route>
         </Route>
-        <Route path="*" element={<NotFound />} />
-      </Route>
-      <Route element={<RequireAuth />}>
-        <Route element={<YearbookLayout />}>
-          <Route path="/account" element={<Account />} />
-          <Route path="/classes" element={<Classes />} />
-          <Route path="/classes/new" element={<ClassNew />} />
-          <Route path="/classes/:id" element={<ClassDetail />} />
-          <Route path="/classes/:id/assemble" element={<ClassAssemble />} />
-          <Route
-            path="/classes/:id/book"
-            element={
-              <Suspense fallback={null}>
-                <ClassBook />
-              </Suspense>
-            }
-          />
-          <Route path="/yearbooks" element={<Yearbooks />} />
-          <Route path="/yearbooks/new" element={<YearbookNew />} />
-          <Route path="/yearbooks/:id" element={<YearbookEdit />} />
-          <Route path="/yearbooks/:id/notes" element={<NotesInbox />} />
-          <Route path="/yearbooks/:id/note-links" element={<NoteLinks />} />
-          <Route
-            path="/yearbooks/:id/book"
-            element={
-              <Suspense fallback={null}>
-                <Book />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/yearbooks/:id/customise"
-            element={
-              <Suspense fallback={null}>
-                <Customise />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/yearbooks/:id/editor"
-            element={
-              <Suspense fallback={null}>
-                <Editor />
-              </Suspense>
-            }
-          />
-        </Route>
-      </Route>
-    </Routes>
+      </Routes>
+    </>
   );
 }
 
@@ -120,12 +124,13 @@ function PublicLayout() {
   const { t } = useTranslation();
   return (
     <>
+      <SkipLink />
       <header className="app-header">
         <strong>{t("app.name")}</strong>
         <AuthNav />
         <LanguageSwitcher />
       </header>
-      <main className="plain-main">
+      <main id={MAIN_ID} tabIndex={-1} className="plain-main">
         <Outlet />
       </main>
       <footer className="site-footer">

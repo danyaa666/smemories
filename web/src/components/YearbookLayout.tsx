@@ -7,6 +7,7 @@ import { useMe } from "../auth/useMe";
 import { useNoteCounts } from "./useNoteCounts";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { LegalLinks } from "./LegalConsent";
+import { MAIN_ID, SkipLink } from "./RouteA11y";
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
 import { useMediaQuery } from "./useMediaQuery";
@@ -116,12 +117,15 @@ export function YearbookLayout({ items = NAV_ITEMS }: { items?: NavItem[] }) {
   if (!wide) {
     return (
       <div className="shell shell-narrow">
+        <SkipLink />
         <header className="topbar">
           {brand}
           {chip}
           <LanguageSwitcher />
         </header>
-        <main>{gone ? <BookNotFound /> : <Outlet />}</main>
+        <main id={MAIN_ID} tabIndex={-1}>
+          {gone ? <BookNotFound /> : <Outlet />}
+        </main>
         <footer className="shell-footer">
           <LegalLinks />
         </footer>
@@ -137,6 +141,7 @@ export function YearbookLayout({ items = NAV_ITEMS }: { items?: NavItem[] }) {
   }
   return (
     <div className="shell shell-wide">
+      <SkipLink />
       <aside className="sidebar">
         {brand}
         {book.data && (
@@ -170,7 +175,9 @@ export function YearbookLayout({ items = NAV_ITEMS }: { items?: NavItem[] }) {
           <LegalLinks />
         </div>
       </aside>
-      <main>{gone ? <BookNotFound /> : <Outlet />}</main>
+      <main id={MAIN_ID} tabIndex={-1}>
+        {gone ? <BookNotFound /> : <Outlet />}
+      </main>
     </div>
   );
 }
