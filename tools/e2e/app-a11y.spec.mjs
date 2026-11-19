@@ -35,7 +35,9 @@ test("skip link and route focus, keyboard only, en and vi", async ({ browser }) 
     await page.goto("/yearbooks"); // a full load: the focus stays on the page, not on a title
     if (lang === "vi") await page.getByRole("group", { name: "Language" }).getByRole("button", { name: "Tiếng Việt" }).click();
     const skipLink = page.getByRole("link", { name: skip });
-    await page.locator("body").press("Tab");
+    if (lang === "vi") await page.reload(); // the language is kept; a fresh load starts Tab at the top (the button clicked above keeps the Tab start)
+    await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toBeVisible(); // the page is drawn before the first Tab
+    await page.keyboard.press("Tab");
     await expect(skipLink).toBeFocused();
     const box = await skipLink.boundingBox();
     expect(box && box.y >= 0 && box.y + box.height <= 900, "the skip link is on screen when focused").toBe(true);
