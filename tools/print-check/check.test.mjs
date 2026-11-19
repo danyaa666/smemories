@@ -10,8 +10,13 @@ import { after, before, describe, test } from "node:test";
 import { chromium } from "playwright";
 import { CLASS_BOOK_CASES, DESIGN_IMAGE, DESIGN_TITLE, HIDDEN_PHOTOS, LAYOUT_MARK, classBookPages, designOf, makeBook, makeClassBook, makeDesignClassBook, makeLayout, makeNavyLayout, photoId, SIGNATURES, studentName } from "./fixture.mjs";
 import { KINDS, layoutOf, sampleBook, shippedTemplates } from "./templates.mjs";
-import { BASE, fitBoxes, inkIn, inspect, open, openClassBook, openEditor, settleStage, raster, savePdf, serveBook, signatureBoxes, startServer, text, words } from "./lib.mjs";
+import { BASE, LINUX, fitBoxes, inkIn, inspect, open, openClassBook, openEditor, settleStage, raster, savePdf, serveBook, signatureBoxes, startServer, text, words } from "./lib.mjs";
 
+// T-186: Linux renders the screen differently from poppler's raster of the PDF in two ways that macOS does not: the ruled lines of a note box (a repeating gradient) sit up to 3 px (0.4 mm at 192 dpi)
+// higher on screen than in the PDF, and the screen snaps text to whole device pixels (about 1 px). The DOM boxes, font sizes and line heights are identical on screen and in print (measured), so the
+// PDF is laid out as drawn. These are the measured exceptions (docs/e2e.md, "Print check on Linux"); every other page and item keeps the strict budget on every platform.
+const LINUX_EDGE = { note01: 4 }; // A5 notes page, the first ink of the note box is its ruled line: 3 px apart in 4 of 4 runs
+const LINUX_EXTRA = { "A4 notes-doodle#1": 0.015, "A4 notes-stickers#1": 0.015, "A4 notes-tape#1": 0.015, "A4 profile-tilted#0": 0.003 }; // extra share of pixels over the 0.5 %: measured 1.61 % and 0.62 % over the plain page, same in 4 of 4 runs
 const squash = (x) => x.replace(/\s+/g, "");
 const PT = { A5: [419.53, 595.28], A4: [595.28, 841.89], Letter: [612, 792] }; // exact sizes in points
 const tmp = mkdtempSync(path.join(os.tmpdir(), "print-check-"));
@@ -1103,6 +1108,11 @@ describe("layout layer: the printed page is the page on screen (T-154)", () => {
       const r = e.getBoundingClientRect();
       return { width: r.width, height: r.height };
     });
+    // T-186: a sheet far down the page has lazy images that only start loading now that it is in the viewport; a picture taken at once showed an empty photo frame in about one run in four on Linux
+    await sheet.evaluate(async (e) => {
+      await Promise.all([...e.querySelectorAll("img")].map((i) => (i.complete ? i.decode().catch(() => {}) : new Promise((done) => { i.addEventListener("load", done, { once: true }); i.addEventListener("error", done, { once: true }); setTimeout(done, 10000); }))));
+      await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
+    });
     const png = await page.screenshot({ clip: { x: 0, y: 0, ...box }, animations: "disabled", caret: "hide" });
     await sheet.evaluate((e) => {
       delete e.dataset.shot;
@@ -1174,7 +1184,8 @@ describe("layout layer: the printed page is the page on screen (T-154)", () => {
           checked++;
           // the placed item: its top-left corner of ink, and for a picture or a shape also the bottom-right (the end of a text is where wrapping may differ by a letter)
           const edges = /^(longtx|clipped|prof01|note01|back01)$/.test(b.id) ? ["x0", "y0"] : ["x0", "y0", "x1", "y1"];
-          for (const k of edges) assert.ok(Math.abs(a[k] - p[k]) <= 2, `${size} ${label} item ${b.id}: ${k} ${a[k]} on screen against ${p[k]} in print (192 dpi)`);
+          const tol = LINUX && LINUX_EDGE[b.id] ? LINUX_EDGE[b.id] : 2;
+          for (const k of edges) assert.ok(Math.abs(a[k] - p[k]) <= tol, `${size} ${label} item ${b.id}: ${k} ${a[k]} on screen against ${p[k]} in print (192 dpi)`);
         }
         assert.ok(checked >= (label === "cover" ? 3 : 1), `${label}: ${checked} items were followed`);
       }
@@ -1302,7 +1313,8 @@ describe("layout layer: the printed page is the page on screen (T-154)", () => {
           const diff = difference(pdfPic, scr);
           const b0 = base.diffs[`${tp.kind}${i}`];
           console.log(`# ${size} ${tp.id}#${i}: difference ${(diff * 100).toFixed(3)} % (the same page without the template: ${(b0 * 100).toFixed(3)} %)`);
-          assert.ok(diff - b0 < 0.005, `${size} ${tp.id}: ${(diff * 100).toFixed(3)} % of the pixels differ, ${(b0 * 100).toFixed(3)} % without the template (it may add 0.5 %)`);
+          const extra = LINUX ? (LINUX_EXTRA[`${size} ${tp.id}#${i}`] ?? 0) : 0;
+          assert.ok(diff - b0 < 0.005 + extra, `${size} ${tp.id}: ${(diff * 100).toFixed(3)} % of the pixels differ, ${(b0 * 100).toFixed(3)} % without the template (it may add ${((0.005 + extra) * 100).toFixed(1)} %)`);
         }
         // each placed item sits where it is on screen: its box as a fraction of its sheet in the print layout against the screen layout, within 2 px of the 192 dpi picture
         const fractions = () => r.page.evaluate((kind) => [...document.querySelectorAll(`.bk-sheet[data-page="${kind}"]`)].map((sheet) => {
@@ -1436,7 +1448,8 @@ describe("layout layer: the printed page is the page on screen (T-154)", () => {
       for (const [id, par] of fits) assert.equal(par, "none", `${id} is drawn edge to edge`);
       let checked = 0;
       for (const b of await itemBoxes(r.page, "back", 0, scr)) {
-        const box = { x0: b.x0 - 6, y0: b.y0 - 6, x1: b.x1 + 6, y1: b.y1 + 6 };
+        // 3 px around the box, not 6 (T-186): the rotated bar thin02 comes within 6 px of thin01 on Letter and its top edge is drawn 2 px higher in the PDF than on screen on Linux (340 against 342), so a wider window measured the neighbour (thin01 itself is the same 308-323 rows in both)
+        const box = { x0: b.x0 - 3, y0: b.y0 - 3, x1: b.x1 + 3, y1: b.y1 + 3 };
         const a = inkBox(scr, box), p = inkBox(pic, box);
         assert.ok(a.n > 300, `${size} ${b.id}: ${a.n} ink pixels on screen`);
         checked++;

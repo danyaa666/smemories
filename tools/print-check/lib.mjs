@@ -20,6 +20,8 @@ const freePort = () =>
     });
   });
 export const PORT = Number(process.env.PRINT_CHECK_PORT ?? (await freePort()));
+/** True on Linux (the CI runner and scripts/print-check-linux.sh): the few platform budgets of check.test.mjs apply there only (T-186). */
+export const LINUX = process.platform === "linux";
 export const BASE = `http://localhost:${PORT}`;
 
 /** Starts `vite` in web/ on PORT and resolves with a stop function. Fails if the port already answers or that vite exits (--strictPort), so a foreign server is never used. */

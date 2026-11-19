@@ -165,6 +165,20 @@ Redis db, and run again.
 
 The print-check suite has 298 tests (run `make print-check` for the current number) and takes about 5-6 min on a Mac but 19-21 min on the CI runner (T-185: the 15 min limit cut it off, it did not hang); the job's "Print check" step is limited to 30 min and the whole job to 60 min (T-149, T-185), and the step prints `print-check: N s`.
 
+**Print check on Linux, locally (T-186).** The CI runner is ubuntu-24.04, and the screen-against-print tests give slightly different pixels there than on a Mac. To reproduce a CI result on a Mac or a Windows PC with Docker running:
+
+```
+scripts/print-check-linux.sh                                  # the whole suite, about 33 min on the Windows PC (CI: 19-21 min)
+scripts/print-check-linux.sh --test-name-pattern 'A4 notes-doodle'   # extra arguments go to `node --test`
+```
+
+It builds `tools/print-check/Dockerfile.linux` (ubuntu-24.04 with Playwright 1.64.0, its Chromium and OS fonts, and poppler: what `ci.yml` installs), copies the checkout into the container (nothing on the host is touched, no `node_modules` is shared), runs `npm ci` and `npm test` and prints `print-check: N s`. Keep the Playwright tag of the Dockerfile equal to `tools/print-check/package.json`. Under Docker `localhost` lists `::1` and `127.0.0.1`; the script sets `NODE_OPTIONS=--dns-result-order=ipv4first`, without it vite and `fetch` pick different ones and the first test fails with "vite did not start".
+
+What the six Linux failures were (T-186; measured in 4 runs each, the numbers do not move between runs):
+- **A5 `note01`** (ink 3 px apart), **A4 `notes-doodle`, `notes-stickers`, `notes-tape` page 2** (2.16 % against 0.55 % for the plain page) and **A4 `profile-tilted`** (0.85 % against 0.23 %): renderer differences, not layout. On screen and in print the DOM boxes, font sizes and line heights are identical (probed). The ruled lines of a note box are a repeating gradient; Chromium on Linux draws them up to 3 px (0.4 mm at 192 dpi) higher on screen than poppler shows them in the PDF, and the screen snaps text to whole device pixels (about 1 px lower in the PDF). Every line and every text row of the page moves together, nothing is missing. The measured exceptions are in `LINUX_EDGE` and `LINUX_EXTRA` of `check.test.mjs` and apply on Linux only; all other pages and items keep the strict budget everywhere.
+- **Letter `thin01`** (y1 323 against 330): a test window, not a mismatch. The bar itself is the same rows (308 to 323) on screen and in the PDF; the 6 px margin around its box also took in the top edge of the rotated bar `thin02`, which Linux draws 2 px higher in the PDF (340 against 342). The margin is 3 px now.
+- **An intermittent fault of the test itself** (seen while reproducing: `A4 notes-doodle/-tape` page 1 jumped from 0.34 % to 1.78 % or 4.04 % in about one run in four, on Linux): the sheet picture was taken before the lazy photo of a far-down sheet had loaded, so the screen showed an empty frame. `sheetPicture` now waits for the images of the sheet.
+
 The `e2e` job in `.github/workflows/ci.yml` starts MySQL, the S3 store and Valkey like `go-integration`, then runs `scripts/e2e.sh`. The
 error starts with `STEP FAILED: <n. title>`, then Playwright's own message and code frame. On failure the artifact `e2e-failure`
 (kept for 3 days) holds the trace (open it with `npx playwright show-trace`, or at trace.playwright.dev), the screenshot and `api.log`.
