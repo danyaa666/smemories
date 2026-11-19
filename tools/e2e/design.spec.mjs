@@ -39,6 +39,7 @@ async function step(title, body) {
 }
 
 const norm = (s) => s.normalize("NFC").replace(/\s+/g, " ").trim().toLocaleLowerCase("vi");
+const flat = (s) => norm(s).replace(/\s+/g, ""); // pdftotext on Linux may split a glyph run, so PDF text is compared without whitespace
 
 /** Deletes what the run created (the account stays). Never fails the test. */
 async function cleanUp() {
@@ -92,7 +93,7 @@ test("customisation journey: pick a look, hide a page, save, reload, print, rese
   const pdfOf = async () => {
     const file = path.join(mkdtempSync(path.join(os.tmpdir(), "e2e-design-")), "book.pdf");
     await savePdf(owner, file);
-    return { info: inspect(file), all: norm(text(file)) };
+    return { info: inspect(file), all: flat(text(file)) };
   };
 
   await step("1. register, create the yearbook and choose Memory Book", async () => {
@@ -189,8 +190,8 @@ test("customisation journey: pick a look, hide a page, save, reload, print, rese
     const pdf = await pdfOf();
     expect(pdf.info.pages, "PDF pages").toBe(PAGES.noProfile);
     expect(pdf.info.allFontsEmbedded, "every font is embedded").toBe(true);
-    for (const s of [TITLE, BELONGS, NOTE.name, NOTE.message]) expect(pdf.all, `the PDF contains "${s}"`).toContain(norm(s));
-    expect(pdf.all, "the hidden profile page is not printed").not.toContain(norm(QUOTE));
+    for (const s of [TITLE, BELONGS, NOTE.name, NOTE.message]) expect(pdf.all, `the PDF contains "${s}"`).toContain(flat(s));
+    expect(pdf.all, "the hidden profile page is not printed").not.toContain(flat(QUOTE));
   });
 
   await step("7. reset to the template: the default look and all four pages come back", async () => {
@@ -206,7 +207,7 @@ test("customisation journey: pick a look, hide a page, save, reload, print, rese
     expect(norm(p.cover)).not.toContain(norm(BELONGS));
     const pdf = await pdfOf();
     expect(pdf.info.pages).toBe(PAGES.all);
-    expect(pdf.all, "the profile page is printed again").toContain(norm(QUOTE));
+    expect(pdf.all, "the profile page is printed again").toContain(flat(QUOTE));
   });
 
   await step("8. switching to Navy Classic resets a saved design; the note and the book stay", async () => {
