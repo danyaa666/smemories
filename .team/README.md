@@ -12,18 +12,19 @@
 |---|---:|---|
 | BACKLOG | 5 | T-023, T-024, T-025, T-031, T-050 |
 | TODO | 2 | T-186, T-183 |
-| READY_FOR_QA | 1 | T-185 |
+| IN_PROGRESS | 1 | T-188 |
+| IN_QA | 1 | T-187 |
 | MERGED | 32 | T-184, T-150, T-151, T-152, T-153, T-154, T-155, T-156, T-157, T-158, T-159, T-160, T-161, T-162, T-163, T-164, T-165, T-166, T-167, T-168, T-169, T-170, T-171, T-172, T-173, T-174, T-175, T-176, T-177, T-178, T-179, T-180 |
-| DONE | 138 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138, T-139, T-140, T-141, T-142, T-143, T-144, T-145, T-146, T-147, T-149, T-148, T-181, T-182 |
+| DONE | 139 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138, T-139, T-140, T-141, T-142, T-143, T-144, T-145, T-146, T-147, T-185, T-149, T-148, T-181, T-182 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Epics (done/total):** E06-go-live 1/1; E09-customisation-editor 34/35; (unfiled) 135/150
+**Epics (done/total):** E06-go-live 1/1; E09-customisation-editor 34/35; (unfiled) 136/152
 
 **Awaiting your review (MERGED):** T-184 ([E01] Unit tests pass on a Windows dev machine (make test with -race)); T-150 ([E09] Spike: layout editor architecture and ADR 0004); T-151 ([E09] Asset pack and registry for stickers, shapes and frames); T-152 ([E09] Backend: student-uploaded design images (backgrounds and decorations)); T-153 ([E09] Layout document model and API (backend)); T-154 ([E09] Web layout runtime: the book draws a layout (Memory Book)); T-155 ([E09] Fix three stale Postman assertions in the customisation-editor collection); T-156 ([E09] Layout version must never go back (reset / template change)); T-157 ([E09] print-check: refuse a foreign server on its port; refresh test counts in docs); T-158 ([E09] Editor state: document store, undo/redo, autosave and conflict handling (web)); T-159 ([E09] Editor route and shell: page strip, zoom, selection overlay, property panel (web)); T-160 ([E09] Editor gestures: move, resize, rotate, snap, guides, with keyboard control (web)); T-161 ([E09] Editor text boxes: add, type in place, font, size, colour, align (web)); T-162 ([E09] Editor palette: stickers, shapes, frames, own images and the page background (web)); T-163 ([E09] Layout version history and restore (backend)); T-164 ([E09] Palette follow-ups: copy, history edge, distinct cap/quota code (web + one small API change)); T-165 ([E09] Editor version history panel: list, preview and restore (web)); T-166 ([E09] Navy Classic: page kinds and editable elements for the layout editor (web + manifest)); T-167 ([E09] Class book carries each member's layout (server cap, privacy, web wiring)); T-168 ([E09] History e2e hardening: friendly mysql-missing message, QA probe cases (tests only)); T-169 ([E09] Spike: Doory-template import and a Fabric.js image studio beside the DOM editor (ADR 0005)); T-170 ([E09] Editor flow: page by page, Save and done, Print, back to the book manage page (web)); T-171 ([E09] Stretching shapes: rectangle and ellipse that fill their box (registry + web)); T-172 ([E09] Page templates: model, shipped storage, validator gate and read route (Go + web preview)); T-173 ([E09] Own page templates and the apply API (Go): save my page, apply a template per section); T-174 ([E09] Stabilise the editor-gestures touch test (flake: 2 to 3 px against 0.5 allowed)); T-175 ([E09] Template gallery and apply, per section (web): shipped and own templates, preview, apply, delete own); T-176 ([E09] Save my page as a template (web): name it, see what is kept, use it again); T-177 ([E09] Shipped page templates for Memory Book: four or more looks per page kind, authored by us); T-178 ([E09] Shipped page templates for Navy Classic: four or more looks per page kind, authored by us); T-179 ([E09] Stage 2 hardening: fuzz the layout parsers, storage budget per user, abuse limits, no content in logs); T-180 ([E09] Make the profile, notes and back template choices a real choice (Memory Book and Navy Classic))
 
 **Open questions for you:** Q-064 (Doory templates: licence route, studio, and template colours (ADR 0005, T-169)); Q-065 (Storage cap per user for layout history (T-179, docs/layout-storage-budget.md): cap now, or watch and decide at go-live?)
 
-_Board last written 2026-11-18 18:23Z_
+_Board last written 2026-11-19 04:53Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -6578,19 +6579,19 @@ Spec: .team/epics/E01-foundation/16-windows-dev-machine-tests.md (read it from t
 - 2026-11-18 10:10Z · leader · merged 2f89947. Review: test-side only, Windows-only skips with reasons, httpx keep-alive root cause fixed; 1 s ceiling and 20 s vitest timeout also apply on Linux (alloc ceiling stays the hard gate). For owner to check: make test passes on your Windows PC; existing checkouts need 'git add --renormalize .' once (eol=lf).
 
 ### T-185 — [E01] Print check: A5 notes drift 3 px, step hangs to timeout; develop e2e cannot install Chromium
-- **Status:** READY_FOR_QA
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** bug
 - **Milestone:** M4
 - **Depends-on:** —
 - **Risk:** low
 - **Rework:** 1
-- **Owner-approved:** —
+- **Owner-approved:** yes
 - **Assignee:** —
 - **Branch:** task/t-185-e01-print-check-a5-notes-drift-3-px-step
 - **PR:** https://github.com/danyaa666/smemories/pull/182
-- **Updated:** 2026-11-18 17:49Z by dev
-- **Comments-seen:** 14
+- **Updated:** 2026-11-19 04:53Z by leader
+- **Comments-seen:** 16
 
 Spec: .team/epics/E01-foundation/17-print-check-drift-and-e2e-chromium.md (read it from the main checkout). Found reviewing T-181: manual CI 44293267820 print check failed (note01 y0 1516 vs 1513 at 192 dpi) then hung to the 15 min timeout; develop baseline 44298102605 failed twice at Install Chromium.
 
@@ -6609,6 +6610,12 @@ Spec: .team/epics/E01-foundation/17-print-check-drift-and-e2e-chromium.md (read 
 - 2026-11-18 17:44Z · dev · dev: PR #182 stays READY_FOR_QA, nothing changed.
 - 2026-11-18 17:49Z · dev · Rework 1: tools/print-check/check.test.mjs restored to origin/develop (T185DIAG rowsOf helper, JSON suffix removed, inkBox JSDoc reattached); git diff origin/develop -- that file is empty, LF. Head abb5c1a. PR CI run 44362103829: go, web, security pass; e2e/image/integration skipped (D-37). Nothing else changed vs 3ecab96.
 - 2026-11-18 17:49Z · leader · Leader pre-check of the rework (for QA to confirm): head abb5c1a vs 3ecab96 changes only tools/print-check/check.test.mjs (+1/-12), and that file now has an empty diff against origin/develop. PR CI 44362103829 green. QA: confirm and pass; no re-run of e2e needed (no code under test changed).
+- 2026-11-19 04:35Z · qa · QA_PASS T-185 re-check, PR #182 head abb5c1a (confirmed with gh: headRefOid abb5c1ab, MERGEABLE). Evidence: (1) git diff --stat 3ecab96 abb5c1a = only tools/print-check/check.test.mjs (+1/-12), nothing else. (2) git diff origin/develop abb5c1a -- tools/print-check/check.test.mjs = empty (0 bytes), so the T185DIAG leftover is gone; git grep T185DIAG on abb5c1a finds nothing. (3) PR CI run 44362103829: go, web, security pass; e2e/image/go-integration skipped per D-37. No e2e re-run: no code under test changed since my pass on 3ecab96 (CI/e2e infra: ci.yml Chromium retry, 30/60 min limits, editor-phone expect.poll, docs). Earlier evidence stands: QA run 44350931687 journey 63/63, print-check 292/298 = exactly the six T-186 failures. Leader: Owner-approved is still needed before merge (D-47).
+- 2026-11-19 04:35Z · leader · Leader review OK (head abb5c1a, CI green): CI/e2e infra only (ci.yml Chromium retry that still fails after 3 tries, 30/60 min limits; editor-phone expect.poll race fix; docs/e2e.md); leftover diagnostic removed. Awaiting owner approval (D-47): look at the ci.yml diff; after merge develop's manual e2e run still shows the six T-186 print-check failures.
+- 2026-11-19 04:51Z · human · owner approved merge
+- 2026-11-19 04:51Z · human · Owner approval given in chat 2026-11-19: "Approve both" (T-185 and board sync #184; recorded by the leader under D-47).
+- 2026-11-19 04:52Z · leader · merged 0befa1e after owner approval (D-47).
+- 2026-11-19 04:53Z · leader · owner approved before merge (D-47)
 
 ### T-186 — [E01] Print check on Linux: six screen-vs-print parity failures
 - **Status:** TODO
@@ -6628,6 +6635,48 @@ Spec: .team/epics/E01-foundation/17-print-check-drift-and-e2e-chromium.md (read 
 Spec: .team/epics/E01-foundation/18-print-check-linux-parity.md (read it from the main checkout). Split out of T-185: Linux CI print-check 292/298, six layout parity failures that never ran on Linux before; reproduce in a local ubuntu-24.04 container (Docker is up).
 
 #### Comments
+
+### T-187 — [E09] Skip link and focus on route change (app-wide)
+- **Status:** IN_QA
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M4
+- **Depends-on:** T-182
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** qa
+- **Branch:** task/t-187-e09-skip-link-and-focus-on-route-change-
+- **PR:** 185
+- **Updated:** 2026-11-19 04:44Z by qa
+- **Comments-seen:** 2
+
+Spec: .team/epics/E09-customisation-editor/43-skip-link-and-route-focus.md (read it from the main checkout). Findings F-08 and F-09 of the T-182 audit.
+
+#### Comments
+- 2026-11-19 04:42Z · dev · PR #185 head fbfdbb0. SkipLink + RouteFocus (web/src/components/RouteA11y.tsx), vitest 1344 pass, tsc/eslint/prettier/i18n green. NOT RUN: e2e (new tools/e2e/app-a11y.spec.mjs and existing specs): Docker Desktop was down on this wake-up. QA: run make e2e; watch editor-keyboard/editor-flow* since the editor h1 now gets focus on arrival.
+- 2026-11-19 04:43Z · leader · QA brief (leader): PR #185. Dev ran no e2e (Docker was down; it is up again). Run the e2e suite incl. the new tools/e2e/app-a11y.spec.mjs, and watch editor-keyboard, editor-flow*, editor-a11y and editor-phone: the h1 of each page now takes focus on arrival, which must not steal focus the editor sets itself (T-182 fixes) nor fire on in-page state changes (dialogs, tabs). Check: skip link is the first Tab stop on App and YearbookLayout and visible on focus; first load does not move focus; en and vi strings. Known Windows-only failures are pre-existing.
+
+### T-188 — [E09] Editor screen-reader polish: numbers, live regions, roles, handles
+- **Status:** IN_PROGRESS
+- **Priority:** P3
+- **Type:** feature
+- **Milestone:** M4
+- **Depends-on:** T-182
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** dev
+- **Branch:** task/t-188-e09-editor-screen-reader-polish-numbers-
+- **PR:** —
+- **Updated:** 2026-11-19 04:44Z by dev
+- **Comments-seen:** 2
+
+Spec: .team/epics/E09-customisation-editor/44-editor-screen-reader-polish.md (read it from the main checkout). Findings F-10, F-13..F-17 of the T-182 audit.
+
+#### Comments
+- 2026-11-19 04:43Z · dev · Claimed by mistake (the gate went SLEEP in the same command). No work done, no branch. Leader: please set it back to TODO. Also note Docker Desktop was down on this wake-up, so e2e could not run.
+- 2026-11-19 04:43Z · leader · reset by leader: the dev run claimed it but its gate said SLEEP (stale cache); no branch exists
 
 <!-- tasks:end -->
 
@@ -6683,3 +6732,4 @@ Spec: .team/epics/E01-foundation/18-print-check-linux-parity.md (read it from th
 - 2026-11-18 — Team moved to the owner's Windows 10 PC (D-46): Go/Node 22/make/Docker/GCC installed, plugin patched for Windows. T-181 found already done as PR #179 (cloud session, board never updated) and re-queued for e2e. T-184 (Windows-only unit test fixes, PR #180) merged 2f89947. Board commits wait: develop now requires PRs.
 - 2026-11-18 — T-181 (phone mode, PR #179) merged 02bfdcd after owner approval: first merge under D-47. T-182 to TODO. T-185 filed (print-check 3 px drift in Linux CI; passed 298/298 locally on 2026-11-06).
 - 2026-11-19 — T-182 (editor accessibility and i18n audit, PR #183) merged 9c212e2 after owner approval. T-183 waits on T-186 (Linux print-check parity). F-08..F-17 from docs/editor-accessibility.md to be planned.
+- 2026-11-19 — T-185 (CI: Chromium install, step limits, journey race; PR #182) merged 0befa1e and board sync #184 merged 201c35b, both after owner approval. T-186 (Linux print-check parity) unblocked. T-187 and T-188 (from the T-182 audit) in QA/dev.

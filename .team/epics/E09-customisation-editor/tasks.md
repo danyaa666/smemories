@@ -1224,7 +1224,7 @@ Spec: .team/epics/E09-customisation-editor/40-phone-mode.md (read it from the ma
 - **Branch:** task/t-182-e09-accessibility-and-i18n-audit-of-the-
 - **PR:** https://github.com/danyaa666/smemories/pull/183
 - **Updated:** 2026-11-18 18:23Z by leader
-- **Comments-seen:** 6
+- **Comments-seen:** 10
 
 Spec: .team/epics/E09-customisation-editor/41-editor-accessibility-i18n-audit.md (read it from the main checkout). Keyboard-only journey spec, aria snapshots, announcement bounds, contrast/zoom/target checks, hard-coded string check, vi text length, docs/editor-accessibility.md with findings table and owner screen-reader checklist; no new dependency
 
