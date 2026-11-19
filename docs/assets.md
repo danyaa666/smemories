@@ -63,7 +63,7 @@ licence text in `licences/` and record `source_url`, `author` and `date_checked`
 
 ## How the server uses it
 
-`internal/assets` embeds the registry. The layout validation (a later task of E09) calls `assets.Has(id)` for every sticker, shape, frame or
+`internal/assets` embeds the registry. The layout validation (`internal/booklayout`, T-153) calls `assets.Has(id)` for every sticker, shape, frame or
 background id in a document and rejects the rest. `TestRegistryMatchesWeb` (Go) and the registry test in `assets.test.tsx` (web) fail when the
 two copies differ, so a forgotten `scripts/sync-assets.sh` cannot reach `develop`.
 

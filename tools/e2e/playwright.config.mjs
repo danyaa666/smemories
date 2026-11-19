@@ -30,6 +30,7 @@ export default defineConfig({
     "editor-a11y.spec.mjs",
     "app-a11y.spec.mjs",
     "stage2-journey.spec.mjs",
+    "stage2-budgets.spec.mjs",
   ],
   outputDir: `${out}/results`, // traces and screenshots of a failed run; CI uploads the folder
   timeout: 240_000, // the whole journey; the budget in CI is 5 minutes including start-up
@@ -46,9 +47,11 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
   projects: [
-    { name: "chromium", testIgnore: ["stage2-journey.spec.mjs"], use: { browserName: "chromium" } },
+    { name: "chromium", testIgnore: ["stage2-journey.spec.mjs", "stage2-budgets.spec.mjs"], use: { browserName: "chromium" } },
     // T-183: the stage 2 story once on a desktop and once on a tablet (1024 px, touch); the spec reads the project name for its viewport
     { name: "journey-desktop", testMatch: ["stage2-journey.spec.mjs"], use: { browserName: "chromium" } },
+    // the budgets (STAGE2_BUDGETS=1 only, see the spec)
+    { name: "budgets", testMatch: ["stage2-budgets.spec.mjs"], use: { browserName: "chromium" } },
     { name: "journey-tablet", testMatch: ["stage2-journey.spec.mjs"], use: { browserName: "chromium" } },
   ],
 });

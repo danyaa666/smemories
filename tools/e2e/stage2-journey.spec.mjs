@@ -310,8 +310,8 @@ test("stage 2 story: edit Memory Book and Navy Classic, print, reload; then the 
       await step(`${label}: History restores the version from before the notes template`, async () => {
         await press(page.getByRole("toolbar").getByRole("button", { name: "History" }));
         const rows = page.getByRole("group", { name: "Earlier versions" }).getByRole("button");
+        await expect(rows.first(), "History lists versions").toBeVisible();
         const n = await rows.count();
-        expect(n, "History lists versions").toBeGreaterThan(0);
         let target = -1;
         for (let i = 0; i < n; i++) if (/Before template/.test((await rows.nth(i).getAttribute("aria-label")) ?? (await rows.nth(i).textContent()) ?? "")) target = i; // the oldest one
         expect(target, "History has a 'Before template' row").toBeGreaterThanOrEqual(0);
@@ -344,7 +344,8 @@ test("stage 2 story: edit Memory Book and Navy Classic, print, reload; then the 
         const info = inspect(file);
         expect(info.pages, "cover, profile, notes pages, back").toBe(3 + notesPages);
         expect(info.allFontsEmbedded, "every font is embedded").toBe(true);
-        expect(squash(text(file)), "the PDF carries the Vietnamese text").toContain(squash(VI_TEXT));
+        const pdfText = squash(text(file)); // -layout interleaves a wrapped box with the lines beside it (Navy's cover), so each word is looked up
+        for (const word of VI_TEXT.split(" ")) expect(pdfText, `the PDF carries "${word}" of the Vietnamese text`).toContain(squash(word));
         await tab.close();
         await page.reload();
         await expect(page.locator(".ed-pagebox .bk-sheet[data-page='cover']")).toBeVisible();
