@@ -11,8 +11,8 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 5 | T-023, T-024, T-025, T-031, T-050 |
-| TODO | 1 | T-191 |
-| READY_FOR_QA | 1 | T-183 |
+| READY_FOR_QA | 1 | T-191 |
+| IN_QA | 1 | T-183 |
 | QA_PASS | 1 | T-189 |
 | MERGED | 32 | T-184, T-150, T-151, T-152, T-153, T-154, T-155, T-156, T-157, T-158, T-159, T-160, T-161, T-162, T-163, T-164, T-165, T-166, T-167, T-168, T-169, T-170, T-171, T-172, T-173, T-174, T-175, T-176, T-177, T-178, T-179, T-180 |
 | DONE | 143 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138, T-139, T-140, T-141, T-142, T-143, T-144, T-145, T-146, T-147, T-185, T-186, T-190, T-187, T-188, T-149, T-148, T-181, T-182 |
@@ -24,7 +24,7 @@
 
 **Open questions for you:** Q-064 (Doory templates: licence route, studio, and template colours (ADR 0005, T-169)); Q-065 (Storage cap per user for layout history (T-179, docs/layout-storage-budget.md): cap now, or watch and decide at go-live?); Q-067 (After the stage 2 exit check (T-183): go live (M2) next, or class yearbook (M3) first?)
 
-_Board last written 2026-11-19 19:01Z_
+_Board last written 2026-11-19 19:27Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -6729,7 +6729,7 @@ Spec: .team/epics/E01-foundation/20-notes-integration-tests-on-develop.md (read 
 - 2026-11-19 15:26Z · leader · merged 3941be3 (PR #189, head 7ac339e, owner-approved).
 
 ### T-191 — [E01] Image scan fails: Go stdlib CVE-2026-97054 in the pinned builder image
-- **Status:** TODO
+- **Status:** READY_FOR_QA
 - **Priority:** P1
 - **Type:** security
 - **Milestone:** M4
@@ -6738,12 +6738,34 @@ Spec: .team/epics/E01-foundation/20-notes-integration-tests-on-develop.md (read 
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-11-19 16:40Z by leader
-- **Comments-seen:** 0
+- **Branch:** task/t-191-e01-image-scan-fails-go-stdlib-cve-2026-
+- **PR:** https://github.com/danyaa666/smemories/pull/192
+- **Updated:** 2026-11-19 19:27Z by dev
+- **Comments-seen:** 3
 
 Spec: .team/epics/E01-foundation/21-go-stdlib-cve-image-pin.md (read it from the main checkout). Trivy HIGH on Go 1.26.10 stdlib in the image (run 44559488055); re-pin the builder to 1.26.11.
+
+#### Comments
+- 2026-11-19 19:27Z · dev · PR #192 head a9c0d64: Dockerfile builder re-pinned to Go 1.26.11 (index sha256:dc40a13b...). CVE-2026-97054 is net/http (MaxBytesReader on HTTP/1 server), reachable: we use MaxBytesReader in httpx and booklayout. Manual CI run 44595094942: image, go, web, security, go-integration green (e2e still running at PR time, unrelated). Local make image-smoke passed; local image-scan could not run (Trivy DB download from mirror.gcr.io times out on this PC), CI image job is the scan evidence. Dependabot docker ecosystem already exists, no new rule needed. For QA: re-check run 44595094942 final state; no go.mod change.
+- 2026-11-19 19:27Z · dev · Dockerfile re-pin only; see PR #192 and comment
+- 2026-11-19 19:27Z · leader · QA brief (leader): PR #192, Dockerfile builder re-pinned to Go 1.26.11 (no go.mod change). Verify: (1) the digest is the official golang:1.26.11-bookworm multi-arch index (docker buildx imagetools inspect) and the comment matches; (2) final state of manual run 44595094942: image job green with Trivy reporting no CVE-2026-97054 (quote the scan summary line), e2e result; (3) the binary in the built image reports go1.26.11 (go version -m on the binary, or the image-smoke output); (4) nothing else in the diff. Local make image-scan may time out on the Trivy DB mirror here; the CI scan is acceptable evidence.
+
+### T-192 — [E01] make image-smoke fails on the Windows dev PC (curl file upload path)
+- **Status:** TODO
+- **Priority:** P3
+- **Type:** chore
+- **Milestone:** M4
+- **Depends-on:** —
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-11-19 19:40Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E01-foundation/22-image-smoke-on-windows.md (read it from the main checkout). Native curl.exe cannot read the MSYS /tmp path in scripts/image-smoke.sh.
 
 #### Comments
 
