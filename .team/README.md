@@ -11,19 +11,20 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 5 | T-023, T-024, T-025, T-031, T-050 |
-| TODO | 2 | T-186, T-183 |
-| READY_FOR_QA | 1 | T-185 |
+| TODO | 1 | T-183 |
+| QA_PASS | 2 | T-187, T-188 |
+| CHANGES_REQUESTED | 1 | T-186 |
 | MERGED | 32 | T-184, T-150, T-151, T-152, T-153, T-154, T-155, T-156, T-157, T-158, T-159, T-160, T-161, T-162, T-163, T-164, T-165, T-166, T-167, T-168, T-169, T-170, T-171, T-172, T-173, T-174, T-175, T-176, T-177, T-178, T-179, T-180 |
-| DONE | 138 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138, T-139, T-140, T-141, T-142, T-143, T-144, T-145, T-146, T-147, T-149, T-148, T-181, T-182 |
+| DONE | 139 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138, T-139, T-140, T-141, T-142, T-143, T-144, T-145, T-146, T-147, T-185, T-149, T-148, T-181, T-182 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Epics (done/total):** E06-go-live 1/1; E09-customisation-editor 34/35; (unfiled) 135/150
+**Epics (done/total):** E06-go-live 1/1; E09-customisation-editor 34/35; (unfiled) 136/152
 
 **Awaiting your review (MERGED):** T-184 ([E01] Unit tests pass on a Windows dev machine (make test with -race)); T-150 ([E09] Spike: layout editor architecture and ADR 0004); T-151 ([E09] Asset pack and registry for stickers, shapes and frames); T-152 ([E09] Backend: student-uploaded design images (backgrounds and decorations)); T-153 ([E09] Layout document model and API (backend)); T-154 ([E09] Web layout runtime: the book draws a layout (Memory Book)); T-155 ([E09] Fix three stale Postman assertions in the customisation-editor collection); T-156 ([E09] Layout version must never go back (reset / template change)); T-157 ([E09] print-check: refuse a foreign server on its port; refresh test counts in docs); T-158 ([E09] Editor state: document store, undo/redo, autosave and conflict handling (web)); T-159 ([E09] Editor route and shell: page strip, zoom, selection overlay, property panel (web)); T-160 ([E09] Editor gestures: move, resize, rotate, snap, guides, with keyboard control (web)); T-161 ([E09] Editor text boxes: add, type in place, font, size, colour, align (web)); T-162 ([E09] Editor palette: stickers, shapes, frames, own images and the page background (web)); T-163 ([E09] Layout version history and restore (backend)); T-164 ([E09] Palette follow-ups: copy, history edge, distinct cap/quota code (web + one small API change)); T-165 ([E09] Editor version history panel: list, preview and restore (web)); T-166 ([E09] Navy Classic: page kinds and editable elements for the layout editor (web + manifest)); T-167 ([E09] Class book carries each member's layout (server cap, privacy, web wiring)); T-168 ([E09] History e2e hardening: friendly mysql-missing message, QA probe cases (tests only)); T-169 ([E09] Spike: Doory-template import and a Fabric.js image studio beside the DOM editor (ADR 0005)); T-170 ([E09] Editor flow: page by page, Save and done, Print, back to the book manage page (web)); T-171 ([E09] Stretching shapes: rectangle and ellipse that fill their box (registry + web)); T-172 ([E09] Page templates: model, shipped storage, validator gate and read route (Go + web preview)); T-173 ([E09] Own page templates and the apply API (Go): save my page, apply a template per section); T-174 ([E09] Stabilise the editor-gestures touch test (flake: 2 to 3 px against 0.5 allowed)); T-175 ([E09] Template gallery and apply, per section (web): shipped and own templates, preview, apply, delete own); T-176 ([E09] Save my page as a template (web): name it, see what is kept, use it again); T-177 ([E09] Shipped page templates for Memory Book: four or more looks per page kind, authored by us); T-178 ([E09] Shipped page templates for Navy Classic: four or more looks per page kind, authored by us); T-179 ([E09] Stage 2 hardening: fuzz the layout parsers, storage budget per user, abuse limits, no content in logs); T-180 ([E09] Make the profile, notes and back template choices a real choice (Memory Book and Navy Classic))
 
 **Open questions for you:** Q-064 (Doory templates: licence route, studio, and template colours (ADR 0005, T-169)); Q-065 (Storage cap per user for layout history (T-179, docs/layout-storage-budget.md): cap now, or watch and decide at go-live?)
 
-_Board last written 2026-11-18 18:23Z_
+_Board last written 2026-11-19 09:33Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -6578,19 +6579,19 @@ Spec: .team/epics/E01-foundation/16-windows-dev-machine-tests.md (read it from t
 - 2026-11-18 10:10Z · leader · merged 2f89947. Review: test-side only, Windows-only skips with reasons, httpx keep-alive root cause fixed; 1 s ceiling and 20 s vitest timeout also apply on Linux (alloc ceiling stays the hard gate). For owner to check: make test passes on your Windows PC; existing checkouts need 'git add --renormalize .' once (eol=lf).
 
 ### T-185 — [E01] Print check: A5 notes drift 3 px, step hangs to timeout; develop e2e cannot install Chromium
-- **Status:** READY_FOR_QA
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** bug
 - **Milestone:** M4
 - **Depends-on:** —
 - **Risk:** low
 - **Rework:** 1
-- **Owner-approved:** —
+- **Owner-approved:** yes
 - **Assignee:** —
 - **Branch:** task/t-185-e01-print-check-a5-notes-drift-3-px-step
 - **PR:** https://github.com/danyaa666/smemories/pull/182
-- **Updated:** 2026-11-18 17:49Z by dev
-- **Comments-seen:** 14
+- **Updated:** 2026-11-19 04:53Z by leader
+- **Comments-seen:** 20
 
 Spec: .team/epics/E01-foundation/17-print-check-drift-and-e2e-chromium.md (read it from the main checkout). Found reviewing T-181: manual CI 44293267820 print check failed (note01 y0 1516 vs 1513 at 192 dpi) then hung to the 15 min timeout; develop baseline 44298102605 failed twice at Install Chromium.
 
@@ -6609,25 +6610,105 @@ Spec: .team/epics/E01-foundation/17-print-check-drift-and-e2e-chromium.md (read 
 - 2026-11-18 17:44Z · dev · dev: PR #182 stays READY_FOR_QA, nothing changed.
 - 2026-11-18 17:49Z · dev · Rework 1: tools/print-check/check.test.mjs restored to origin/develop (T185DIAG rowsOf helper, JSON suffix removed, inkBox JSDoc reattached); git diff origin/develop -- that file is empty, LF. Head abb5c1a. PR CI run 44362103829: go, web, security pass; e2e/image/integration skipped (D-37). Nothing else changed vs 3ecab96.
 - 2026-11-18 17:49Z · leader · Leader pre-check of the rework (for QA to confirm): head abb5c1a vs 3ecab96 changes only tools/print-check/check.test.mjs (+1/-12), and that file now has an empty diff against origin/develop. PR CI 44362103829 green. QA: confirm and pass; no re-run of e2e needed (no code under test changed).
+- 2026-11-19 04:35Z · qa · QA_PASS T-185 re-check, PR #182 head abb5c1a (confirmed with gh: headRefOid abb5c1ab, MERGEABLE). Evidence: (1) git diff --stat 3ecab96 abb5c1a = only tools/print-check/check.test.mjs (+1/-12), nothing else. (2) git diff origin/develop abb5c1a -- tools/print-check/check.test.mjs = empty (0 bytes), so the T185DIAG leftover is gone; git grep T185DIAG on abb5c1a finds nothing. (3) PR CI run 44362103829: go, web, security pass; e2e/image/go-integration skipped per D-37. No e2e re-run: no code under test changed since my pass on 3ecab96 (CI/e2e infra: ci.yml Chromium retry, 30/60 min limits, editor-phone expect.poll, docs). Earlier evidence stands: QA run 44350931687 journey 63/63, print-check 292/298 = exactly the six T-186 failures. Leader: Owner-approved is still needed before merge (D-47).
+- 2026-11-19 04:35Z · leader · Leader review OK (head abb5c1a, CI green): CI/e2e infra only (ci.yml Chromium retry that still fails after 3 tries, 30/60 min limits; editor-phone expect.poll race fix; docs/e2e.md); leftover diagnostic removed. Awaiting owner approval (D-47): look at the ci.yml diff; after merge develop's manual e2e run still shows the six T-186 print-check failures.
+- 2026-11-19 04:51Z · human · owner approved merge
+- 2026-11-19 04:51Z · human · Owner approval given in chat 2026-11-19: "Approve both" (T-185 and board sync #184; recorded by the leader under D-47).
+- 2026-11-19 04:52Z · leader · merged 0befa1e after owner approval (D-47).
+- 2026-11-19 04:53Z · leader · owner approved before merge (D-47)
 
 ### T-186 — [E01] Print check on Linux: six screen-vs-print parity failures
-- **Status:** TODO
+- **Status:** CHANGES_REQUESTED
 - **Priority:** P2
 - **Type:** bug
 - **Milestone:** M4
 - **Depends-on:** T-185
 - **Risk:** low
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-11-18 16:26Z by leader
-- **Comments-seen:** 0
+- **Branch:** task/t-186-e01-print-check-on-linux-six-screen-vs-p
+- **PR:** https://github.com/danyaa666/smemories/pull/187
+- **Updated:** 2026-11-19 09:33Z by leader
+- **Comments-seen:** 3
 
 Spec: .team/epics/E01-foundation/18-print-check-linux-parity.md (read it from the main checkout). Split out of T-185: Linux CI print-check 292/298, six layout parity failures that never ran on Linux before; reproduce in a local ubuntu-24.04 container (Docker is up).
 
 #### Comments
+- 2026-11-19 08:48Z · dev · PR #187 head 3e8add7. Reproduced locally in ubuntu-24.04 (scripts/print-check-linux.sh, doc in docs/e2e.md): 292/298, same six as CI with the CI numbers. Verdicts: note01 + A4 doodle/stickers/tape p2 + A4 profile-tilted = Linux renderer noise (DOM boxes/fonts/line heights identical on screen and print; ruled-gradient lines 3 px higher on screen than in the PDF, text 1 px; nothing missing; same numbers in 4 of 4 runs: 2.159 %, 0.848 %, 3 px) -> Linux-only budgets in LINUX_EDGE/LINUX_EXTRA, everything else strict. Letter thin01 = test window (6 px margin took in the rotated neighbour thin02; the bar is rows 308-323 on both sides) -> margin 3 px. Extra finding: A4 notes page 1 was intermittently 1.78/4.04 % because the screen picture was taken before a lazy photo loaded (empty frame in the diff mask) -> sheetPicture waits for images. After: full suite 298/298 twice in the container (32 min each) + the six tests a third time. BLOCKER for requirement 3: manual CI runs (44483277625, 44489053574) fail in e2e step 'The journey' BEFORE print-check runs: first at editor-keyboard step 5 (fixed here: poll threw TypeError on a not-yet-stored layout), then the registration 429 rate limit in journey step 1 after the editor specs (same cascade QA saw locally). That is an e2e/CI setup matter (reset limits between spec files in scripts/e2e.sh, or a test-env limit); leader decision, not touched here. QA: run scripts/print-check-linux.sh on the head to confirm 298/298.
+- 2026-11-19 08:48Z · dev · Local Linux 298/298 x2; CI print-check not reached (journey 429 before it), see comment
+- 2026-11-19 09:32Z · leader · Leader decision on the journey 429 (test config only, my call): the e2e suite now registers more users than the test API's 20/hour register limit (SMEM_E2E_RATE_REGISTER_PER_HOUR default in scripts/e2e.sh). Raise that default to 200 in scripts/e2e.sh and docs/e2e.md (SMEM_ENV=test API only; .env, config.go defaults and production limits stay untouched; no new env var, no dev shortcut). First grep tools/e2e for any spec that expects a register 429 and keep it working (it may set its own low limit). Then start a manual full CI run on the PR branch and put the run id and print-check count in the PR: requirement 3 is 298/298 in CI. If the e2e job fails again for a reason outside print-check, report it with the run id and stop; do not chase unrelated flakes.
+
+### T-187 — [E09] Skip link and focus on route change (app-wide)
+- **Status:** QA_PASS
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M4
+- **Depends-on:** T-182
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** leader
+- **Branch:** task/t-187-e09-skip-link-and-focus-on-route-change-
+- **PR:** 185
+- **Updated:** 2026-11-19 05:41Z by qa
+- **Comments-seen:** 4
+
+Spec: .team/epics/E09-customisation-editor/43-skip-link-and-route-focus.md (read it from the main checkout). Findings F-08 and F-09 of the T-182 audit.
+
+#### Comments
+- 2026-11-19 04:42Z · dev · PR #185 head fbfdbb0. SkipLink + RouteFocus (web/src/components/RouteA11y.tsx), vitest 1344 pass, tsc/eslint/prettier/i18n green. NOT RUN: e2e (new tools/e2e/app-a11y.spec.mjs and existing specs): Docker Desktop was down on this wake-up. QA: run make e2e; watch editor-keyboard/editor-flow* since the editor h1 now gets focus on arrival.
+- 2026-11-19 04:43Z · leader · QA brief (leader): PR #185. Dev ran no e2e (Docker was down; it is up again). Run the e2e suite incl. the new tools/e2e/app-a11y.spec.mjs, and watch editor-keyboard, editor-flow*, editor-a11y and editor-phone: the h1 of each page now takes focus on arrival, which must not steal focus the editor sets itself (T-182 fixes) nor fire on in-page state changes (dialogs, tabs). Check: skip link is the first Tab stop on App and YearbookLayout and visible on focus; first load does not move focus; en and vi strings. Known Windows-only failures are pre-existing.
+- 2026-11-19 05:41Z · qa · QA_PASS on PR #185. Code head fbfdbb0 unchanged; I pushed 2 test-only commits, branch head now 7fa068c. CI on fbfdbb0: go, web, security pass.
+  Evidence (me, Windows, own DB smem_test_e2e_qa187, ports 18187/14187; make's guard-test step fails on Windows scrub-trace tests, pre-existing, so I ran make's e2e steps without it):
+  AC1 skip link first Tab stop of App (public) and YearbookLayout, visible on focus, targets main, en+vi: app-a11y.spec.mjs 2/2 pass (checks Tab order, on-screen box, Enter focuses main, URL hash unchanged; /login and /yearbooks; Bỏ qua đến nội dung / Skip to content).
+  AC2 route change focuses h1 tabindex=-1, not on first load: e2e /yearbooks->/classes by keyboard (en, vi) and /login->/register pass; first load leaves focus on body (e2e); vitest RouteA11y 4/4. In-page state changes (dialogs, tabs, Templates/History panels) in the editor specs did not lose focus (editor-keyboard pass).
+  AC3 editor focus handling from T-182 unchanged: editor-a11y 6/6 pass, editor-shell, editor-flow*, editor-phone*, editor-history, editor-navy, editor-palette, editor-templates, editor-save-template pass.
+  Full make e2e on fbfdbb0: 60 pass, 5 fail. 3 are Windows/pre-existing, same failures on develop 9c212e2: design step 6 and journey step 8 (pdftotext mangles Vietnamese text on Windows), editor-gestures touch tap (768px), editor-text pixel diff (A4 -4 500 runes). The 5th was caused by this PR, see issue 2.
+  Issues found and fixed by me in test files (no product code change needed):
+  1. blocker (fixed): app-a11y.spec.mjs was not in testMatch of tools/e2e/playwright.config.mjs, so make e2e never ran it (docs/e2e.md says it does). Registered. Also the spec raced the first render and the vi pass pressed Tab after the language click; fixed (wait for h1, reload).
+  2. major (fixed): editor-keyboard step 2 assumed the Tab start stays on the removed link after a route change (old finding F-09); now focus is on the editor h1, so 'Back to customise' needed 49 Tab stops. Step 2 now asserts the h1 is focused and Shift+Tab reaches the back link. Passes (2/2, twice).
+  Observations, non-blocking: (a) editor-keyboard Templates/History steps flake on this PC (Tab leaves the page after the Sticker panel 'Sparkle'; also seen on develop 9c212e2, step 9), passed on rerun. (b) vitest full run on this PC: 1 then 3 different tests fail under load (editor.test.tsx, EditorShell.test.tsx, find-timeouts); both files pass alone 45/45; tsc, eslint, prettier, lint:i18n clean. (c) RouteFocus waits up to 3s for an h1 and focuses it if focus is on body by then; fine. Leader: please look at the 2 test commits.
+- 2026-11-19 05:41Z · leader · Leader review OK (head 7fa068c; product code unchanged since fbfdbb0, whose CI is green; CI on 7fa068c was still running at review, merge only once it is green). QA's two test commits are correct: app-a11y.spec.mjs is now in playwright testMatch (it never ran before) and editor-keyboard step 2 now asserts the new behaviour (h1 focused after the route change, Shift+Tab to the back link), which is stronger, not weaker. Awaiting owner approval (D-47): try Tab once on any page (skip link appears) and navigate with the keyboard (focus lands on the page title).
+
+### T-188 — [E09] Editor screen-reader polish: numbers, live regions, roles, handles
+- **Status:** QA_PASS
+- **Priority:** P3
+- **Type:** feature
+- **Milestone:** M4
+- **Depends-on:** T-182
+- **Risk:** low
+- **Rework:** 1
+- **Owner-approved:** —
+- **Assignee:** leader
+- **Branch:** task/t-188-e09-editor-screen-reader-polish-numbers-
+- **PR:** https://github.com/danyaa666/smemories/pull/186
+- **Updated:** 2026-11-19 06:51Z by qa
+- **Comments-seen:** 9
+
+Spec: .team/epics/E09-customisation-editor/44-editor-screen-reader-polish.md (read it from the main checkout). Findings F-10, F-13..F-17 of the T-182 audit.
+
+#### Comments
+- 2026-11-19 04:43Z · dev · Claimed by mistake (the gate went SLEEP in the same command). No work done, no branch. Leader: please set it back to TODO. Also note Docker Desktop was down on this wake-up, so e2e could not run.
+- 2026-11-19 04:43Z · leader · reset by leader: the dev run claimed it but its gate said SLEEP (stale cache); no branch exists
+- 2026-11-19 05:47Z · dev · PR #186 head 32d4c5e. F-10,F-13..F-17 done; docs rows marked. Verify: vitest (NumField.test.tsx new), e2e editor-a11y/gestures/templates/save-template/palette/phone/flow/navy/shell/keyboard pass locally. Known: gestures touch@768, editor-text 0.67% (pre-existing); editor-history not run here (no mysql client on PATH); pages/editor.test 'mounts the editor' fails on develop too. Number fields are now type=text role=spinbutton with arrow stepping (needed for the vi decimal comma).
+- 2026-11-19 05:48Z · leader · QA brief (leader): PR #186. Check every F-row against the spec, not only the tests. Focus: (1) NumField is now type=text role=spinbutton: aria-valuenow/min/max, ArrowUp/Down, Home/End if the spec's pattern needs them, typing '12,4' in vi and '12.4' in en both parse, invalid input does not move the item; (2) cards and history rows as aria-pressed buttons: arrow/Enter behaviour, Apply/Delete reachable, screen-reader name; (3) live regions: counter silent until near the limit, search count debounced (~600 ms); (4) handles aria-hidden yet gestures specs green; (5) editor.test.tsx 'mounts the editor for the owner': dev says it fails on develop too; run it alone 3x on develop and on the head and say whether it is a real failure or a load flake; (6) run editor-history (row locators changed; use your docker-exec mysql shim).
+- 2026-11-19 06:13Z · qa · QA_PASS on 32d4c5e (+ my test-only commit 58667cc, NumField.qa.test.tsx; PR head is now 58667cc). Local, Windows, own compose project/DB smem_test_e2e188, ports 18188/14188.
+  Mechanical (web, head): tsc 0 errors; eslint+prettier clean; lint:i18n ok; full vitest 74 files / 1348 tests pass (before my commit); NumField tests 17 pass. CI on PR: go/web/security pending at the time of writing (earlier run security pass), not red.
+  Item 5, editor.test.tsx 'mounts the editor for the owner': run alone 3x on develop 42e61f8 = 8/8 pass each time; 3x on the head = 8/8 pass each time; also passes inside the full-suite run on the head. I could not reproduce a failure either side: it is a load flake, not a real failure and not caused by T-188.
+  AC table: F-10 -> NumField test + my 17 tests: vi shows 12,4; '12,5' and '30.5' both commit; abc, 1,2,3, empty, blank, 0, 201, Infinity commit nothing and restore old value; aria-valuenow/min/max present; ArrowUp/Down step and clamp, vi writes 12,5; announcements say 12,3 in vi, printHint 'Letter (215,9 x 279,4 mm)' vi / '(215.9 x 279.4 mm)' en -> PASS. F-13 -> EditorSaveTemplate.test: counter aria-live off until 5 from the limit -> PASS. F-14 -> EditorPalette.test fake timers: count changes 600 ms after typing pauses -> PASS. F-15 -> cards/history rows are aria-pressed buttons in role=group, Apply/Delete outside any radiogroup; editor-templates 6/6 and editor-history 7/7 (incl. keyboard-only walk, Enter, Apply/Delete, Escape focus) pass -> PASS. F-16 -> handles aria-hidden (Stage.tsx); editor-gestures finds them via getByLabel: mouse drag/resize/rotate on A5/A4/Letter, Shift/Alt, flush-edge handle, keyboard spec all pass; editor-a11y tree (en+vi) pass -> PASS. F-17 -> printHint from locales -> PASS. docs rows F-10,F-13..F-17 marked fixed -> PASS.
+  E2E on head (make e2e flow, full suite 73 tests, then reruns): passes editor-a11y 8/8 (en+vi aria tree, contrast, targets, zoom), editor-gestures 6/7 + perf skipped, editor-templates 6/6, editor-save-template, editor-palette 7/7, editor-phone 4 + phone-qa 6, editor-flow(+qa,+stale), editor-navy, editor-shell, editor-keyboard, editor-text 10/10, class journey. editor-history 7/7 via a docker-exec mysql.exe shim (first full run had rate-limit 429 on later registrations; reset-limits then rerun of history/templates/text = 23/23 pass).
+  Failures, none from T-188: (a) editor-gestures 'touch at 768 px' fails identically on develop 42e61f8 (verified: 6 pass / this 1 fails the same way at 'the first tap selects') -> pre-existing. (b) design.spec step 6 fails identically on develop: PDF text extracted by pdftotext on Windows is garbled ('lớp' -> 'lp'), environment, not the PR. h2-gallery/journey were not rerun (journey needs the same PDF text; both hit the 429 in the first run, not a product error). Not run: print-check, make test-integration (no Go/migration/print change; diff is web + docs + e2e only).
+  Non-blocking: 1) typed() uses Number(), so '0x10' and '1e1' are accepted as 16 and 10; harmless (range-checked) but a plain-number regex would be stricter. 2) Counter flips aria-live off to polite in the same render that changes its text; some screen readers announce a region only if it was already live, so the near-limit warning may be silent on first crossing; worth one manual NVDA/VoiceOver check. 3) No Home/End on the spinbutton (spec does not ask for it). 4) Needs the owner's real screen reader pass, as the T-182 doc already says.
+- 2026-11-19 06:13Z · leader · Leader review: QA evidence is good (vitest 1348, editor e2e incl. history 7/7, editor.test.tsx flake not reproduced 8/8). Two items before merge: 1) F-13 (requirement 2): the 'Save as template' counter flips aria-live from off to polite in the same render as the text change, so the first near-limit warning can be silent (QA note). Fix: keep the region aria-live=polite at all times and only put text in it when near/over the limit (empty otherwise), or render the live region once and update its text a tick after it becomes live; add a test that the first near-limit message is written into an already-live region. 2) NumField typed(): reject '0x10', '1e1' and other non-decimal forms (accept digits with one '.' or ',' and an optional leading '-'); extend NumField tests. Nothing else; keep QA's NumField.qa.test.tsx. Then READY_FOR_QA with the new head.
+- 2026-11-19 06:19Z · dev · Rework head b1a5d19. (1) F-13: counter text stays a plain hint; new always-live visually-hidden aria-live=polite span (data-testid name-counter-live) is empty until 5 from the limit and is then written into the same node; EditorSaveTemplate.test asserts live from the start, empty at 54, same node with text at 55. (2) NumField typed() now needs /^-?(\d+\.?\d*|\.\d+)$/ after comma->dot: rejects 0x10, 1e1, +5, Infinity, 1.2.3 etc.; NumField.test extended. QA's NumField.qa.test.tsx kept. tsc, eslint, prettier clean; vitest src/book/editor 489 pass. e2e not rerun (no e2e references the counter).
+- 2026-11-19 06:51Z · qa · QA_PASS re-check on head b1a5d19 (PR #186; diff 58667cc..b1a5d19 = NumField.tsx, NumField.test.tsx, TemplatesPanel.tsx, EditorSaveTemplate.test.tsx only, nothing else). Local, Windows. CI on PR: go, web, security pass; e2e/go-integration/image skipped by D-37/D-38.
+  1) F-13 -> code: visible counter <p> no longer has aria-live; new always-mounted visually-hidden span aria-live=polite (data-testid name-counter-live, class exists in styles.css) is empty until 5 from the limit, then text goes into the same node, so no off-to-polite flip. Test: live from the start, empty at 54, same node (toBe) with '55 of 60 characters' at 55 -> PASS.
+  2) NumField typed() -> regex /^-?(\d+\.?\d*|\.\d+)$/ after comma->dot. Tests reject 0x10, 1e1, 1E2, +5, Infinity, empty, blank, 1.2.3, 1,2.3, --1, 5-, '.' and accept -3, 7., .5; vi '12,4' display/commit and en '12.4' still covered by NumField.test and my NumField.qa.test.tsx (kept) -> PASS.
+  Commands (web, head): vitest NumField + EditorSaveTemplate = 3 files 33 tests pass; full vitest 1358 tests pass (exit 0); tsc 0 errors; eslint src clean; prettier --check src/book/editor clean; lint:i18n ok.
+  E2E editor-a11y and editor-save-template: NOT run this time (Docker is up but the main compose stack is shared with dev on T-186; e2e.sh needs a separate project). Risk is low: only a hidden span plus a regex changed; e2e/editor-save-template.spec.mjs line 232 uses toContainText on the dialog (still matches, text now appears in the p and the hidden span). Evidence from the earlier pass on 32d4c5e still stands for the rest.
+  Non-blocking: owner's real NVDA/VoiceOver check of the counter is still advisable (T-182 doc checklist). Not run: make test-integration, print-check (no Go/print change).
+- 2026-11-19 06:51Z · leader · Leader review OK (head b1a5d19, CI green): web + docs + e2e specs only. Rework fixes exactly the two review items (always-live hidden span for the F-13 counter, strict decimal regex in NumField), tests prove both; full vitest 1358. e2e on the rework head not re-run (shared Docker stack busy; change is a hidden span and a regex; full e2e passed on 32d4c5e). Awaiting owner approval (D-47): the only open item is a real screen-reader check of the 'Save as template' counter near its 60-character limit (NVDA or VoiceOver), plus typing '12,4' in a size field with the UI in Vietnamese.
 
 <!-- tasks:end -->
 
@@ -6683,3 +6764,4 @@ Spec: .team/epics/E01-foundation/18-print-check-linux-parity.md (read it from th
 - 2026-11-18 — Team moved to the owner's Windows 10 PC (D-46): Go/Node 22/make/Docker/GCC installed, plugin patched for Windows. T-181 found already done as PR #179 (cloud session, board never updated) and re-queued for e2e. T-184 (Windows-only unit test fixes, PR #180) merged 2f89947. Board commits wait: develop now requires PRs.
 - 2026-11-18 — T-181 (phone mode, PR #179) merged 02bfdcd after owner approval: first merge under D-47. T-182 to TODO. T-185 filed (print-check 3 px drift in Linux CI; passed 298/298 locally on 2026-11-06).
 - 2026-11-19 — T-182 (editor accessibility and i18n audit, PR #183) merged 9c212e2 after owner approval. T-183 waits on T-186 (Linux print-check parity). F-08..F-17 from docs/editor-accessibility.md to be planned.
+- 2026-11-19 — T-185 (CI: Chromium install, step limits, journey race; PR #182) merged 0befa1e and board sync #184 merged 201c35b, both after owner approval. T-186 (Linux print-check parity) unblocked. T-187 and T-188 (from the T-182 audit) in QA/dev.
