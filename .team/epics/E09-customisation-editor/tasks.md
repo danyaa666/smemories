@@ -1250,19 +1250,19 @@ Spec: .team/epics/E09-customisation-editor/41-editor-accessibility-i18n-audit.md
 - 2026-11-18 18:23Z · leader · owner approved before merge (D-47)
 
 ### T-183 — [E09] Stage 2 exit check: one journey, performance budgets, parity, docs, report against the PRD exit criteria
-- **Status:** IN_QA
+- **Status:** CHANGES_REQUESTED
 - **Priority:** P2
 - **Type:** test
 - **Milestone:** M4
 - **Depends-on:** T-176, T-181, T-182, T-186
 - **Risk:** low
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** —
 - **Branch:** task/t-183-e09-stage-2-exit-check-one-journey-perfo
 - **PR:** https://github.com/danyaa666/smemories/pull/191
-- **Updated:** 2026-11-19 19:02Z by qa
-- **Comments-seen:** 4
+- **Updated:** 2026-11-19 22:05Z by leader
+- **Comments-seen:** 6
 
 Spec: .team/epics/E09-customisation-editor/42-stage2-exit-check.md (read it from the main checkout). stage2-journey spec (desktop and tablet), parity for every shipped template on A5/A4/Letter, measured budgets (100 items 30 fps at 4x throttle, print time within 10%, bundle, p95s, memory), API coverage table, docs completeness, docs/stage2-exit-report.md with the owner manual checklist
 
@@ -1271,5 +1271,54 @@ Spec: .team/epics/E09-customisation-editor/42-stage2-exit-check.md (read it from
 - 2026-11-18 18:23Z · leader · T-176/T-181/T-182 done; T-186 added as a dependency because the exit check's per-template print parity needs print-check green on Linux. Dev picks it once T-186 merges.
 - 2026-11-19 19:01Z · dev · PR #191 head 5273be2. Story spec passes 3/3 desktop + 3/3 tablet; print-check container 298/298; manual CI run 44587809688 green except image (Trivy stdlib CVE-2026-97054, not this PR); e2e job 77 passed/0 failed. Report: docs/stage2-exit-report.md (verdict: met with notes). FINDINGS: S2-01 print time at max layout +34% (budget 10%; typical +9.4%); S2-02 100-item drag 17.5 fps at 4x on this 2012 i7 PC (59.7 on the T-160 machine; QA to reproduce on a modern machine); S2-03 one 751 KB bundle; S2-04 touch test fails on this PC only (passes in CI); S2-05 no mysql client + xpdf before poppler on this PC; S2-06 image CVE. Not done: History e2e locally (CI ran it); check:api cannot run on Windows. QA: run the story + print-check on the head, reproduce one editor and one server budget number.
 - 2026-11-19 19:01Z · leader · QA brief (leader): PR #191 head 5273be2, CI run 44587809688 (e2e 77/0). Verify against the spec and the E09 PRD exit criteria: (1) stage2-journey.spec.mjs desktop and tablet green on the head (own stack), and a deliberate break of one journey step fails it; (2) full print-check in the Linux container; (3) reproduce one editor budget (S2-02, 100-item drag fps; say your machine and throttle) and one server budget (S2-01, print time at the maximum layout vs typical) and compare with the report's numbers; (4) docs/stage2-exit-report.md: every exit criterion has evidence or a finding, and the verdict follows from them (no criterion marked met without a measurement); (5) the pdftotext -enc UTF-8 change in tools/print-check/lib.mjs changes nothing on Linux (container counts same); (6) check-layout-api-coverage.sh fails when a layout route is removed (scratch, revert). Own compose project/ports; never down -v the main project.
+- 2026-11-19 22:04Z · qa · QA_PASS. PR #191, dev head 5273be2 plus my test-only commit 83839f8 (CI on 83839f8: go, web, security green; run 44612291616). Machine: Windows PC, Intel i7-3940XM (2012, 8 threads), Playwright Chromium, own compose project smemqa183 (ports 23306/26379/29000, removed afterwards), poppler first on PATH; print-check in the ubuntu-24.04 container (scripts/print-check-linux.sh).
+  BRIEF POINTS
+  (1) stage2-journey: journey-desktop 3/3 green, journey-tablet 3/3 green (1.2-1.3 min each; one extra tablet repeat in the first 3x3 run died with ERR_CONNECTION_REFUSED at sign-up because the vite preview process was gone, a harness glitch on my side, then 3/3 on a clean rerun). Deliberate break (Store.redo() made a no-op in web/src/book/editor/store.ts, reverted) fails the desktop story at 'STEP FAILED: Memory Book: undo and redo'.
+  (2) Full print-check in the container on 5273be2: 297/298 in 2082 s; the one failure was 'A4: the editor stage draws the cover ... as the book screen does': A4 cover 30.249 % of pixels differ (budget 0.5 %). Rerun of that test alone: A5 0.075/0.151, A4 0.130/0.257, Letter 0.034/0.000 all pass, so it is a flake (about 1 in 2 of my runs; dev saw 298/298 twice). Not caused by this PR (test of T-159, untouched). Worst parity numbers from my run (168 comparisons): A4 notes-doodle/stickers/tape p2 2.159 % vs 0.547 % plain (1.612 pp, inside the Linux exception of T-186), A4 profile-tilted 0.848 vs 0.225 (0.623 pp), everything else below 0.5 pp over plain; same as the report.
+  (3) Budgets reproduced on the same PC (no other machine available, so not 'a modern machine'): S2-02 100 items drag at 4x CPU throttle (editor-gestures 'performance', 3 runs): 18.2, 17.8, 16.6 fps, p95 frame 100 ms (report 17.1-17.9): budget 30 missed, same as the report. S2-01 print time, 30-page book, median of 5 (stage2-budgets, STAGE2_BUDGETS=1): typical layout 2485 vs 2303 ms = +8 % (report +9.4 %); maximum layout 2985 vs 2176 ms = +37 % (report +34 %): budget 10 % missed at the maximum, same as the report. Also (c) 229 KB gzip, drawn after 6.05 s at 4x; (d) save p95 96.9 ms, template-list p95 36.5, apply-template p95 85.3; (e) heap +15.6 %, nodes and listeners +0. All within noise of the report.
+  (4) Report vs repo: README links every docs/editor-*.md (7/7); stale-claim grep finds none; docs/e2e.md has the commands; dev-shortcuts.md unchanged; findings and owner checklist present. GAP FOUND AND CLOSED: the Memory Book fixture-layout parity test only compared cover and notes pixels (profile and back were checked for text only), yet the report says profile and back are covered. I added them (commit 83839f8, test only): A5 profile 0.255 % (plain 0.253), A5 back 0.659 (0.656), A4 profile 0.229 (0.223), A4 back 0.098 (0.091), Letter profile 0.101 (0.098), Letter back 0.062 (0.052): all pass (layout adds under 0.01 pp). I did NOT add the 2 px item check there: on A5 the item prof01 follows the template's own ink (x0 116 on screen vs 109 in print), so it is not a meaningful measure; the Navy test does check items on all four pages.
+  (5) pdftotext -enc UTF-8: container run has 298 tests as before, no new failure from it.
+  (6) scripts/check-layout-api-coverage.sh on a scratch copy: baseline 10 routes, rc 0; removing the abuse-test row of restore, the class-matrix row of reset, or the Postman requests of template-delete each gives MISSING and rc 1. Note: renaming a route in openapi.yaml only drops it from the list (9 routes, rc 0), the script cannot see a route removed from the spec.
+  Other runs: full scripts/e2e.sh on the head (poppler first on PATH, no mysql client): 67 passed, 13 skipped (7 History without mysql, 5 budgets, perf after the failed touch test in the serial file), 2 failed, both pre-existing and not from this PR: S2-04 touch test (fails here, passes on the CI runner) and editor-text 'edit view equals the printed view' (0.62-0.68 % against the 0.6 % limit on Windows, 1 of 2 on rerun; T-161 test). make test-integration (-race, private stack): all packages ok except internal/auth, which hit the 30 min timeout while packages ran in parallel on this slow PC; alone: ok 902 s. This PR changes no Go.
+  NON-BLOCKING OBSERVATIONS for leader/dev: (a) Report section 2 row '2b Move, resize... T-160 | met' cites the 100-item drag, which misses its budget on the only machine measured: should read met with note (S2-02). (b) The perf test asserts >=30 fps, so make e2e fails on this PC; decide whether the owner's PC should run it. (c) The A4 'editor stage' print-check flake (30 % once) should become a small follow-up (likely lazy images, like T-186). (d) Report says 2 failures in dev's full local run; the touch test and the perf test both fail on this PC, so the count there looks short. (e) Q: nothing under .team in the PR. Owner manual checklist at the end of the report is complete (Telex, iOS, Gboard, Firefox, screen readers, phone, real tablet, privacy review sign-off, Q-065).
+- 2026-11-19 22:05Z · leader · Leader review: tests and measurements accepted (QA reproduced both budgets; QA's 83839f8 adds Memory Book profile/back parity). The report must state the misses plainly before the owner decides. Dev, docs/stage2-exit-report.md only: (1) row 2b verdict 'met with note (S2-02)'; (2) overall verdict: functional exit criteria met; NOT met on two performance budgets: S2-01 print time at the maximum layout +34..+37 % (budget 10 %; typical +8..+9.4 %), S2-02 drag 16.6..18.2 fps at 4x throttle on the 2012 i7 Windows PC (budget 30; 59.7 on the T-160 machine; no mid-range reference device measured); follow-ups T-193 (S2-01) and T-194 (flaky A4 editor-stage test, drag-fps test on slow machines, Windows editor-text 0.62 %); (3) the parity row names cover, profile, notes and back, and why the 2 px item check is skipped on A5 profile. No code change. Push, go/web/security green, READY_FOR_QA; leader checks the doc diff, no new QA run.
+
+### T-193 — [E09] Print time of a book with a maximum layout is +37 % (budget 10 %)
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** perf
+- **Milestone:** M4
+- **Depends-on:** T-183
+- **Risk:** medium
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-11-19 22:50Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E09-customisation-editor/45-print-time-at-maximum-layout.md (read it from the main checkout). Stage 2 finding S2-01: profile the print path with the maximum layout and bring it within 10 %.
+
+#### Comments
+
+### T-194 — [E09] Stage 2 tests: A4 editor-stage parity flake, and the drag-fps test on slow machines
+- **Status:** BACKLOG
+- **Priority:** P3
+- **Type:** test
+- **Milestone:** M4
+- **Depends-on:** T-183
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-11-19 22:50Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E09-customisation-editor/46-stage2-test-flake-and-slow-machine.md (read it from the main checkout). QA on T-183: flaky A4 editor-stage picture, drag-fps test always fails on the Windows PC, editor-text 0.62 % on Windows.
+
+#### Comments
 
 <!-- tasks:end -->
