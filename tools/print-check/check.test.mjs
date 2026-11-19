@@ -1142,7 +1142,7 @@ describe("layout layer: the printed page is the page on screen (T-154)", () => {
       const baseline = {};
       {
         const plain = await printAndShow(makeBook({ size, notes: 2, template: "memory-book" }), size, `layout-base-${size}`);
-        for (const [label, nth, pdfPage] of [["cover", 0, 1], ["notes", 0, 3], ["notes", 1, 4]])
+        for (const [label, nth, pdfPage] of [["cover", 0, 1], ["profile", 0, 2], ["notes", 0, 3], ["notes", 1, 4], ["back", 0, 5]])
           baseline[`${label}${nth}`] = difference(raster(plain.file, pdfPage, DPI), await sheetPicture(plain.page, label, nth));
         await plain.page.close();
       }
@@ -1168,7 +1168,7 @@ describe("layout layer: the printed page is the page on screen (T-154)", () => {
       assert.ok(!("ghost01" in fits), "an asset the registry does not have is skipped");
       assert.equal(await r.page.locator('[data-layout-item="ghost02"] *').count(), 0, "a design image that is gone draws nothing (no broken-image frame)");
 
-      for (const [label, nth, pdfPage] of [["cover", 0, 1], ["notes", 0, 3], ["notes", 1, 4]]) {
+      for (const [label, nth, pdfPage] of [["cover", 0, 1], ["profile", 0, 2], ["notes", 0, 3], ["notes", 1, 4], ["back", 0, 5]]) {
         const pdfPic = raster(r.file, pdfPage, DPI);
         const scr = await sheetPicture(r.page, label, nth);
         assert.ok(Math.abs(pdfPic.w - scr.w) <= 2 && Math.abs(pdfPic.h - scr.h) <= 2, `${label}: ${pdfPic.w}x${pdfPic.h} against ${scr.w}x${scr.h}`);
@@ -1177,6 +1177,8 @@ describe("layout layer: the printed page is the page on screen (T-154)", () => {
         console.log(`# ${size} ${label}#${nth}: difference ${(diff * 100).toFixed(3)} % (the same page without the layout: ${(base * 100).toFixed(3)} %)`);
         assert.ok(diff - base < 0.005, `${size} ${label}: ${(diff * 100).toFixed(3)} % of the pixels differ, ${(base * 100).toFixed(3)} % without the layout (the layout may add 0.5 %)`);
         let checked = 0;
+        // T-183 QA: profile and back are compared by pixels only: the fixture's text sits on the template's own ink there (A5 profile: its x0 is the template's, 116 against 109)
+        if (label === "profile" || label === "back") continue;
         for (const b of await itemBoxes(r.page, label, nth, scr)) {
           const box = { x0: b.x0 - 6, y0: b.y0 - 6, x1: b.x1 + 6, y1: b.y1 + 6 };
           const a = inkBox(scr, box), p = inkBox(pdfPic, box);
