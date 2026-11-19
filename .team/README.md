@@ -10,19 +10,20 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 7 | T-023, T-024, T-025, T-031, T-050, T-182, T-183 |
-| IN_PROGRESS | 1 | T-181 |
+| BACKLOG | 5 | T-023, T-024, T-025, T-031, T-050 |
+| TODO | 2 | T-186, T-183 |
+| READY_FOR_QA | 1 | T-185 |
 | MERGED | 32 | T-184, T-150, T-151, T-152, T-153, T-154, T-155, T-156, T-157, T-158, T-159, T-160, T-161, T-162, T-163, T-164, T-165, T-166, T-167, T-168, T-169, T-170, T-171, T-172, T-173, T-174, T-175, T-176, T-177, T-178, T-179, T-180 |
-| DONE | 136 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138, T-139, T-140, T-141, T-142, T-143, T-144, T-145, T-146, T-147, T-149, T-148 |
+| DONE | 138 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138, T-139, T-140, T-141, T-142, T-143, T-144, T-145, T-146, T-147, T-149, T-148, T-181, T-182 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Epics (done/total):** E06-go-live 1/1; E09-customisation-editor 32/35; (unfiled) 135/148
+**Epics (done/total):** E06-go-live 1/1; E09-customisation-editor 34/35; (unfiled) 135/150
 
 **Awaiting your review (MERGED):** T-184 ([E01] Unit tests pass on a Windows dev machine (make test with -race)); T-150 ([E09] Spike: layout editor architecture and ADR 0004); T-151 ([E09] Asset pack and registry for stickers, shapes and frames); T-152 ([E09] Backend: student-uploaded design images (backgrounds and decorations)); T-153 ([E09] Layout document model and API (backend)); T-154 ([E09] Web layout runtime: the book draws a layout (Memory Book)); T-155 ([E09] Fix three stale Postman assertions in the customisation-editor collection); T-156 ([E09] Layout version must never go back (reset / template change)); T-157 ([E09] print-check: refuse a foreign server on its port; refresh test counts in docs); T-158 ([E09] Editor state: document store, undo/redo, autosave and conflict handling (web)); T-159 ([E09] Editor route and shell: page strip, zoom, selection overlay, property panel (web)); T-160 ([E09] Editor gestures: move, resize, rotate, snap, guides, with keyboard control (web)); T-161 ([E09] Editor text boxes: add, type in place, font, size, colour, align (web)); T-162 ([E09] Editor palette: stickers, shapes, frames, own images and the page background (web)); T-163 ([E09] Layout version history and restore (backend)); T-164 ([E09] Palette follow-ups: copy, history edge, distinct cap/quota code (web + one small API change)); T-165 ([E09] Editor version history panel: list, preview and restore (web)); T-166 ([E09] Navy Classic: page kinds and editable elements for the layout editor (web + manifest)); T-167 ([E09] Class book carries each member's layout (server cap, privacy, web wiring)); T-168 ([E09] History e2e hardening: friendly mysql-missing message, QA probe cases (tests only)); T-169 ([E09] Spike: Doory-template import and a Fabric.js image studio beside the DOM editor (ADR 0005)); T-170 ([E09] Editor flow: page by page, Save and done, Print, back to the book manage page (web)); T-171 ([E09] Stretching shapes: rectangle and ellipse that fill their box (registry + web)); T-172 ([E09] Page templates: model, shipped storage, validator gate and read route (Go + web preview)); T-173 ([E09] Own page templates and the apply API (Go): save my page, apply a template per section); T-174 ([E09] Stabilise the editor-gestures touch test (flake: 2 to 3 px against 0.5 allowed)); T-175 ([E09] Template gallery and apply, per section (web): shipped and own templates, preview, apply, delete own); T-176 ([E09] Save my page as a template (web): name it, see what is kept, use it again); T-177 ([E09] Shipped page templates for Memory Book: four or more looks per page kind, authored by us); T-178 ([E09] Shipped page templates for Navy Classic: four or more looks per page kind, authored by us); T-179 ([E09] Stage 2 hardening: fuzz the layout parsers, storage budget per user, abuse limits, no content in logs); T-180 ([E09] Make the profile, notes and back template choices a real choice (Memory Book and Navy Classic))
 
 **Open questions for you:** Q-064 (Doory templates: licence route, studio, and template colours (ADR 0005, T-169)); Q-065 (Storage cap per user for layout history (T-179, docs/layout-storage-budget.md): cap now, or watch and decide at go-live?)
 
-_Board last written 2026-11-18 10:10Z_
+_Board last written 2026-11-18 18:23Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -6549,7 +6550,7 @@ Spec: .team/epics/E09-customisation-editor/07-journey-print-check-docs.md.
 - **Branch:** task/t-184-e01-unit-tests-pass-on-a-windows-dev-mac
 - **PR:** 180
 - **Updated:** 2026-11-18 10:10Z by leader
-- **Comments-seen:** 6
+- **Comments-seen:** 8
 
 Spec: .team/epics/E01-foundation/16-windows-dev-machine-tests.md (read it from the main checkout). Four tests fail only on Windows (D-46): booklayout hostile-input time ceiling under -race, httpx Serve shutdown, notes spool symlink and read-only dir. Fix the tests, not the product; CI on Linux must stay green.
 
@@ -6575,6 +6576,58 @@ Spec: .team/epics/E01-foundation/16-windows-dev-machine-tests.md (read it from t
   (a) Existing Windows checkouts (main and worktrees) need 'git add --renormalize' / re-checkout to get LF; docker/mysql/init-test-grants.sh was CRLF in the main checkout, so 'make up' grant step fails here ('set: -: invalid option') and the smem_test_% grant was missing: integration tests got Error 1044 until I applied the grant by hand (tr -d CR | sh inside the mysql container, idempotent GRANT, no restart/reset). Fix the main checkout line endings.
   (b) The running compose project here is named 'smemories', not 'awesomeproject1' as CLAUDE.md says.
 - 2026-11-18 10:10Z · leader · merged 2f89947. Review: test-side only, Windows-only skips with reasons, httpx keep-alive root cause fixed; 1 s ceiling and 20 s vitest timeout also apply on Linux (alloc ceiling stays the hard gate). For owner to check: make test passes on your Windows PC; existing checkouts need 'git add --renormalize .' once (eol=lf).
+
+### T-185 — [E01] Print check: A5 notes drift 3 px, step hangs to timeout; develop e2e cannot install Chromium
+- **Status:** READY_FOR_QA
+- **Priority:** P2
+- **Type:** bug
+- **Milestone:** M4
+- **Depends-on:** —
+- **Risk:** low
+- **Rework:** 1
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** task/t-185-e01-print-check-a5-notes-drift-3-px-step
+- **PR:** https://github.com/danyaa666/smemories/pull/182
+- **Updated:** 2026-11-18 17:49Z by dev
+- **Comments-seen:** 14
+
+Spec: .team/epics/E01-foundation/17-print-check-drift-and-e2e-chromium.md (read it from the main checkout). Found reviewing T-181: manual CI 44293267820 print check failed (note01 y0 1516 vs 1513 at 192 dpi) then hung to the 15 min timeout; develop baseline 44298102605 failed twice at Install Chromium.
+
+#### Comments
+- 2026-11-18 12:47Z · leader · Leader: context from the previous leader session: QA ran print-check 298/298 LOCALLY (macOS) on develop at cc3d8c6 (T-176 merge, 2026-11-06), i.e. the same develop the CI run failed on. So the 3 px A5 notes mismatch may be specific to the Linux CI runner (fonts, Chromium build, DPI), not a code drift. First step: run print-check locally on this Windows PC on develop head and compare; only then decide code bug vs environment.
+- 2026-11-18 15:03Z · leader · Reclaimed: the dev run was stopped by an app restart. Worktree .team/worktrees/T-185 has an uncommitted edit to .github/workflows/ci.yml and no results yet; the next dev run resumes from it (check the diff first).
+- 2026-11-18 15:52Z · dev · dev interim (2026-11-18). (1) Windows: print-check cannot run here at all (spawn npx ENOENT, then C:\C:\ paths and pdftotext differences); not fixed, separate task if wanted. Docker is down, so no local Linux repro. (2) CI evidence, branch task/t-185-*: run 44332084141 Install Chromium OK (17 s) with the apt retry/lock fix; journey 63 passed, 1 failed: editor-phone.spec.mjs:344 read --kb right after dispatchEvent, React had not rendered yet (race, Linux only) -> now expect.poll. Run 44334658321 (head fdcea18): journey 63/63 passed; print check ran to the end: 298 tests, 292 pass, 6 fail, 1147 s (19 min). So there is NO hang: the suite is just longer than the 15 min step limit (T-149 set it when it had far fewer tests); node:test reports the first failure at once and keeps going. All 6 failures are screen-vs-print pixel parity on Linux: A5 note01 y0 +3 px (whole text line 3 px lower on screen, ink rows shown in the log), A4 notes-doodle/stickers/tape 2.159 % vs 0.547 % baseline, A4 profile-tilted, Letter thin01 y1 7 px. The layout parity tests (T-154) were never run on Linux CI before, so this looks like Linux font hinting (screen rounds metrics, PDF does not), not code drift on develop. Testing --font-render-hinting=none in run 44340594952.
+- 2026-11-18 16:24Z · dev · dev: PR #182 (head 3ecab96) has the CI fixes (Chromium install, keyboard-inset race, limits 30/60 min, docs). Requirement 2 (Linux screen-vs-print parity, 6 failing tests) is not solved after 2 approaches (evidence only; hinting off was worse: 10 fail, reverted). Needs a Linux environment to iterate: Docker Desktop is down here and print-check does not run on Windows. Options for the leader: (a) start Docker/WSL so I can reproduce in a ubuntu-24.04 container; (b) merge #182 as is and make the 6 Linux-failing parity tests skip on Linux (they pass on macOS; QA runs print-check locally per D-37) with a follow-up task; (c) a dev on a Mac/Linux box. Print-check ends cleanly; it never hung (19-21 min suite vs 15 min limit).
+- 2026-11-18 16:24Z · dev · Linux parity failures need a Linux repro; PR #182 has the CI fixes; see comment
+- 2026-11-18 16:26Z · leader · Rescoped by leader: T-185 = PR #182 as it is (Chromium install fixed, step/job limits 30/60 min, journey race fixed, no hang: the suite outran the 15 min limit). Requirement 2 (the six Linux parity failures) moved to T-186. Dev: set T-185 READY_FOR_QA on PR #182 with its CI run ids; QA checks the CI changes, not print-check parity.
+- 2026-11-18 16:29Z · dev · PR #182 head 3ecab96, mergeable; develop's only newer commit touches .team/CLAUDE.md/docs, no overlap. PR CI run 44347001063: go, web, security pass (e2e/image/integration skipped per D-37). Manual runs: 44332084141 (Install Chromium OK 17 s), 44334658321 (journey 63/63; print-check ran to the end, 292/298, 6 Linux parity failures now T-186). QA: check ci.yml changes (Chromium apt retry/lock, step/job limits 30/60 min, editor-phone.spec keyboard-inset expect.poll), docs; not print-check parity.
+- 2026-11-18 16:29Z · dev · dev: READY_FOR_QA, PR #182 head 3ecab96, CI run 44347001063 green (go/web/security). No new code.
+- 2026-11-18 16:44Z · leader · QA brief (leader): scope is PR #182 only (CI/e2e infra), not print-check parity (T-186). Check: (1) ci.yml diff: Chromium install retry and apt-lock handling are correct YAML and cannot mask a real install failure (it must still fail after the retries); step 30 min / job 60 min limits are deliberate; (2) the editor-phone '--kb' race fix uses expect.poll and still asserts the same thing; (3) docs/e2e.md matches; (4) the manual CI runs on the branch: journey 63/63 and print-check 292/298 with exactly the six T-186 failures, nothing new; (5) nothing outside CI, tools/e2e and docs changed. Record run ids and head SHA.
+- 2026-11-18 17:16Z · qa · QA_PASS T-185, PR #182 head 3ecab96 (CI/e2e infra only; print-check parity is T-186). Evidence is from CI and diff reading; nothing was run locally (Windows cannot run print-check). (1) ci.yml diff read: apt conf file Acquire::Retries 3 / Timeout 20 / DPkg::Lock::Timeout 120; 3 attempts of timeout -k 5 200; after a failed attempt it runs pkill -x apt-get and dpkg --configure -a, both with || true, and the loop still ends in 'exit 1', so a persistent install failure still fails the step. Worst case 3x200 s plus cleanup is about 11 min, inside the new 12 min step limit. Step 30 min and job 60 min are consistent with the observed 19-21 min suite and are explained in comments and docs. The runs executing the workflow prove the YAML parses. (2) editor-phone.spec.mjs:344: the same assertion (--kb > 300) now runs under expect.poll over the same page.evaluate; it asserts the same thing and only waits for React's render. (3) docs/e2e.md: 298 tests, 19-21 min on CI, 30/60 min limits: matches ci.yml. (4) Manual CI run 44350931687 ON THE HEAD 3ecab96 (I started it): Install Chromium OK, 1 attempt, 16 s; guard-test 8/8; journey 63 passed (6.1 m); print-check 298 tests, 292 pass, 6 fail, ended cleanly (about 19.5 min, no hang), failures exactly the six T-186 ones: A5 notes note01 y0 1516 vs 1513, A4 profile-tilted 0.848 %, A4 notes-doodle/stickers/tape 2.159 %, Letter thin01 y1 323 vs 330. Nothing new. Earlier run 44334658321 (head fdcea18; code identical to the head, only docs/e2e.md differs) gave the same 63/63 and 292/298 with the same six. The overall run conclusion is failure, because of print-check. The PR run 44347001063 (go, web, security) is green. Skipped per D-37 (go-integration and e2e only run by hand). In run 44350931687 go-integration, go, web, security and image passed. (5) FINDING, non-blocking: the diff touches tools/print-check/check.test.mjs, outside your 'CI, tools/e2e, docs' scope: a leftover T-185 diagnostic, the function rowsOf and a ' T185DIAG {json}' suffix on the failure message at the layout-parity assert (about line 1188). It does not change what is asserted (the message is only extended when the assertion already fails), but it dumps a large JSON blob into the failure text and leaves the 'The extent of the dark pixels' JSDoc detached from inkBox. Either accept it as help for T-186 or ask dev to revert it; I did not edit it. Observation: develop's e2e job stays red until T-186 lands, because 6 print-check tests fail on Linux.
+- 2026-11-18 17:16Z · leader · Leader review: everything else is OK (QA run 44350931687: Chromium 16 s first try, journey 63/63, print-check 292/298 = exactly the T-186 six; retry still fails the step after 3 attempts; 30/60 min limits; expect.poll keeps the --kb > 300 check). One blocking item: 1) tools/print-check/check.test.mjs (~line 1188): remove the leftover T185DIAG diagnostic (rowsOf helper and the JSON suffix on the parity assert) and reattach the inkBox JSDoc, so the file is identical to develop. If the diagnostic helps T-186, re-add it on the T-186 branch. No other change; push, keep CI green, back to READY_FOR_QA (QA only needs to confirm the file now matches develop).
+- 2026-11-18 17:44Z · dev · dev: PR #182 stays READY_FOR_QA, nothing changed.
+- 2026-11-18 17:49Z · dev · Rework 1: tools/print-check/check.test.mjs restored to origin/develop (T185DIAG rowsOf helper, JSON suffix removed, inkBox JSDoc reattached); git diff origin/develop -- that file is empty, LF. Head abb5c1a. PR CI run 44362103829: go, web, security pass; e2e/image/integration skipped (D-37). Nothing else changed vs 3ecab96.
+- 2026-11-18 17:49Z · leader · Leader pre-check of the rework (for QA to confirm): head abb5c1a vs 3ecab96 changes only tools/print-check/check.test.mjs (+1/-12), and that file now has an empty diff against origin/develop. PR CI 44362103829 green. QA: confirm and pass; no re-run of e2e needed (no code under test changed).
+
+### T-186 — [E01] Print check on Linux: six screen-vs-print parity failures
+- **Status:** TODO
+- **Priority:** P2
+- **Type:** bug
+- **Milestone:** M4
+- **Depends-on:** T-185
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-11-18 16:26Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E01-foundation/18-print-check-linux-parity.md (read it from the main checkout). Split out of T-185: Linux CI print-check 292/298, six layout parity failures that never ran on Linux before; reproduce in a local ubuntu-24.04 container (Docker is up).
+
+#### Comments
 
 <!-- tasks:end -->
 
@@ -6628,3 +6681,5 @@ Spec: .team/epics/E01-foundation/16-windows-dev-machine-tests.md (read it from t
 - 2026-10-17 — T-090 merged in two PRs (#83 39a66f9, #84 39ea415): migrate/smoke/hygiene fixes and the SES go-live fixes (loud sandbox/unverified-sender errors, bounded shutdown drain, resend refund cap). Item 9 waits for the go-live phase. T-089 accepted? pending. First-phase code work left: T-029 (MinIO image) and the small T-091 leftovers.
 - 2026-10-26 — Owner chose the class yearbook (E07) before go-live (D-36); nine specs written (T-026, T-125..T-131, T-027). T-026 (class foundation API, PR #121, head 98571b3) passed QA and my review, awaiting `team approve` (Q-056). Owner asked to pause `go-integration` and `e2e` in CI (D-37); T-132 merged 9be9475: both jobs run by hand only, QA runs them locally (CLAUDE.md "CI scope").
 - 2026-11-18 — Team moved to the owner's Windows 10 PC (D-46): Go/Node 22/make/Docker/GCC installed, plugin patched for Windows. T-181 found already done as PR #179 (cloud session, board never updated) and re-queued for e2e. T-184 (Windows-only unit test fixes, PR #180) merged 2f89947. Board commits wait: develop now requires PRs.
+- 2026-11-18 — T-181 (phone mode, PR #179) merged 02bfdcd after owner approval: first merge under D-47. T-182 to TODO. T-185 filed (print-check 3 px drift in Linux CI; passed 298/298 locally on 2026-11-06).
+- 2026-11-19 — T-182 (editor accessibility and i18n audit, PR #183) merged 9c212e2 after owner approval. T-183 waits on T-186 (Linux print-check parity). F-08..F-17 from docs/editor-accessibility.md to be planned.
