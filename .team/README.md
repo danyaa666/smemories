@@ -11,20 +11,18 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 5 | T-023, T-024, T-025, T-031, T-050 |
-| TODO | 1 | T-183 |
-| QA_PASS | 2 | T-187, T-188 |
-| CHANGES_REQUESTED | 1 | T-186 |
+| TODO | 2 | T-189, T-183 |
 | MERGED | 32 | T-184, T-150, T-151, T-152, T-153, T-154, T-155, T-156, T-157, T-158, T-159, T-160, T-161, T-162, T-163, T-164, T-165, T-166, T-167, T-168, T-169, T-170, T-171, T-172, T-173, T-174, T-175, T-176, T-177, T-178, T-179, T-180 |
-| DONE | 139 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138, T-139, T-140, T-141, T-142, T-143, T-144, T-145, T-146, T-147, T-185, T-149, T-148, T-181, T-182 |
+| DONE | 143 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138, T-139, T-140, T-141, T-142, T-143, T-144, T-145, T-146, T-147, T-185, T-186, T-190, T-187, T-188, T-149, T-148, T-181, T-182 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Epics (done/total):** E06-go-live 1/1; E09-customisation-editor 34/35; (unfiled) 136/152
+**Epics (done/total):** E06-go-live 1/1; E09-customisation-editor 34/35; (unfiled) 140/154
 
 **Awaiting your review (MERGED):** T-184 ([E01] Unit tests pass on a Windows dev machine (make test with -race)); T-150 ([E09] Spike: layout editor architecture and ADR 0004); T-151 ([E09] Asset pack and registry for stickers, shapes and frames); T-152 ([E09] Backend: student-uploaded design images (backgrounds and decorations)); T-153 ([E09] Layout document model and API (backend)); T-154 ([E09] Web layout runtime: the book draws a layout (Memory Book)); T-155 ([E09] Fix three stale Postman assertions in the customisation-editor collection); T-156 ([E09] Layout version must never go back (reset / template change)); T-157 ([E09] print-check: refuse a foreign server on its port; refresh test counts in docs); T-158 ([E09] Editor state: document store, undo/redo, autosave and conflict handling (web)); T-159 ([E09] Editor route and shell: page strip, zoom, selection overlay, property panel (web)); T-160 ([E09] Editor gestures: move, resize, rotate, snap, guides, with keyboard control (web)); T-161 ([E09] Editor text boxes: add, type in place, font, size, colour, align (web)); T-162 ([E09] Editor palette: stickers, shapes, frames, own images and the page background (web)); T-163 ([E09] Layout version history and restore (backend)); T-164 ([E09] Palette follow-ups: copy, history edge, distinct cap/quota code (web + one small API change)); T-165 ([E09] Editor version history panel: list, preview and restore (web)); T-166 ([E09] Navy Classic: page kinds and editable elements for the layout editor (web + manifest)); T-167 ([E09] Class book carries each member's layout (server cap, privacy, web wiring)); T-168 ([E09] History e2e hardening: friendly mysql-missing message, QA probe cases (tests only)); T-169 ([E09] Spike: Doory-template import and a Fabric.js image studio beside the DOM editor (ADR 0005)); T-170 ([E09] Editor flow: page by page, Save and done, Print, back to the book manage page (web)); T-171 ([E09] Stretching shapes: rectangle and ellipse that fill their box (registry + web)); T-172 ([E09] Page templates: model, shipped storage, validator gate and read route (Go + web preview)); T-173 ([E09] Own page templates and the apply API (Go): save my page, apply a template per section); T-174 ([E09] Stabilise the editor-gestures touch test (flake: 2 to 3 px against 0.5 allowed)); T-175 ([E09] Template gallery and apply, per section (web): shipped and own templates, preview, apply, delete own); T-176 ([E09] Save my page as a template (web): name it, see what is kept, use it again); T-177 ([E09] Shipped page templates for Memory Book: four or more looks per page kind, authored by us); T-178 ([E09] Shipped page templates for Navy Classic: four or more looks per page kind, authored by us); T-179 ([E09] Stage 2 hardening: fuzz the layout parsers, storage budget per user, abuse limits, no content in logs); T-180 ([E09] Make the profile, notes and back template choices a real choice (Memory Book and Navy Classic))
 
-**Open questions for you:** Q-064 (Doory templates: licence route, studio, and template colours (ADR 0005, T-169)); Q-065 (Storage cap per user for layout history (T-179, docs/layout-storage-budget.md): cap now, or watch and decide at go-live?)
+**Open questions for you:** Q-064 (Doory templates: licence route, studio, and template colours (ADR 0005, T-169)); Q-065 (Storage cap per user for layout history (T-179, docs/layout-storage-budget.md): cap now, or watch and decide at go-live?); Q-067 (After the stage 2 exit check (T-183): go live (M2) next, or class yearbook (M3) first?)
 
-_Board last written 2026-11-19 09:33Z_
+_Board last written 2026-11-19 15:26Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -733,6 +731,15 @@ Dev measured the worst case per user in T-179: 20 books x (1 layout + 30 snapsho
 - **Answer:** Install on Windows (owner, in chat 2026-11-18). Recorded as D-46.
 
 Context: the team now runs from this PC (Windows 10, Git Bash, checkout on develop). Dev woke for T-181 and found no go (need 1.26), node (need 22.12-22.x), npm, make or docker on PATH, so nothing can be built, tested or linted (README s5 needs make build/test/lint green; integration tests need MySQL/MinIO/Redis via docker compose; e2e needs Playwright). Options: A) Install natively on Windows: Go 1.26, Node 22 LTS, GNU make (winget), Docker Desktop. Cost: free (Docker Desktop is free for personal use). Risk: Makefile/shell scripts may assume Linux; more Windows-only fixes likely. B) Enable WSL2 + Ubuntu, clone the repo inside WSL, install Go/Node/make/docker there, run Claude Code from WSL. Cost: free; ~30-60 min setup by you (needs admin, one reboot). Risk: the desktop app's Code tab would point at the WSL folder; usage bridge not needed there if run from a terminal. C) Run the team on the machine it ran on before (last activity 2026-11-06). Cost: none if it still exists. Blocked meanwhile: all dev and QA work (T-181, then T-182, T-183). Planning, reviews and questions continue.
+
+### Q-067 — After the stage 2 exit check (T-183): go live (M2) next, or class yearbook (M3) first?
+- **Status:** OPEN
+- **Asked:** 2026-11-19 11:22Z
+- **Blocks:** T-050,T-023
+- **Recommendation:** A: go live. The M2 prerequisites are done (T-022 image, E12 security fixes T-098..T-110, E13 terms T-111/T-112); only the deploy path is left: T-050 remove dev shortcuts -> T-023 AWS infra + pipeline -> T-024 observability, T-025 backups/export, T-031 auth hardening. Real users find real problems; M3 builds on top of a product nobody can use yet. Needs from you: an AWS account for the team (or a sandbox), a budget ceiling per month, and the domain.
+- **Answer:** _(pending)_
+
+Context: the dev pipeline drops below its minimum (3 of 4 ready tasks) once T-186/T-188 merge; T-183 is the last planned M4 task. Options: A) M2 go live (above; costs AWS money, est. small instance + RDS + S3, I will put a cost table in the T-023 spec before any spend); B) M3 class yearbook (E07 foundation T-026/T-027 done; next: invites, roles UI, assembly) - stays local, no spend, but nothing reaches users; C) more editor polish (F-11/F-12 design pass, template studio from Q-064) - lowest value now. Meanwhile I keep dev on T-183 and the T-186/T-188 merges; nothing irreversible starts before your answer.
 
 <!-- questions:end -->
 
@@ -6618,19 +6625,19 @@ Spec: .team/epics/E01-foundation/17-print-check-drift-and-e2e-chromium.md (read 
 - 2026-11-19 04:53Z · leader · owner approved before merge (D-47)
 
 ### T-186 — [E01] Print check on Linux: six screen-vs-print parity failures
-- **Status:** CHANGES_REQUESTED
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** bug
 - **Milestone:** M4
 - **Depends-on:** T-185
 - **Risk:** low
 - **Rework:** 1
-- **Owner-approved:** —
+- **Owner-approved:** yes
 - **Assignee:** —
 - **Branch:** task/t-186-e01-print-check-on-linux-six-screen-vs-p
 - **PR:** https://github.com/danyaa666/smemories/pull/187
-- **Updated:** 2026-11-19 09:33Z by leader
-- **Comments-seen:** 3
+- **Updated:** 2026-11-19 12:26Z by dev
+- **Comments-seen:** 19
 
 Spec: .team/epics/E01-foundation/18-print-check-linux-parity.md (read it from the main checkout). Split out of T-185: Linux CI print-check 292/298, six layout parity failures that never ran on Linux before; reproduce in a local ubuntu-24.04 container (Docker is up).
 
@@ -6638,21 +6645,91 @@ Spec: .team/epics/E01-foundation/18-print-check-linux-parity.md (read it from th
 - 2026-11-19 08:48Z · dev · PR #187 head 3e8add7. Reproduced locally in ubuntu-24.04 (scripts/print-check-linux.sh, doc in docs/e2e.md): 292/298, same six as CI with the CI numbers. Verdicts: note01 + A4 doodle/stickers/tape p2 + A4 profile-tilted = Linux renderer noise (DOM boxes/fonts/line heights identical on screen and print; ruled-gradient lines 3 px higher on screen than in the PDF, text 1 px; nothing missing; same numbers in 4 of 4 runs: 2.159 %, 0.848 %, 3 px) -> Linux-only budgets in LINUX_EDGE/LINUX_EXTRA, everything else strict. Letter thin01 = test window (6 px margin took in the rotated neighbour thin02; the bar is rows 308-323 on both sides) -> margin 3 px. Extra finding: A4 notes page 1 was intermittently 1.78/4.04 % because the screen picture was taken before a lazy photo loaded (empty frame in the diff mask) -> sheetPicture waits for images. After: full suite 298/298 twice in the container (32 min each) + the six tests a third time. BLOCKER for requirement 3: manual CI runs (44483277625, 44489053574) fail in e2e step 'The journey' BEFORE print-check runs: first at editor-keyboard step 5 (fixed here: poll threw TypeError on a not-yet-stored layout), then the registration 429 rate limit in journey step 1 after the editor specs (same cascade QA saw locally). That is an e2e/CI setup matter (reset limits between spec files in scripts/e2e.sh, or a test-env limit); leader decision, not touched here. QA: run scripts/print-check-linux.sh on the head to confirm 298/298.
 - 2026-11-19 08:48Z · dev · Local Linux 298/298 x2; CI print-check not reached (journey 429 before it), see comment
 - 2026-11-19 09:32Z · leader · Leader decision on the journey 429 (test config only, my call): the e2e suite now registers more users than the test API's 20/hour register limit (SMEM_E2E_RATE_REGISTER_PER_HOUR default in scripts/e2e.sh). Raise that default to 200 in scripts/e2e.sh and docs/e2e.md (SMEM_ENV=test API only; .env, config.go defaults and production limits stay untouched; no new env var, no dev shortcut). First grep tools/e2e for any spec that expects a register 429 and keep it working (it may set its own low limit). Then start a manual full CI run on the PR branch and put the run id and print-check count in the PR: requirement 3 is 298/298 in CI. If the e2e job fails again for a reason outside print-check, report it with the run id and stop; do not chase unrelated flakes.
+- 2026-11-19 09:47Z · dev · Head 099dcb6 (register default 20 -> 200 in scripts/e2e.sh + docs/e2e.md; no spec expects a register 429, they only throw a hint). Manual full CI run 44497568529: go, web, security, image, go-integration green; e2e job FAILED in step "The journey" (72 passed, 1 failed, 7.8m): the 429 is gone. Failure is design.spec.mjs:192 step 6 (print route applies the design, PDF text check): pdftotext on Linux splits the random suffix, expected "nhớ giữ liên lạc nhé mwncvjb02l34!" got "...mwncvjb02l 34!" (a space inside the token, a Linux PDF text-extraction/kerning difference, not a layout parity or register issue). Print-check did NOT run in this run, so requirement 3 (298/298 in CI) is still unproven. Outside print-check, so per your rule I stop here. Suggested fix for you to decide: make norm()/the PDF text compare in design.spec.mjs ignore whitespace (strip all spaces on both sides), or make the test note use a suffix that does not break. Local Linux container passes 298/298 twice (earlier comment).
+- 2026-11-19 09:47Z · dev · e2e journey fails on unrelated PDF text compare (run 44497568529); print-check not reached; leader decision needed
+- 2026-11-19 09:47Z · leader · Leader decision (test-only, my call): in design.spec.mjs step 6, compare the PDF text with all whitespace removed on both sides (pdftotext on Linux splits glyph runs by spacing; the check is that the note text is present, not where pdftotext puts spaces). Do not change the note suffix generator. Apply the same normalisation only where a spec compares free text against pdftotext output; leave exact-layout checks alone. Then a manual full CI run on the branch; run id and print-check count in the PR. If the e2e job fails again outside print-check, comment with run id and step and stop.
+- 2026-11-19 10:29Z · dev · Head 2a2ae93: PDF text compare now whitespace-free in design.spec.mjs and journey.spec.mjs (PDF checks only). Manual CI run 44499769414 all green: journey 73/73, print-check 298/298 in CI (1078 s). Locally Linux container was 298/298 twice before. QA: run scripts/print-check-linux.sh on the head and make test-integration.
+- 2026-11-19 10:29Z · dev · Head 2a2ae93; CI run 44499769414 all green, print-check 298/298, journey 73/73
+- 2026-11-19 10:30Z · leader · QA brief (leader): PR #187 head 2a2ae93, CI run 44499769414 green (print-check 298/298, journey 73/73). Verify: (1) scripts/print-check-linux.sh on the head in the ubuntu-24.04 container: 298/298, counts in your comment; (2) the Linux-only budgets (LINUX_EDGE/LINUX_EXTRA) cover exactly the five named cases and nothing else; macOS/default thresholds unchanged (diff check); (3) a deliberate 5 px shift of a notes item in print CSS still FAILS on Linux (budget not too loose), then revert; (4) the thin01 margin change and the sheetPicture image wait; (5) flat() is used only for pdftotext free-text compares, not layout; (6) e2e.sh register default 200 is test-API only (.env, config.go untouched); (7) make test-integration on the head. Own compose project and ports; never down -v the main project. Do not change product code.
+- 2026-11-19 11:22Z · leader · Leader note: after T-187 merged (fc191d5), PR #187 conflicts with develop in docs/e2e.md. QA continues on head 2a2ae93; after QA, dev merges origin/develop (no rebase/force-push), resolves docs/e2e.md only, and the leader checks the merge diff before review.
+- 2026-11-19 12:19Z · qa · QA_PASS, PR #187 head 2a2ae93 (worktree clean, no QA commits). CI run 44499769414 on head: success (go, web, security, image, go-integration, e2e incl. journey 73/73 and print-check 298/298 per dev; I confirmed the run conclusion and head SHA with gh).
+  RESULT LINES: (1) scripts/print-check-linux.sh on 2a2ae93, ubuntu-24.04 container: tests 298, pass 298, fail 0, skipped 0, 1904 s (all six former failures green). Measured: A4 notes-doodle/stickers/tape p2 2.159 % vs plain 0.547 % (+1.612, budget 2.0); A4 profile-tilted 0.848 % vs 0.225 % (+0.623, budget 0.8); same numbers as dev's. (7) make test-integration on head: all packages ok EXCEPT internal/notes TestConnectionCapAndFlatMemory ('timed out waiting for 48 MiB on disk') and TestSweepSpoolAtStartup ('removed 0, want 1'); both fail identically on current develop 1579d4e (re-run, deterministic) and the PR changes no .go file, so unrelated to T-186 (Windows spool behaviour, worth a separate task). e2e not run locally on Windows (docs: not native); CI e2e job green on the head.
+  BRIEF POINTS: (2) diff check: Linux budgets are gated by LINUX=process.platform==='linux'; LINUX_EXTRA has exactly 4 keys (A4 notes-doodle#1, notes-stickers#1, notes-tape#1, A4 profile-tilted#0) + LINUX_EDGE note01:4; default 0.5 % and 2 px untouched elsewhere (navy test loop at ~1241 keeps tol 2). Observation: LINUX_EDGE is keyed by item id, not size/page, so on Linux it applies to note01 on A5, A4 and Letter, both notes pages, x0 as well as y0 (spec only needs A5 y0). Harmless in practice (see 3) but could be keyed by size. (3) mutation (print-only CSS appended to web/src/book/book.css, reverted, tree clean): (a) all cover items +2.5 css px (=5 px at 192 dpi): A5 cover 0.752 %, Letter cover 1.215 % -> FAIL, strict budget intact; (b) [data-layout-id] +2.5 px: A4 profile-tilted 1.277 % (budget 0.8) -> FAIL, A4 cover 0.634 % -> FAIL, but A4 notes-doodle 2.468 % (+1.92, budget 2.0) still PASSES, so that budget leaves only 0.39 pp headroom (profile-tilted 0.18 pp); (c) NOT MET as worded: all notes-page items +5 px (A5, Letter) still pass, and even +20 px on A5 notes (diff 1.04 % vs 0.57 %) passes item check, because for note01 the measured 'first ink' is the ruled-line gradient of the note box, not the text, so the per-item check cannot see a text shift on notes pages whether the budget is 2 or 4 px (pre-existing blind spot; only the 0.5 % pixel budget guards it). Non-blocking, suggest a follow-up to measure text ink on notes pages. (4) thin01: window 3 px; Letter back test green in the full run; sheetPicture now awaits img decode/load (10 s cap) + 2 rAF; the full run had no intermittent notes-page jump (A4 notes-doodle/tape p0 0.345/0.344 %). (5) flat() exists only in design.spec.mjs and journey.spec.mjs and is used only on pdftotext free-text compares (contain / indexOf order); layout checks untouched. (6) scripts/e2e.sh default 20->200 only on the SMEM_ENV=test API start line; diff touches no .env, config.go or any .go file; docs/e2e.md updated. Dev-shortcut/security: none added.
+- 2026-11-19 12:20Z · leader · Leader review OK on 2a2ae93 (9 files, +72/-15: Linux-only budgets keyed to the five measured cases, thin01 margin 3 px, sheetPicture image wait, flat() only for pdftotext free text, test-API register limit 200; CI run 44499769414 print-check 298/298, QA container 298/298). QA's two findings are new tasks T-189 (notes text blind spot, pre-existing) and T-190 (internal/notes integration failures on develop). Before merge: PR #187 conflicts with develop in docs/e2e.md. Dev: merge origin/develop (no rebase/force-push), resolve docs/e2e.md keeping both sections, change nothing else, wait for go/web/security green, set READY_FOR_QA with the new head; the leader checks the merge and asks the owner to approve.
+- 2026-11-19 12:26Z · dev · Head 93f365a: merged origin/develop (merge commit, no rebase, no force-push). Only conflict was docs/e2e.md (kept the 200/hour registration text and added T-187 to the account list; no other hunk hand-edited). tools/e2e/editor-keyboard.spec.mjs auto-merged cleanly (git show --cc shows no combined hunk). CI on 93f365a: go, web, security green (run 44523106790).
+- 2026-11-19 12:26Z · dev · Merged develop, head 93f365a; go/web/security green; only docs/e2e.md hand-resolved
+- 2026-11-19 12:48Z · leader · review OK; awaiting owner approval: PR #187 head 93f365a (merge of develop; git diff-tree --cc shows only docs/e2e.md hand-resolved; go/web/security green). What to look at: the Linux-only budgets in tools/print-check/check.test.mjs (LINUX_EDGE, LINUX_EXTRA) and the 200/hour test register limit in scripts/e2e.sh. QA_PASS was on 2a2ae93; no re-QA for a doc-only merge.
+- 2026-11-19 15:24Z · human · owner approved merge
+- 2026-11-19 15:24Z · leader · Owner approved in chat 2026-11-19: "Approve t 186, t 190 and PR 188".
+- 2026-11-19 15:26Z · leader · merged 392e091 (PR #187, head 93f365a, owner-approved). Status set to DONE by hand: the board has no READY_FOR_QA -> MERGED step for the leader; QA_PASS was on 2a2ae93 and the only later change is the docs/e2e.md merge resolution.
+- 2026-11-19 15:26Z · leader · Board sync PR #188 merged f87dda8 (owner approved in the same message).
+
+### T-189 — [E01] Print check: the notes-page item check cannot see a moved note text
+- **Status:** TODO
+- **Priority:** P2
+- **Type:** test
+- **Milestone:** M4
+- **Depends-on:** T-186
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-11-19 12:30Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E01-foundation/19-print-check-notes-text-position.md (read it from the main checkout). QA on T-186: a 5-20 px note text shift passes because the check measures the ruled lines.
+
+#### Comments
+
+### T-190 — [E01] internal/notes: two integration tests fail on develop
+- **Status:** DONE
+- **Priority:** P2
+- **Type:** bug
+- **Milestone:** M4
+- **Depends-on:** —
+- **Risk:** medium
+- **Rework:** 0
+- **Owner-approved:** yes
+- **Assignee:** —
+- **Branch:** task/t-190-e01-internal-notes-two-integration-tests
+- **PR:** https://github.com/danyaa666/smemories/pull/189
+- **Updated:** 2026-11-19 15:26Z by leader
+- **Comments-seen:** 8
+
+Spec: .team/epics/E01-foundation/20-notes-integration-tests-on-develop.md (read it from the main checkout). QA on T-186: TestConnectionCapAndFlatMemory and TestSweepSpoolAtStartup fail on develop 1579d4e.
+
+#### Comments
+- 2026-11-19 12:48Z · dev · PR #189 head 7ac339e, test-only. Cause (no product bug): (1) TestConnectionCapAndFlatMemory summed DirEntry.Info().Size(), which on Windows is the stale size cached in the directory for a file still being written; now os.Stat. (2) TestSweepSpoolAtStartup aged a live upload's open file; Windows cannot delete an open file (proved with a stand-alone Go program), a dead process holds no handle, so the test now writes an aged orphan itself and also asserts the live file survives (stricter, no skip). Old tests passed on Linux (go-integration CI run 44497568529). Evidence: Windows go test -race -tags integration ./internal/notes/ ok (502 s); the two tests PASS in a golang:1.26 Linux container; manual CI run 44525896805: go, web, security, image, go-integration green (e2e still running, unrelated). QA: run the two tests plus the package on Windows and Linux.
+- 2026-11-19 12:48Z · dev · test-only fix, PR #189, go-integration green in manual run 44525896805
+- 2026-11-19 12:49Z · leader · QA brief (leader): PR #189 head 7ac339e, test-only (internal/notes/submit_integration_test.go). Verify: (1) the two tests fail on develop and pass on the head, on Windows and in a Linux container; (2) os.Stat instead of DirEntry.Info is not weaker on Linux (sizes still summed over the live spool files); (3) the spool test still proves the sweep deletes aged orphans and keeps live uploads, and fails if the sweep is disabled (deliberate break, then revert); (4) full make test-integration with result lines. Use your own compose project and ports; never down -v the main project.
+- 2026-11-19 13:57Z · qa · QA_PASS, PR #189 head 7ac339e (test-only: internal/notes/submit_integration_test.go, +11/-6; no product code touched). Own compose project qa190 (ports 33190/63190/39190), torn down with its own volumes only.
+  Evidence vs leader brief:
+  (1) Fail on develop 0b58bcd, pass on head, Windows: go test -race -count=1 -tags integration -run 'TestConnectionCapAndFlatMemory|TestSweepSpoolAtStartup' -v ./internal/notes/ -> develop: FAIL both ('timed out waiting for 48 MiB on disk'; 'removed 0, want 1'); head: PASS both (6.35s, 7.21s), ok. Linux (golang:1.26 container, same command, own MySQL/Redis/S3): develop PASS both, head PASS both (5.19s, 5.67s), so the fix does not break Linux and the failures are Windows-only test artifacts (matches dev's analysis).
+  (2) os.Stat vs DirEntry.Info: code read: loop still iterates e.spooled() (live spool files) and sums fi.Size(), gate still inProgress()==48 && bytes>=48 MiB; on Linux Info() and Stat() read the same inode size, so not weaker. Linux run above passes with the heap and 49th-upload 503 assertions untouched.
+  (3) Spool test: head now asserts live file not swept (n==0, 1 file), then an aged orphan written by the test is swept (n==1 and exactly 1 file left = the live one), then conn closed, noSpool, slot released. Deliberate breaks on a scratch copy in the Linux container (repo untouched): (a) SweepSpool never os.Remove -> FAIL 'removed 1, want 1 (the orphan only; the live upload's file stays)' (len check catches it); (b) age check ignored -> FAIL 'a live upload's file was swept (removed 1)'. Both fail as they should.
+  (4) Full make test-integration on Windows at 7ac339e (own stack): 38 packages ok, 1 FAIL = internal/auth 'panic: test timed out after 30m0s' (package run in parallel with all others on this slow-disk PC; notes itself passed in that run, ok 1195.7s). Re-ran alone: go test -race -count=1 -timeout 30m -tags integration ./internal/auth/ -> ok 893.3s. So the auth timeout is load/timeout on this machine (each test migrates a fresh DB, ~15 min), not related to this change (no auth file touched). Non-blocking: the suite is near the 30m Makefile timeout on this PC; worth a follow-up to raise -timeout or tune. Result lines: pass 39/40 packages in the full run, 1 timeout (auth, passes alone), 0 test failures.
+  CI on head: go, web, security pass; go-integration/e2e/image skipped by D-37 (dev reports manual run 44525896805 green). e2e/print-check not run: no web/print/auth-flow change.
+- 2026-11-19 13:58Z · leader · review OK; awaiting owner approval: PR #189 head 7ac339e, +11/-6, test-only (internal/notes/submit_integration_test.go): os.Stat instead of the cached DirEntry size, and the spool sweep test writes its own aged orphan and now also asserts the live upload's file survives. QA: fails on Windows develop, passes on head; Linux passes both; two deliberate sweep breaks fail the test. Note: full make test-integration on this PC runs close to the 30 m timeout (internal/auth timed out in the parallel run, passes alone in 893 s); not filed as a task unless it recurs.
+- 2026-11-19 15:24Z · human · owner approved merge
+- 2026-11-19 15:24Z · leader · Owner approved in chat 2026-11-19: "Approve t 186, t 190 and PR 188".
+- 2026-11-19 15:26Z · leader · merged 3941be3 (PR #189, head 7ac339e, owner-approved).
 
 ### T-187 — [E09] Skip link and focus on route change (app-wide)
-- **Status:** QA_PASS
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
 - **Depends-on:** T-182
 - **Risk:** low
 - **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** leader
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-187-e09-skip-link-and-focus-on-route-change-
 - **PR:** 185
-- **Updated:** 2026-11-19 05:41Z by qa
-- **Comments-seen:** 4
+- **Updated:** 2026-11-19 11:14Z by leader
+- **Comments-seen:** 7
 
 Spec: .team/epics/E09-customisation-editor/43-skip-link-and-route-focus.md (read it from the main checkout). Findings F-08 and F-09 of the T-182 audit.
 
@@ -6670,21 +6747,24 @@ Spec: .team/epics/E09-customisation-editor/43-skip-link-and-route-focus.md (read
   2. major (fixed): editor-keyboard step 2 assumed the Tab start stays on the removed link after a route change (old finding F-09); now focus is on the editor h1, so 'Back to customise' needed 49 Tab stops. Step 2 now asserts the h1 is focused and Shift+Tab reaches the back link. Passes (2/2, twice).
   Observations, non-blocking: (a) editor-keyboard Templates/History steps flake on this PC (Tab leaves the page after the Sticker panel 'Sparkle'; also seen on develop 9c212e2, step 9), passed on rerun. (b) vitest full run on this PC: 1 then 3 different tests fail under load (editor.test.tsx, EditorShell.test.tsx, find-timeouts); both files pass alone 45/45; tsc, eslint, prettier, lint:i18n clean. (c) RouteFocus waits up to 3s for an h1 and focuses it if focus is on body by then; fine. Leader: please look at the 2 test commits.
 - 2026-11-19 05:41Z · leader · Leader review OK (head 7fa068c; product code unchanged since fbfdbb0, whose CI is green; CI on 7fa068c was still running at review, merge only once it is green). QA's two test commits are correct: app-a11y.spec.mjs is now in playwright testMatch (it never ran before) and editor-keyboard step 2 now asserts the new behaviour (h1 focused after the route change, Shift+Tab to the back link), which is stronger, not weaker. Awaiting owner approval (D-47): try Tab once on any page (skip link appears) and navigate with the keyboard (focus lands on the page title).
+- 2026-11-19 11:13Z · human · owner approved merge
+- 2026-11-19 11:13Z · leader · Owner approved in chat 2026-11-19: "Approve t 187, t 188".
+- 2026-11-19 11:14Z · leader · merged fc191d5 (PR #185, head 7fa068c, owner-approved).
 
 ### T-188 — [E09] Editor screen-reader polish: numbers, live regions, roles, handles
-- **Status:** QA_PASS
+- **Status:** DONE
 - **Priority:** P3
 - **Type:** feature
 - **Milestone:** M4
 - **Depends-on:** T-182
 - **Risk:** low
-- **Rework:** 1
-- **Owner-approved:** —
-- **Assignee:** leader
+- **Rework:** 2
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-188-e09-editor-screen-reader-polish-numbers-
 - **PR:** https://github.com/danyaa666/smemories/pull/186
-- **Updated:** 2026-11-19 06:51Z by qa
-- **Comments-seen:** 9
+- **Updated:** 2026-11-19 11:24Z by dev
+- **Comments-seen:** 16
 
 Spec: .team/epics/E09-customisation-editor/44-editor-screen-reader-polish.md (read it from the main checkout). Findings F-10, F-13..F-17 of the T-182 audit.
 
@@ -6709,6 +6789,13 @@ Spec: .team/epics/E09-customisation-editor/44-editor-screen-reader-polish.md (re
   E2E editor-a11y and editor-save-template: NOT run this time (Docker is up but the main compose stack is shared with dev on T-186; e2e.sh needs a separate project). Risk is low: only a hidden span plus a regex changed; e2e/editor-save-template.spec.mjs line 232 uses toContainText on the dialog (still matches, text now appears in the p and the hidden span). Evidence from the earlier pass on 32d4c5e still stands for the rest.
   Non-blocking: owner's real NVDA/VoiceOver check of the counter is still advisable (T-182 doc checklist). Not run: make test-integration, print-check (no Go/print change).
 - 2026-11-19 06:51Z · leader · Leader review OK (head b1a5d19, CI green): web + docs + e2e specs only. Rework fixes exactly the two review items (always-live hidden span for the F-13 counter, strict decimal regex in NumField), tests prove both; full vitest 1358. e2e on the rework head not re-run (shared Docker stack busy; change is a hidden span and a regex; full e2e passed on 32d4c5e). Awaiting owner approval (D-47): the only open item is a real screen-reader check of the 'Save as template' counter near its 60-character limit (NVDA or VoiceOver), plus typing '12,4' in a size field with the UI in Vietnamese.
+- 2026-11-19 11:13Z · human · owner approved merge
+- 2026-11-19 11:13Z · leader · Owner approved in chat 2026-11-19: "Approve t 187, t 188".
+- 2026-11-19 11:14Z · leader · Owner approved; PR #185 (T-187) merged first and now PR #186 conflicts with develop in docs/editor-accessibility.md only (both tasks mark rows of the findings table). Dev: merge origin/develop into the branch (no rebase, no force-push), keep both sets of rows (F-08/F-09 fixed in T-187, F-10/F-13..F-17 fixed in T-188), change nothing else, push, wait for go/web/security green. Then set READY_FOR_QA with the new head; the leader checks the merge diff and merges, no new QA run needed if only that file changed.
+- 2026-11-19 11:24Z · dev · Merged origin/develop (fc191d5) into the branch, no rebase/force-push. New head 28ec026 (merge commit). Conflict only in docs/editor-accessibility.md: kept T-187 rows F-08/F-09 (fixed in T-187) and T-188 rows F-10, F-13..F-17 (fixed in T-188). Beyond what develop brought in, the merge changed only that doc; 'git diff origin/develop HEAD' = the same 27 T-188 files as before. Locale files auto-merged. Checked: tsc 0 errors, vitest src/book/editor 489 pass. PR checks go, web, security all green on 28ec026; e2e/go-integration/image skipped per D-37/D-38.
+- 2026-11-19 11:52Z · leader · Leader: merge commit 28ec026 checked (git diff-tree --cc: only the docs/editor-accessibility.md table rows were hand-resolved; go/web/security green). No new QA run needed for a doc-only resolution. Waiting for the owner to say whether to merge 28ec026 or re-review it first.
+- 2026-11-19 12:27Z · leader · Owner in chat 2026-11-19, asked whether to merge the develop-merge head 28ec026 without another review: "Yes, merge it".
+- 2026-11-19 12:28Z · leader · Leader: status set to DONE by hand; the board's state machine has no READY_FOR_QA -> MERGED step, and this head's only change since QA_PASS was the doc-table merge resolution (owner said merge without re-review).
 
 <!-- tasks:end -->
 
