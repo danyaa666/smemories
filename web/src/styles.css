@@ -60,6 +60,28 @@ a:hover {
   box-shadow: var(--focus-ring);
 }
 
+/* Skip link (F-08): off-screen until it has focus. Focus moved by script to the page title or <main> shows no ring (F-09). */
+.skip-link {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 100;
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  transform: translateY(-120%);
+}
+
+.skip-link:focus {
+  transform: none;
+}
+
+main[tabindex="-1"]:focus,
+h1[tabindex="-1"]:focus {
+  outline: none;
+  box-shadow: none;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;

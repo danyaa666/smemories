@@ -127,7 +127,9 @@ test("keyboard only: the whole editor", async ({ browser }) => {
   });
 
   await step("2. the Tab order of the editor: toolbar, page flow, page strip, stage bar, items; every stop has a focus ring", async () => {
-    const seen = await tabTo(page, "Back to customise", { wrap: true }); // a route change leaves the Tab start where the link was (finding)
+    // T-187: a route change puts the focus on the page's <h1>, which the editor draws right after its "Back to customise" link.
+    await expect(page.getByRole("heading", { level: 1, name: "Free layout" })).toBeFocused();
+    const seen = await tabTo(page, "Back to customise", { back: true });
     expect(seen.length).toBeLessThan(40);
     const order = (await tabTo(page, "Cover sticker")).slice(0, -1);
     expect(order).toEqual([
