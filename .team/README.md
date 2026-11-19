@@ -13,7 +13,7 @@
 | BACKLOG | 5 | T-023, T-024, T-025, T-031, T-050 |
 | TODO | 2 | T-186, T-183 |
 | IN_PROGRESS | 1 | T-188 |
-| IN_QA | 1 | T-187 |
+| QA_PASS | 1 | T-187 |
 | MERGED | 32 | T-184, T-150, T-151, T-152, T-153, T-154, T-155, T-156, T-157, T-158, T-159, T-160, T-161, T-162, T-163, T-164, T-165, T-166, T-167, T-168, T-169, T-170, T-171, T-172, T-173, T-174, T-175, T-176, T-177, T-178, T-179, T-180 |
 | DONE | 139 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138, T-139, T-140, T-141, T-142, T-143, T-144, T-145, T-146, T-147, T-185, T-149, T-148, T-181, T-182 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
@@ -24,7 +24,7 @@
 
 **Open questions for you:** Q-064 (Doory templates: licence route, studio, and template colours (ADR 0005, T-169)); Q-065 (Storage cap per user for layout history (T-179, docs/layout-storage-budget.md): cap now, or watch and decide at go-live?)
 
-_Board last written 2026-11-19 04:53Z_
+_Board last written 2026-11-19 05:41Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -6591,7 +6591,7 @@ Spec: .team/epics/E01-foundation/16-windows-dev-machine-tests.md (read it from t
 - **Branch:** task/t-185-e01-print-check-a5-notes-drift-3-px-step
 - **PR:** https://github.com/danyaa666/smemories/pull/182
 - **Updated:** 2026-11-19 04:53Z by leader
-- **Comments-seen:** 16
+- **Comments-seen:** 20
 
 Spec: .team/epics/E01-foundation/17-print-check-drift-and-e2e-chromium.md (read it from the main checkout). Found reviewing T-181: manual CI 44293267820 print check failed (note01 y0 1516 vs 1513 at 192 dpi) then hung to the 15 min timeout; develop baseline 44298102605 failed twice at Install Chromium.
 
@@ -6637,7 +6637,7 @@ Spec: .team/epics/E01-foundation/18-print-check-linux-parity.md (read it from th
 #### Comments
 
 ### T-187 — [E09] Skip link and focus on route change (app-wide)
-- **Status:** IN_QA
+- **Status:** QA_PASS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -6645,17 +6645,28 @@ Spec: .team/epics/E01-foundation/18-print-check-linux-parity.md (read it from th
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** leader
 - **Branch:** task/t-187-e09-skip-link-and-focus-on-route-change-
 - **PR:** 185
-- **Updated:** 2026-11-19 04:44Z by qa
-- **Comments-seen:** 2
+- **Updated:** 2026-11-19 05:41Z by qa
+- **Comments-seen:** 4
 
 Spec: .team/epics/E09-customisation-editor/43-skip-link-and-route-focus.md (read it from the main checkout). Findings F-08 and F-09 of the T-182 audit.
 
 #### Comments
 - 2026-11-19 04:42Z · dev · PR #185 head fbfdbb0. SkipLink + RouteFocus (web/src/components/RouteA11y.tsx), vitest 1344 pass, tsc/eslint/prettier/i18n green. NOT RUN: e2e (new tools/e2e/app-a11y.spec.mjs and existing specs): Docker Desktop was down on this wake-up. QA: run make e2e; watch editor-keyboard/editor-flow* since the editor h1 now gets focus on arrival.
 - 2026-11-19 04:43Z · leader · QA brief (leader): PR #185. Dev ran no e2e (Docker was down; it is up again). Run the e2e suite incl. the new tools/e2e/app-a11y.spec.mjs, and watch editor-keyboard, editor-flow*, editor-a11y and editor-phone: the h1 of each page now takes focus on arrival, which must not steal focus the editor sets itself (T-182 fixes) nor fire on in-page state changes (dialogs, tabs). Check: skip link is the first Tab stop on App and YearbookLayout and visible on focus; first load does not move focus; en and vi strings. Known Windows-only failures are pre-existing.
+- 2026-11-19 05:41Z · qa · QA_PASS on PR #185. Code head fbfdbb0 unchanged; I pushed 2 test-only commits, branch head now 7fa068c. CI on fbfdbb0: go, web, security pass.
+  Evidence (me, Windows, own DB smem_test_e2e_qa187, ports 18187/14187; make's guard-test step fails on Windows scrub-trace tests, pre-existing, so I ran make's e2e steps without it):
+  AC1 skip link first Tab stop of App (public) and YearbookLayout, visible on focus, targets main, en+vi: app-a11y.spec.mjs 2/2 pass (checks Tab order, on-screen box, Enter focuses main, URL hash unchanged; /login and /yearbooks; Bỏ qua đến nội dung / Skip to content).
+  AC2 route change focuses h1 tabindex=-1, not on first load: e2e /yearbooks->/classes by keyboard (en, vi) and /login->/register pass; first load leaves focus on body (e2e); vitest RouteA11y 4/4. In-page state changes (dialogs, tabs, Templates/History panels) in the editor specs did not lose focus (editor-keyboard pass).
+  AC3 editor focus handling from T-182 unchanged: editor-a11y 6/6 pass, editor-shell, editor-flow*, editor-phone*, editor-history, editor-navy, editor-palette, editor-templates, editor-save-template pass.
+  Full make e2e on fbfdbb0: 60 pass, 5 fail. 3 are Windows/pre-existing, same failures on develop 9c212e2: design step 6 and journey step 8 (pdftotext mangles Vietnamese text on Windows), editor-gestures touch tap (768px), editor-text pixel diff (A4 -4 500 runes). The 5th was caused by this PR, see issue 2.
+  Issues found and fixed by me in test files (no product code change needed):
+  1. blocker (fixed): app-a11y.spec.mjs was not in testMatch of tools/e2e/playwright.config.mjs, so make e2e never ran it (docs/e2e.md says it does). Registered. Also the spec raced the first render and the vi pass pressed Tab after the language click; fixed (wait for h1, reload).
+  2. major (fixed): editor-keyboard step 2 assumed the Tab start stays on the removed link after a route change (old finding F-09); now focus is on the editor h1, so 'Back to customise' needed 49 Tab stops. Step 2 now asserts the h1 is focused and Shift+Tab reaches the back link. Passes (2/2, twice).
+  Observations, non-blocking: (a) editor-keyboard Templates/History steps flake on this PC (Tab leaves the page after the Sticker panel 'Sparkle'; also seen on develop 9c212e2, step 9), passed on rerun. (b) vitest full run on this PC: 1 then 3 different tests fail under load (editor.test.tsx, EditorShell.test.tsx, find-timeouts); both files pass alone 45/45; tsc, eslint, prettier, lint:i18n clean. (c) RouteFocus waits up to 3s for an h1 and focuses it if focus is on body by then; fine. Leader: please look at the 2 test commits.
+- 2026-11-19 05:41Z · leader · Leader review OK (head 7fa068c; product code unchanged since fbfdbb0, whose CI is green; CI on 7fa068c was still running at review, merge only once it is green). QA's two test commits are correct: app-a11y.spec.mjs is now in playwright testMatch (it never ran before) and editor-keyboard step 2 now asserts the new behaviour (h1 focused after the route change, Shift+Tab to the back link), which is stronger, not weaker. Awaiting owner approval (D-47): try Tab once on any page (skip link appears) and navigate with the keyboard (focus lands on the page title).
 
 ### T-188 — [E09] Editor screen-reader polish: numbers, live regions, roles, handles
 - **Status:** IN_PROGRESS
