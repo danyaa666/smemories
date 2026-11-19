@@ -11,9 +11,9 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 5 | T-023, T-024, T-025, T-031, T-050 |
-| TODO | 2 | T-186, T-183 |
-| QA_PASS | 1 | T-187 |
-| CHANGES_REQUESTED | 1 | T-188 |
+| TODO | 1 | T-183 |
+| IN_PROGRESS | 1 | T-186 |
+| QA_PASS | 2 | T-187, T-188 |
 | MERGED | 32 | T-184, T-150, T-151, T-152, T-153, T-154, T-155, T-156, T-157, T-158, T-159, T-160, T-161, T-162, T-163, T-164, T-165, T-166, T-167, T-168, T-169, T-170, T-171, T-172, T-173, T-174, T-175, T-176, T-177, T-178, T-179, T-180 |
 | DONE | 139 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138, T-139, T-140, T-141, T-142, T-143, T-144, T-145, T-146, T-147, T-185, T-149, T-148, T-181, T-182 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
@@ -24,7 +24,7 @@
 
 **Open questions for you:** Q-064 (Doory templates: licence route, studio, and template colours (ADR 0005, T-169)); Q-065 (Storage cap per user for layout history (T-179, docs/layout-storage-budget.md): cap now, or watch and decide at go-live?)
 
-_Board last written 2026-11-19 06:13Z_
+_Board last written 2026-11-19 06:51Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -6618,7 +6618,7 @@ Spec: .team/epics/E01-foundation/17-print-check-drift-and-e2e-chromium.md (read 
 - 2026-11-19 04:53Z · leader · owner approved before merge (D-47)
 
 ### T-186 — [E01] Print check on Linux: six screen-vs-print parity failures
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** bug
 - **Milestone:** M4
@@ -6626,10 +6626,10 @@ Spec: .team/epics/E01-foundation/17-print-check-drift-and-e2e-chromium.md (read 
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-186-e01-print-check-on-linux-six-screen-vs-p
 - **PR:** —
-- **Updated:** 2026-11-18 16:26Z by leader
+- **Updated:** 2026-11-19 06:19Z by dev
 - **Comments-seen:** 0
 
 Spec: .team/epics/E01-foundation/18-print-check-linux-parity.md (read it from the main checkout). Split out of T-185: Linux CI print-check 292/298, six layout parity failures that never ran on Linux before; reproduce in a local ubuntu-24.04 container (Docker is up).
@@ -6669,7 +6669,7 @@ Spec: .team/epics/E09-customisation-editor/43-skip-link-and-route-focus.md (read
 - 2026-11-19 05:41Z · leader · Leader review OK (head 7fa068c; product code unchanged since fbfdbb0, whose CI is green; CI on 7fa068c was still running at review, merge only once it is green). QA's two test commits are correct: app-a11y.spec.mjs is now in playwright testMatch (it never ran before) and editor-keyboard step 2 now asserts the new behaviour (h1 focused after the route change, Shift+Tab to the back link), which is stronger, not weaker. Awaiting owner approval (D-47): try Tab once on any page (skip link appears) and navigate with the keyboard (focus lands on the page title).
 
 ### T-188 — [E09] Editor screen-reader polish: numbers, live regions, roles, handles
-- **Status:** CHANGES_REQUESTED
+- **Status:** QA_PASS
 - **Priority:** P3
 - **Type:** feature
 - **Milestone:** M4
@@ -6677,11 +6677,11 @@ Spec: .team/epics/E09-customisation-editor/43-skip-link-and-route-focus.md (read
 - **Risk:** low
 - **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** leader
 - **Branch:** task/t-188-e09-editor-screen-reader-polish-numbers-
 - **PR:** https://github.com/danyaa666/smemories/pull/186
-- **Updated:** 2026-11-19 06:13Z by leader
-- **Comments-seen:** 6
+- **Updated:** 2026-11-19 06:51Z by qa
+- **Comments-seen:** 9
 
 Spec: .team/epics/E09-customisation-editor/44-editor-screen-reader-polish.md (read it from the main checkout). Findings F-10, F-13..F-17 of the T-182 audit.
 
@@ -6698,6 +6698,14 @@ Spec: .team/epics/E09-customisation-editor/44-editor-screen-reader-polish.md (re
   Failures, none from T-188: (a) editor-gestures 'touch at 768 px' fails identically on develop 42e61f8 (verified: 6 pass / this 1 fails the same way at 'the first tap selects') -> pre-existing. (b) design.spec step 6 fails identically on develop: PDF text extracted by pdftotext on Windows is garbled ('lớp' -> 'lp'), environment, not the PR. h2-gallery/journey were not rerun (journey needs the same PDF text; both hit the 429 in the first run, not a product error). Not run: print-check, make test-integration (no Go/migration/print change; diff is web + docs + e2e only).
   Non-blocking: 1) typed() uses Number(), so '0x10' and '1e1' are accepted as 16 and 10; harmless (range-checked) but a plain-number regex would be stricter. 2) Counter flips aria-live off to polite in the same render that changes its text; some screen readers announce a region only if it was already live, so the near-limit warning may be silent on first crossing; worth one manual NVDA/VoiceOver check. 3) No Home/End on the spinbutton (spec does not ask for it). 4) Needs the owner's real screen reader pass, as the T-182 doc already says.
 - 2026-11-19 06:13Z · leader · Leader review: QA evidence is good (vitest 1348, editor e2e incl. history 7/7, editor.test.tsx flake not reproduced 8/8). Two items before merge: 1) F-13 (requirement 2): the 'Save as template' counter flips aria-live from off to polite in the same render as the text change, so the first near-limit warning can be silent (QA note). Fix: keep the region aria-live=polite at all times and only put text in it when near/over the limit (empty otherwise), or render the live region once and update its text a tick after it becomes live; add a test that the first near-limit message is written into an already-live region. 2) NumField typed(): reject '0x10', '1e1' and other non-decimal forms (accept digits with one '.' or ',' and an optional leading '-'); extend NumField tests. Nothing else; keep QA's NumField.qa.test.tsx. Then READY_FOR_QA with the new head.
+- 2026-11-19 06:19Z · dev · Rework head b1a5d19. (1) F-13: counter text stays a plain hint; new always-live visually-hidden aria-live=polite span (data-testid name-counter-live) is empty until 5 from the limit and is then written into the same node; EditorSaveTemplate.test asserts live from the start, empty at 54, same node with text at 55. (2) NumField typed() now needs /^-?(\d+\.?\d*|\.\d+)$/ after comma->dot: rejects 0x10, 1e1, +5, Infinity, 1.2.3 etc.; NumField.test extended. QA's NumField.qa.test.tsx kept. tsc, eslint, prettier clean; vitest src/book/editor 489 pass. e2e not rerun (no e2e references the counter).
+- 2026-11-19 06:51Z · qa · QA_PASS re-check on head b1a5d19 (PR #186; diff 58667cc..b1a5d19 = NumField.tsx, NumField.test.tsx, TemplatesPanel.tsx, EditorSaveTemplate.test.tsx only, nothing else). Local, Windows. CI on PR: go, web, security pass; e2e/go-integration/image skipped by D-37/D-38.
+  1) F-13 -> code: visible counter <p> no longer has aria-live; new always-mounted visually-hidden span aria-live=polite (data-testid name-counter-live, class exists in styles.css) is empty until 5 from the limit, then text goes into the same node, so no off-to-polite flip. Test: live from the start, empty at 54, same node (toBe) with '55 of 60 characters' at 55 -> PASS.
+  2) NumField typed() -> regex /^-?(\d+\.?\d*|\.\d+)$/ after comma->dot. Tests reject 0x10, 1e1, 1E2, +5, Infinity, empty, blank, 1.2.3, 1,2.3, --1, 5-, '.' and accept -3, 7., .5; vi '12,4' display/commit and en '12.4' still covered by NumField.test and my NumField.qa.test.tsx (kept) -> PASS.
+  Commands (web, head): vitest NumField + EditorSaveTemplate = 3 files 33 tests pass; full vitest 1358 tests pass (exit 0); tsc 0 errors; eslint src clean; prettier --check src/book/editor clean; lint:i18n ok.
+  E2E editor-a11y and editor-save-template: NOT run this time (Docker is up but the main compose stack is shared with dev on T-186; e2e.sh needs a separate project). Risk is low: only a hidden span plus a regex changed; e2e/editor-save-template.spec.mjs line 232 uses toContainText on the dialog (still matches, text now appears in the p and the hidden span). Evidence from the earlier pass on 32d4c5e still stands for the rest.
+  Non-blocking: owner's real NVDA/VoiceOver check of the counter is still advisable (T-182 doc checklist). Not run: make test-integration, print-check (no Go/print change).
+- 2026-11-19 06:51Z · leader · Leader review OK (head b1a5d19, CI green): web + docs + e2e specs only. Rework fixes exactly the two review items (always-live hidden span for the F-13 counter, strict decimal regex in NumField), tests prove both; full vitest 1358. e2e on the rework head not re-run (shared Docker stack busy; change is a hidden span and a regex; full e2e passed on 32d4c5e). Awaiting owner approval (D-47): the only open item is a real screen-reader check of the 'Save as template' counter near its 60-character limit (NVDA or VoiceOver), plus typing '12,4' in a size field with the UI in Vietnamese.
 
 <!-- tasks:end -->
 
