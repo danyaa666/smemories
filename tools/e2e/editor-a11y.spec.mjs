@@ -192,11 +192,11 @@ const STATES = {
   },
   templates: async (page, T) => {
     await toolbarButton(page, T("editor.templates.button")).click();
-    await expect(page.getByRole("radiogroup", { name: T("editor.templates.list") })).toBeVisible();
+    await expect(page.getByRole("group", { name: T("editor.templates.list"), exact: true })).toBeVisible();
   },
   "template preview": async (page, T) => {
     await STATES.templates(page, T);
-    await page.getByRole("radio").first().click();
+    await page.locator(".ed-tpl-pick").first().click();
     await expect(page.getByRole("button", { name: T("editor.templates.back") })).toBeVisible();
   },
   history: async (page, T) => {

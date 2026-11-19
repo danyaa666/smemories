@@ -68,7 +68,7 @@ describe("announcements of key steps", () => {
     expect(announce.mock.calls[0]![0]).toContain('\\"n\\":1'); // "Moved right 1." of the first press
     vi.advanceTimersByTime(SAY_MS);
     expect(announce).toHaveBeenCalledTimes(2);
-    const x = (n: number) => Number(/"x":"([\d.]+)"/.exec(announce.mock.calls[n]![0])![1]);
+    const x = (n: number) => Number(/"x":([\d.]+)/.exec(announce.mock.calls[n]![0])![1]);
     expect(x(1)).toBeCloseTo(x(0) + (19 / pageBox("A5").w) * 100, 0); // the 20th press' place: 19 px further than the first
     vi.advanceTimersByTime(5000);
     expect(announce).toHaveBeenCalledTimes(2); // nothing else, no repeat

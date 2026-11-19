@@ -8,6 +8,9 @@ import type { LayoutDoc } from "./document";
 import { EditorShell } from "./EditorShell";
 import { mockServer, type MockVersion } from "./mockServer";
 
+const getPicks = () => Array.from(document.querySelectorAll<HTMLElement>(".ed-history-row"));
+const findPicks = () => waitFor(() => expect(getPicks().length).toBeGreaterThan(0)).then(getPicks);
+
 // T-165: the version history panel in the editor: nothing is fetched before it opens, keyboard walk, read-only preview, restore (settle first, one
 // request, history cleared), the errors, and the dropped message. The real browser path is tools/e2e/editor-history.spec.mjs.
 
@@ -89,7 +92,7 @@ const mount = async (v: MockVersion[] = versions()) => {
 };
 const open = async () => {
   await userEvent.click(screen.getByRole("button", { name: /History/ }));
-  return screen.findAllByRole("radio");
+  return findPicks();
 };
 const stageText = () => document.querySelector(".ed-pagebox")?.textContent ?? "";
 const live = () => document.querySelector(".visually-hidden[role=status]")?.textContent;
@@ -139,7 +142,7 @@ describe("opening", () => {
     await i18n.changeLanguage("vi");
     await mount(v);
     await userEvent.click(screen.getByRole("button", { name: /Lịch sử/ }));
-    expect((await screen.findAllByRole("radio"))[0]).toHaveAccessibleName(/Trước khi áp dụng mẫu/);
+    expect((await findPicks())[0]).toHaveAccessibleName(/Trước khi áp dụng mẫu/);
   });
 
   it("shows at most 30 rows", async () => {
@@ -160,7 +163,7 @@ describe("opening", () => {
     expect(await screen.findByText(/No earlier versions yet/)).toBeInTheDocument();
     srv.s.versions.push(...versions());
     await userEvent.click(screen.getByRole("button", { name: "Refresh" }));
-    expect(await screen.findAllByRole("radio")).toHaveLength(3);
+    expect(await findPicks()).toHaveLength(3);
     expect(srv.s.history).toEqual(["list", "list"]);
   });
 
@@ -173,7 +176,7 @@ describe("opening", () => {
     expect(await screen.findByText(/You are offline/)).toBeInTheDocument();
     f.mockImplementation(real);
     await userEvent.click(screen.getByRole("button", { name: "Try again" }));
-    expect(await screen.findAllByRole("radio")).toHaveLength(3);
+    expect(await findPicks()).toHaveLength(3);
     expect(srv.s.history).toEqual(["list"]);
   });
 });
@@ -193,13 +196,13 @@ describe("keyboard", () => {
     await userEvent.keyboard("{ArrowUp}{Enter}");
     await screen.findByText(/Previewing a version from/);
     expect(srv.s.history).toEqual(["list", `get:${id(2)}`]);
-    expect(rows[1]).toHaveAttribute("aria-checked", "true");
+    expect(rows[1]).toHaveAttribute("aria-pressed", "true");
     await waitFor(() => expect(stageText()).toContain("Bản cũ"));
     await userEvent.keyboard("{Escape}");
     expect(screen.queryByText(/Previewing a version from/)).toBeNull();
     expect(stageText()).toContain("Bản hiện tại");
     await userEvent.keyboard("{Escape}");
-    expect(screen.queryByRole("radiogroup", { name: "Earlier versions" })).toBeNull();
+    expect(screen.queryByRole("group", { name: "Earlier versions" })).toBeNull();
     await waitFor(() => expect(button).toHaveFocus());
   });
 });
@@ -262,7 +265,7 @@ describe("preview", () => {
     srv.s.versions.splice(0, 1);
     await userEvent.click(rows[0]!);
     expect(await screen.findByText(/no longer exists/)).toBeInTheDocument();
-    await waitFor(() => expect(screen.getAllByRole("radio")).toHaveLength(2));
+    await waitFor(() => expect(getPicks()).toHaveLength(2));
   });
 });
 
@@ -284,8 +287,8 @@ describe("restore", () => {
     expect(screen.getByRole("button", { name: "Undo" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Redo" })).toBeDisabled();
     expect(screen.getByText("Version restored.", { selector: ".banner-text" })).toBeVisible();
-    await waitFor(() => expect(screen.getAllByRole("radio")).toHaveLength(4)); // the replaced document is a new row
-    expect(screen.getAllByRole("radio")[0]).toHaveAccessibleName(/Before restore/);
+    await waitFor(() => expect(getPicks()).toHaveLength(4)); // the replaced document is a new row
+    expect(getPicks()[0]).toHaveAccessibleName(/Before restore/);
     expect(srv.s.history.at(-1)).toBe("list");
   });
 
@@ -396,7 +399,7 @@ describe("vietnamese", () => {
     await mount();
     const rows = await userEvent
       .click(screen.getByRole("button", { name: /Lịch sử/ }))
-      .then(() => screen.findAllByRole("radio"));
+      .then(() => findPicks());
     expect(rows[0]).toHaveAccessibleName(/Trước khi khôi phục/);
     await userEvent.click(rows[0]!);
     expect(await screen.findByText(/Đang xem trước phiên bản lúc/)).toBeInTheDocument();

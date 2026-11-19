@@ -204,7 +204,7 @@ test("mouse: drag, corner resize and rotate follow the pointer to within 1 px on
         await expect(page.getByRole("button", { name: "Undo" })).toBeDisabled();
 
         // --- the 44 x 44 px hit area of a handle, at this zoom
-        const se = page.getByRole("button", { name: "Resize from bottom right" });
+        const se = page.getByLabel("Resize from bottom right", { exact: true });
         const hb = await box(se);
         const hits = await page.evaluate(
           ([cx, cy]) => [[-21, -21], [21, -21], [-21, 21], [21, 21], [0, 0]].map(([dx, dy]) => document.elementFromPoint(cx + dx, cy + dy)?.getAttribute("aria-label")),
@@ -230,7 +230,7 @@ test("mouse: drag, corner resize and rotate follow the pointer to within 1 px on
         await expect.poll(async () => Math.abs((await box(item)).w - b0.w)).toBeLessThan(0.01);
 
         // --- rotate: the pointer turns 30 degrees about the centre
-        const rot = page.getByRole("button", { name: "Rotate", exact: true });
+        const rot = page.getByLabel("Rotate", { exact: true });
         const rb = await box(rot);
         const c = [b0.cx, b0.cy];
         const rho = Math.hypot(rb.cx - c[0], rb.cy - c[1]);
@@ -272,7 +272,7 @@ test("mouse: Shift keeps the ratio and snaps rotation to 15; Alt off, the item s
   page.on("request", (r) => r.url().includes("/api/book-layout/save") && saves.push(r.url()));
 
   await step("Shift on a corner keeps the aspect ratio", async () => {
-    const hb = await box(page.getByRole("button", { name: "Resize from bottom right" }));
+    const hb = await box(page.getByLabel("Resize from bottom right", { exact: true }));
     const b0 = await box(item);
     await withAlt(page, async () => {
       await page.keyboard.down("Shift");
@@ -290,7 +290,7 @@ test("mouse: Shift keeps the ratio and snaps rotation to 15; Alt off, the item s
 
   await step("Shift while rotating snaps to 15 degrees", async () => {
     const b0 = await box(item);
-    const rb = await box(page.getByRole("button", { name: "Rotate", exact: true }));
+    const rb = await box(page.getByLabel("Rotate", { exact: true }));
     const a = (22 * Math.PI) / 180;
     const vx = rb.cx - b0.cx;
     const vy = rb.cy - b0.cy;
@@ -440,10 +440,10 @@ test("an item flush to the page edge can be resized with the mouse from a handle
       await setZoom(page, 100);
       const item = drawn(page, FLUSH.id);
       await page.getByRole("button", { name: "Sticker", exact: true }).click();
-      await page.getByRole("button", { name: "Resize from bottom right" }).scrollIntoViewIfNeeded(); // T-170: the second toolbar row pushes the page down; a person scrolls too
+      await page.getByLabel("Resize from bottom right", { exact: true }).scrollIntoViewIfNeeded(); // T-170: the second toolbar row pushes the page down; a person scrolls too
       const b0 = await box(item);
       const sheet = await box(page.locator(".ed-pagebox .bk-sheet"));
-      const hb = await box(page.getByRole("button", { name: "Resize from bottom right" }));
+      const hb = await box(page.getByLabel("Resize from bottom right", { exact: true }));
       expect(hb.cx + 5, "the handle sticks out of the page").toBeGreaterThan(sheet.l + sheet.w);
       const x = hb.cx + 4; // press on the part of the handle that lies outside the clip
       const y = hb.cy + 4;

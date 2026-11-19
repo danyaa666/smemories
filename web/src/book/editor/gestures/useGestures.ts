@@ -45,8 +45,6 @@ export const boxOp = (x: Target, rect: Rect, deg: number, pb: PageBox): Op =>
     ? setItemBox(x.kind, x.id, patchOf(rect, deg, pb))
     : setOverride(x.id, patchOf(rect, deg, pb));
 
-const pct = (v: number) => String(Math.round(v * 10) / 10);
-
 /** What a change says in words: the new place (% of the page from the left and top), size or angle. */
 export function describe(
   t: TFunction,
@@ -59,10 +57,10 @@ export function describe(
   const key = { move: "movedTo", resize: "resized", rotate: "rotated" }[what];
   return t(`editor.said.${key}`, {
     lead: lead ?? "",
-    x: pct((rect.left / pb.w) * 100),
-    y: pct((rect.top / pb.h) * 100),
-    w: pct((rect.width / pb.w) * 100),
-    h: pct((rect.height / pb.h) * 100),
+    x: (rect.left / pb.w) * 100,
+    y: (rect.top / pb.h) * 100,
+    w: (rect.width / pb.w) * 100,
+    h: (rect.height / pb.h) * 100,
     deg,
   }).trim();
 }

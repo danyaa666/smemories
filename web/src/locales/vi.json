@@ -1000,7 +1000,7 @@
     "prevPage": "Trang trước",
     "nextPage": "Trang sau",
     "print": "In hoặc lưu thành PDF",
-    "printHint": "In tất cả các trang của sách, cỡ {{size}}.",
+    "printHint": "In tất cả các trang của sách, cỡ {{size}} ({{w, number}} × {{h, number}} mm).",
     "done": "Xong",
     "doneFailed": "Những thay đổi gần nhất chưa được lưu nên trình chỉnh sửa vẫn mở. Hãy xem trạng thái lưu rồi nhấn Xong lại.",
     "previewFailed": "Chưa lưu được các thay đổi mới nhất nên chưa mở bản xem trước.",
@@ -1143,8 +1143,8 @@
     },
     "said": {
       "leadMove": "Đã dời {{dir}} {{n}}.",
-      "movedTo": "{{lead}} Vị trí cách mép trái {{x}} phần trăm, cách mép trên {{y}} phần trăm.",
-      "resized": "Kích thước {{w}} phần trăm chiều rộng trang, {{h}} phần trăm chiều cao.",
+      "movedTo": "{{lead}} Vị trí cách mép trái {{x, number(maximumFractionDigits: 1)}} phần trăm, cách mép trên {{y, number(maximumFractionDigits: 1)}} phần trăm.",
+      "resized": "Kích thước {{w, number(maximumFractionDigits: 1)}} phần trăm chiều rộng trang, {{h, number(maximumFractionDigits: 1)}} phần trăm chiều cao.",
       "rotated": "Đã xoay đến {{deg}} độ.",
       "cancelled": "Đã hủy"
     },

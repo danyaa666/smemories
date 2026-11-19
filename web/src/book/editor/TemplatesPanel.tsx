@@ -407,8 +407,7 @@ export function TemplatesPanel({
           <div className="ed-tpl-card" key={cardKey(c)} data-tid={cardKey(c)}>
             <button
               type="button"
-              role="radio"
-              aria-checked={cardKey(c) === previewId}
+              aria-pressed={cardKey(c) === previewId}
               aria-label={fresh ? `${label}, ${t("editor.templates.save.new")}` : label}
               tabIndex={i === cursor ? 0 : -1}
               ref={(el) => void (radios.current[i] = el)}
@@ -490,7 +489,7 @@ export function TemplatesPanel({
       )}
       {groups && (
         <div
-          role="radiogroup"
+          role="group"
           aria-label={t("editor.templates.list")}
           className="ed-tpl-list"
           ref={root}
@@ -547,9 +546,15 @@ export function TemplatesPanel({
               void submitSave();
             }}
           />
-          <p className={`ed-hint${nameLength(name) > NAME_MAX ? " error" : ""}`} aria-live="polite">
+          <p className={`ed-hint${nameLength(name) > NAME_MAX ? " error" : ""}`}>
             {t("editor.templates.save.counter", { used: nameLength(name), max: NAME_MAX })}
           </p>
+          {/* Always live, empty until the limit is near, so the first warning is written into a region that is already live (F-13) */}
+          <span className="visually-hidden" aria-live="polite" data-testid="name-counter-live">
+            {nameLength(name) >= NAME_MAX - 5
+              ? t("editor.templates.save.counter", { used: nameLength(name), max: NAME_MAX })
+              : ""}
+          </span>
           {saveFailure && (
             <p role="alert" className="error">
               {saveErrorText(saveFailure)}

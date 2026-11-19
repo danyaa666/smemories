@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { assets, AssetSvg, type Asset, type AssetKind } from "../../assets";
 import { matchAssets } from "./search";
 
+export const COUNT_MS = 600;
 export const COLS = 3; // the grid is three tiles wide (editor.css); the arrow keys step by this
 
 export const assetLabel = (a: Asset, lang: string) =>
@@ -58,6 +59,12 @@ export function AssetGrid({
       ),
     [kinds, q],
   );
+  // The count is spoken once typing pauses, not on every key (F-14).
+  const [told, setTold] = useState(list.length);
+  useEffect(() => {
+    const id = window.setTimeout(() => setTold(list.length), COUNT_MS);
+    return () => window.clearTimeout(id);
+  }, [list.length]);
   const at = Math.min(cur, Math.max(0, list.length - 1));
   const grid = useRef<HTMLDivElement>(null);
   const move = (to: number) => {
@@ -90,9 +97,7 @@ export function AssetGrid({
         onChange={(e) => setQ(e.target.value)}
       />
       <p className="ed-hint" role="status" aria-live="polite">
-        {list.length === 0
-          ? t("editor.palette.noMatch")
-          : t("editor.palette.count", { count: list.length })}
+        {told === 0 ? t("editor.palette.noMatch") : t("editor.palette.count", { count: told })}
       </p>
       {/* the keydown handler only moves focus between the buttons inside */}
       {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
