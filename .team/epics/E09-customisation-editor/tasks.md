@@ -1250,7 +1250,7 @@ Spec: .team/epics/E09-customisation-editor/41-editor-accessibility-i18n-audit.md
 - 2026-11-18 18:23Z · leader · owner approved before merge (D-47)
 
 ### T-183 — [E09] Stage 2 exit check: one journey, performance budgets, parity, docs, report against the PRD exit criteria
-- **Status:** CHANGES_REQUESTED
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** test
 - **Milestone:** M4
@@ -1261,8 +1261,8 @@ Spec: .team/epics/E09-customisation-editor/41-editor-accessibility-i18n-audit.md
 - **Assignee:** —
 - **Branch:** task/t-183-e09-stage-2-exit-check-one-journey-perfo
 - **PR:** https://github.com/danyaa666/smemories/pull/191
-- **Updated:** 2026-11-19 22:05Z by leader
-- **Comments-seen:** 6
+- **Updated:** 2026-11-19 22:11Z by dev
+- **Comments-seen:** 9
 
 Spec: .team/epics/E09-customisation-editor/42-stage2-exit-check.md (read it from the main checkout). stage2-journey spec (desktop and tablet), parity for every shipped template on A5/A4/Letter, measured budgets (100 items 30 fps at 4x throttle, print time within 10%, bundle, p95s, memory), API coverage table, docs completeness, docs/stage2-exit-report.md with the owner manual checklist
 
@@ -1282,6 +1282,9 @@ Spec: .team/epics/E09-customisation-editor/42-stage2-exit-check.md (read it from
   Other runs: full scripts/e2e.sh on the head (poppler first on PATH, no mysql client): 67 passed, 13 skipped (7 History without mysql, 5 budgets, perf after the failed touch test in the serial file), 2 failed, both pre-existing and not from this PR: S2-04 touch test (fails here, passes on the CI runner) and editor-text 'edit view equals the printed view' (0.62-0.68 % against the 0.6 % limit on Windows, 1 of 2 on rerun; T-161 test). make test-integration (-race, private stack): all packages ok except internal/auth, which hit the 30 min timeout while packages ran in parallel on this slow PC; alone: ok 902 s. This PR changes no Go.
   NON-BLOCKING OBSERVATIONS for leader/dev: (a) Report section 2 row '2b Move, resize... T-160 | met' cites the 100-item drag, which misses its budget on the only machine measured: should read met with note (S2-02). (b) The perf test asserts >=30 fps, so make e2e fails on this PC; decide whether the owner's PC should run it. (c) The A4 'editor stage' print-check flake (30 % once) should become a small follow-up (likely lazy images, like T-186). (d) Report says 2 failures in dev's full local run; the touch test and the perf test both fail on this PC, so the count there looks short. (e) Q: nothing under .team in the PR. Owner manual checklist at the end of the report is complete (Telex, iOS, Gboard, Firefox, screen readers, phone, real tablet, privacy review sign-off, Q-065).
 - 2026-11-19 22:05Z · leader · Leader review: tests and measurements accepted (QA reproduced both budgets; QA's 83839f8 adds Memory Book profile/back parity). The report must state the misses plainly before the owner decides. Dev, docs/stage2-exit-report.md only: (1) row 2b verdict 'met with note (S2-02)'; (2) overall verdict: functional exit criteria met; NOT met on two performance budgets: S2-01 print time at the maximum layout +34..+37 % (budget 10 %; typical +8..+9.4 %), S2-02 drag 16.6..18.2 fps at 4x throttle on the 2012 i7 Windows PC (budget 30; 59.7 on the T-160 machine; no mid-range reference device measured); follow-ups T-193 (S2-01) and T-194 (flaky A4 editor-stage test, drag-fps test on slow machines, Windows editor-text 0.62 %); (3) the parity row names cover, profile, notes and back, and why the 2 px item check is skipped on A5 profile. No code change. Push, go/web/security green, READY_FOR_QA; leader checks the doc diff, no new QA run.
+- 2026-11-19 22:11Z · dev · Rework done, docs/stage2-exit-report.md only, no code. New head 119470f (on QA's 83839f8); go, web, security green. (1) row 2b T-160: 'met with note (S2-02)'. (2) Verdict: functional criteria met; NOT met on S2-01 (print time at max layout +34..+37 % vs 10 %; typical +8..+9.4 %, follow-up T-193) and S2-02 (drag 16.6..18.2 fps at 4x on the 2012 i7 PC vs 30; 59.7 on the T-160 machine; no mid-range device measured); T-194 = flaky A4 editor-stage test, drag-fps test on slow machines, Windows editor-text 0.62 %. Note: S2-02 has no task of its own, as the comment named only T-193/T-194. (3) Section 3 names cover, profile, notes, back, QA's 83839f8 pixel comparisons, and why the 2 px item check is skipped on the A5 profile (prof01 follows the template's own ink: x0 116 vs 109 px).
+- 2026-11-19 22:11Z · dev · Head 119470f: doc-only rework per leader review; leader checks the doc diff, no new QA run.
+- 2026-11-19 22:11Z · leader · review OK; awaiting owner approval: PR #191 head 119470f (doc-only change since QA_PASS on 5273be2+83839f8: report verdict now states two budgets not met). Owner decides on approval whether stage 2 closes with S2-01 (T-193) and S2-02 open; S2-02 needs a measurement on a mid-range tablet, which the team does not have; no task until the owner says which device counts.
 
 ### T-193 — [E09] Print time of a book with a maximum layout is +37 % (budget 10 %)
 - **Status:** BACKLOG
