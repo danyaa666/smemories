@@ -59,3 +59,23 @@ test("skip link and route focus, keyboard only, en and vi", async ({ browser }) 
     expect(await page.evaluate(() => document.querySelector("main").contains(document.activeElement))).toBe(true);
   }
 });
+
+test("public pages (App layout): the first load keeps the focus on the page, the skip link is the first Tab stop, and a link click moves the focus to the new h1", async ({ browser }) => {
+  test.skip(!BASE, "run through `make e2e` (scripts/e2e.sh starts the API and the web server)");
+  const page = await (await browser.newContext({ locale: "en-US", baseURL: BASE, viewport: { width: 1280, height: 900 } })).newPage();
+  await page.goto("/login");
+  await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toBeVisible();
+  expect(await page.evaluate(() => document.activeElement === document.body), "first load does not move focus").toBe(true);
+  await page.keyboard.press("Tab");
+  const skip = page.getByRole("link", { name: "Skip to content" });
+  await expect(skip).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("main")).toBeFocused();
+  // Route change by keyboard: the "Create account" link of the login page.
+  await page.getByRole("main").getByRole("link", { name: /create (an )?account|register|sign up/i }).first().focus();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/\/register$/);
+  const h1 = page.getByRole("main").getByRole("heading", { level: 1 });
+  await expect(h1).toBeFocused();
+  await expect(h1).toHaveAttribute("tabindex", "-1");
+});
