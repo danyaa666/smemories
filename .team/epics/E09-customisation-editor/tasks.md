@@ -1250,7 +1250,7 @@ Spec: .team/epics/E09-customisation-editor/41-editor-accessibility-i18n-audit.md
 - 2026-11-18 18:23Z · leader · owner approved before merge (D-47)
 
 ### T-183 — [E09] Stage 2 exit check: one journey, performance budgets, parity, docs, report against the PRD exit criteria
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** test
 - **Milestone:** M4
@@ -1258,10 +1258,10 @@ Spec: .team/epics/E09-customisation-editor/41-editor-accessibility-i18n-audit.md
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-183-e09-stage-2-exit-check-one-journey-perfo
 - **PR:** —
-- **Updated:** 2026-11-18 18:23Z by leader
+- **Updated:** 2026-11-19 16:25Z by dev
 - **Comments-seen:** 2
 
 Spec: .team/epics/E09-customisation-editor/42-stage2-exit-check.md (read it from the main checkout). stage2-journey spec (desktop and tablet), parity for every shipped template on A5/A4/Letter, measured budgets (100 items 30 fps at 4x throttle, print time within 10%, bundle, p95s, memory), API coverage table, docs completeness, docs/stage2-exit-report.md with the owner manual checklist
