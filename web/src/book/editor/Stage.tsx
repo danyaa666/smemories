@@ -381,6 +381,7 @@ function Chrome({
           key={c}
           type="button"
           tabIndex={-1}
+          aria-hidden="true" // pointer only: the keyboard and the panel are the alternative (F-16)
           className={`ed-handle ed-h-${c}`}
           aria-label={t(`editor.handle.${c}`)}
           aria-disabled={readOnly}
@@ -390,6 +391,7 @@ function Chrome({
       <button
         type="button"
         tabIndex={-1}
+        aria-hidden="true"
         className="ed-handle ed-rotate"
         aria-label={t("editor.handle.rotate")}
         aria-disabled={readOnly}

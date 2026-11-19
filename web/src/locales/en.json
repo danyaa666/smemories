@@ -999,7 +999,7 @@
     "prevPage": "Previous page",
     "nextPage": "Next page",
     "print": "Print or save as PDF",
-    "printHint": "Prints all pages of the book, {{size}}.",
+    "printHint": "Prints all pages of the book, {{size}} ({{w, number}} × {{h, number}} mm).",
     "done": "Done",
     "doneFailed": "Your latest changes are not saved yet, so the editor stays open. Check the save status, then press Done again.",
     "previewFailed": "The latest changes could not be saved, so the preview was not opened.",
@@ -1142,8 +1142,8 @@
     },
     "said": {
       "leadMove": "Moved {{dir}} {{n}}.",
-      "movedTo": "{{lead}} Position {{x}} percent from the left, {{y}} percent from the top.",
-      "resized": "Size {{w}} percent of the page width, {{h}} percent of its height.",
+      "movedTo": "{{lead}} Position {{x, number(maximumFractionDigits: 1)}} percent from the left, {{y, number(maximumFractionDigits: 1)}} percent from the top.",
+      "resized": "Size {{w, number(maximumFractionDigits: 1)}} percent of the page width, {{h, number(maximumFractionDigits: 1)}} percent of its height.",
       "rotated": "Rotated to {{deg}} degrees.",
       "cancelled": "Cancelled"
     },

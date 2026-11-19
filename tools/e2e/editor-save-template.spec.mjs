@@ -128,7 +128,7 @@ async function showPalette(page) {
 }
 const palette = (page) => page.getByRole("complementary", { name: "Add to the page" });
 const templatesButton = (page) => page.getByRole("toolbar").getByRole("button", { name: "Templates", exact: true });
-const card = (page, name) => page.getByRole("radio", { name: new RegExp(`^Template ${name},`) });
+const card = (page, name) => page.getByRole("button", { name: new RegExp(`^Template ${name},`) });
 const saveButton = (page) => page.getByRole("button", { name: "Save this page as a template" });
 const saveDialog = (page) => page.getByRole("dialog", { name: "Save this page as a template" });
 const stage = (page) => page.locator(".ed-pagebox");
@@ -138,7 +138,7 @@ const applyResponse = (page) => page.waitForResponse((r) => r.url().includes("/a
 const createResponse = (page) => page.waitForResponse((r) => r.url().includes("/api/book-layout/template-create") && r.request().method() === "POST");
 async function openTemplates(page) {
   await templatesButton(page).click();
-  await expect(page.getByRole("radiogroup", { name: "Templates" })).toBeVisible();
+  await expect(page.getByRole("group", { name: "Templates", exact: true })).toBeVisible();
 }
 async function saveAs(page, name) {
   await saveButton(page).click();
@@ -293,9 +293,9 @@ test("save a customised cover as a template, reset, apply it again: title and te
     await card(page, NAME).click();
     await page.getByRole("button", { name: "Apply to the cover" }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Apply template" }).click();
-    await expect(page.getByRole("radiogroup", { name: "Templates" })).toHaveCount(0);
+    await expect(page.getByRole("group", { name: "Templates", exact: true })).toHaveCount(0);
     await page.getByRole("toolbar").getByRole("button", { name: "History" }).click();
-    await expect(page.getByRole("radiogroup", { name: "Earlier versions" }).getByRole("radio").first()).toHaveAccessibleName(/Before template/);
+    await expect(page.getByRole("group", { name: "Earlier versions" }).getByRole("button").first()).toHaveAccessibleName(/Before template/);
   });
 });
 

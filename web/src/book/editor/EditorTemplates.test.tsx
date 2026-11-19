@@ -10,6 +10,9 @@ import type { LayoutDoc } from "./document";
 import { EditorShell } from "./EditorShell";
 import { mockServer, type MockTemplate } from "./mockServer";
 
+const getPicks = () => Array.from(document.querySelectorAll<HTMLElement>(".ed-tpl-pick"));
+const findPicks = () => waitFor(() => expect(getPicks().length).toBeGreaterThan(0)).then(getPicks);
+
 // T-175: the Templates panel in the editor: nothing is fetched before it opens, the list per page kind, the keyboard walk, read-only preview, apply
 // (settle first, one request, history cleared), delete, and every error. The real browser path is tools/e2e/editor-templates.spec.mjs.
 
@@ -105,11 +108,11 @@ const mount = async (opts: { layout?: LayoutDoc | null; templates?: MockTemplate
 const button = () => screen.getByRole("button", { name: /^Templates$/ });
 const open = async () => {
   await userEvent.click(button());
-  return screen.findAllByRole("radio");
+  return findPicks();
 };
 const stageText = () => document.querySelector(".ed-pagebox")?.textContent ?? "";
 const live = () => document.querySelector(".visually-hidden[role=status]")?.textContent;
-const cardName = (n: string) => screen.getByRole("radio", { name: new RegExp(`^Template ${n},`) });
+const cardName = (n: string) => screen.getByRole("button", { name: new RegExp(`^Template ${n},`) });
 const applyBtn = (n: string) =>
   within(cardName(n).closest(".ed-tpl-card") as HTMLElement).getByRole("button", {
     name: "Apply",
@@ -157,7 +160,7 @@ describe("opening and the list", () => {
     await i18n.changeLanguage("vi");
     await mount();
     await userEvent.click(screen.getByRole("button", { name: /^Mẫu trang$/ }));
-    expect(await screen.findByRole("radio", { name: /^Mẫu Tiêu đề gọn,/ })).toBeVisible();
+    expect(await screen.findByRole("button", { name: /^Mẫu Tiêu đề gọn,/ })).toBeVisible();
     expect(screen.getByRole("heading", { level: 2, name: "Mẫu cho bìa" })).toBeVisible();
   });
 
@@ -169,7 +172,10 @@ describe("opening and the list", () => {
     );
     srv.s.templates.push(...TEMPLATES());
     await userEvent.click(screen.getByRole("button", { name: "Refresh" }));
-    expect(await screen.findAllByRole("radio")).toHaveLength(3);
+    expect(await findPicks()).toHaveLength(3);
+    // F-15: the cards are buttons in a group (aria-pressed marks the preview), not radios next to the Apply and Delete buttons
+    expect(screen.queryAllByRole("radio")).toHaveLength(0);
+    expect(screen.queryByRole("radiogroup")).toBeNull();
     expect(srv.s.tcalls).toEqual(["list:cover", "list:cover"]);
   });
 
@@ -182,7 +188,7 @@ describe("opening and the list", () => {
     expect(await screen.findByText(/You are offline/)).toBeInTheDocument();
     f.mockImplementation(real);
     await userEvent.click(screen.getByRole("button", { name: "Try again" }));
-    expect(await screen.findAllByRole("radio")).toHaveLength(3);
+    expect(await findPicks()).toHaveLength(3);
     expect(srv.s.tcalls).toEqual(["list:cover"]);
   });
 
@@ -222,14 +228,14 @@ describe("page kind", () => {
       await screen.findByRole("heading", { level: 2, name: "Templates for the notes pages" }),
     ).toBeVisible();
     expect(screen.getByText("A notes template applies to every notes page.")).toBeVisible();
-    expect(await screen.findByRole("radio", { name: /^Template Calm notes,/ })).toBeVisible();
+    expect(await screen.findByRole("button", { name: /^Template Calm notes,/ })).toBeVisible();
     await next(); // notes page 2: the same kind, no new call
-    expect(screen.getByRole("radio", { name: /^Template Calm notes,/ })).toBeVisible();
+    expect(screen.getByRole("button", { name: /^Template Calm notes,/ })).toBeVisible();
     expect(srv.s.tcalls).toEqual(["list:cover", "list:profile", "list:notes"]);
     await userEvent.click(screen.getByRole("button", { name: "Previous page" }));
     await userEvent.click(screen.getByRole("button", { name: "Previous page" }));
     await userEvent.click(screen.getByRole("button", { name: "Previous page" }));
-    expect(await screen.findByRole("radio", { name: /^Template Clean title,/ })).toBeVisible();
+    expect(await screen.findByRole("button", { name: /^Template Clean title,/ })).toBeVisible();
     expect(srv.s.tcalls.filter((c) => c === "list:cover")).toHaveLength(2); // the cover list was dropped when a third kind came
   });
 
@@ -238,7 +244,7 @@ describe("page kind", () => {
     await open();
     await next();
     await next(); // notes 1
-    await userEvent.click(await screen.findByRole("radio", { name: /^Template Calm notes,/ }));
+    await userEvent.click(await screen.findByRole("button", { name: /^Template Calm notes,/ }));
     await screen.findByText(/Previewing the template 'Calm notes'/);
     await next(); // notes 2: same kind
     expect(screen.getByText(/Previewing the template 'Calm notes'/)).toBeVisible();
@@ -281,13 +287,13 @@ describe("keyboard", () => {
     expect(radios[0]).toHaveFocus();
     await userEvent.keyboard("{End}{ArrowUp}{Enter}");
     await screen.findByText(/Previewing the template 'Bold'/);
-    expect(radios[1]).toHaveAttribute("aria-checked", "true");
+    expect(radios[1]).toHaveAttribute("aria-pressed", "true");
     await waitFor(() => expect(stageText()).toContain("Mẫu đậm"));
     await userEvent.keyboard("{Escape}");
     expect(screen.queryByText(/Previewing the template/)).toBeNull();
     expect(stageText()).toContain("Bản hiện tại");
     await userEvent.keyboard("{Escape}");
-    expect(screen.queryByRole("radiogroup", { name: "Templates" })).toBeNull();
+    expect(screen.queryByRole("group", { name: "Templates" })).toBeNull();
     await waitFor(() => expect(button()).toHaveFocus());
   });
 
@@ -383,8 +389,10 @@ describe("apply", () => {
     const toast = document.querySelector<HTMLElement>(".banner")!;
     expect(toast).toHaveTextContent("Template applied to the cover.");
     await userEvent.click(within(toast).getByRole("button", { name: "Undo in History" }));
-    const rows = await screen.findAllByRole("radio");
-    expect(rows[0]).toHaveAccessibleName(/Before template, 1 item$/);
+    const rows = await screen.findAllByRole("group", { name: "Earlier versions" });
+    expect(within(rows[0]!).getAllByRole("button")[0]).toHaveAccessibleName(
+      /Before template, 1 item$/,
+    );
     expect(document.querySelector(".banner")).toBeNull();
   });
 
@@ -517,7 +525,7 @@ describe("apply errors (each with its own text; the editor is left as it was)", 
       await attempt();
       expect(await screen.findByText(text)).toBeVisible();
       await waitFor(() => expect(srv.s.tcalls.filter((c) => c === "list:cover")).toHaveLength(2));
-      await screen.findAllByRole("radio");
+      await findPicks();
       untouched(srv);
     },
   );
@@ -578,7 +586,7 @@ describe("delete an own template", () => {
       "Delete the template 'My cover'? Books that already used it are not changed.",
     );
     await userEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
-    await waitFor(() => expect(screen.queryByRole("radio", { name: /My cover/ })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole("button", { name: /My cover/ })).toBeNull());
     expect(srv.s.tcalls).toEqual(["list:cover", "delete:01J9Z3K6V8Q4M7N2P5R8OWN001"]);
     expect(live()).toBe("Template 'My cover' deleted.");
     expect(screen.queryByRole("button", { name: "Delete" })).toBeNull();
@@ -593,7 +601,7 @@ describe("delete an own template", () => {
     await userEvent.click(
       within(screen.getByRole("dialog")).getByRole("button", { name: "Delete" }),
     );
-    await waitFor(() => expect(screen.queryByRole("radio", { name: /My cover/ })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole("button", { name: /My cover/ })).toBeNull());
     expect(srv.s.tcalls.filter((c) => c === "list:cover")).toHaveLength(2);
     expect(screen.queryByRole("dialog")).toBeNull();
   });
@@ -622,6 +630,6 @@ describe("delete an own template", () => {
     expect(await within(screen.getByRole("dialog")).findByRole("alert")).toHaveTextContent(
       "Something went wrong",
     );
-    expect(screen.getByRole("radio", { name: /My cover/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /My cover/ })).toBeInTheDocument();
   });
 });

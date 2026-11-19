@@ -219,7 +219,7 @@ async function openEditor(page) {
 const historyButton = (page) =>
   page.getByRole("toolbar").getByRole("button", { name: "History" });
 const rows = (page) =>
-  page.getByRole("radiogroup", { name: "Earlier versions" }).getByRole("radio");
+  page.getByRole("group", { name: "Earlier versions" }).getByRole("button");
 async function openHistory(page) {
   await historyButton(page).click();
   await expect(rows(page).first()).toBeVisible();
@@ -617,7 +617,7 @@ test("keyboard only: open History, walk the rows, preview, restore; Escape gives
   await expectShare(page, 50);
   await page.keyboard.press("Escape");
   await expect(
-    page.getByRole("radiogroup", { name: "Earlier versions" }),
+    page.getByRole("group", { name: "Earlier versions" }),
   ).toBeHidden();
   await expect(historyButton(page)).toBeFocused();
 });

@@ -124,7 +124,7 @@ test("768 px touch (desktop shell, coarse pointer): the Templates dialogs have 4
   for (const b of heights) expect(b.h, `delete dialog button ${b.n}`).toBeGreaterThanOrEqual(43.5);
   await dialog.getByRole("button", { name: "Cancel" }).tap();
   // the apply confirm
-  await page.getByRole("radio", { name: new RegExp(`^Template ${NAME},`) }).tap();
+  await page.getByRole("button", { name: new RegExp(`^Template ${NAME},`) }).tap();
   await page.getByRole("button", { name: /^Apply to/ }).tap();
   const apply = page.getByRole("dialog");
   await expect(apply).toBeVisible();

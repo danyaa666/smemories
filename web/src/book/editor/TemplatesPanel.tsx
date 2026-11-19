@@ -407,8 +407,7 @@ export function TemplatesPanel({
           <div className="ed-tpl-card" key={cardKey(c)} data-tid={cardKey(c)}>
             <button
               type="button"
-              role="radio"
-              aria-checked={cardKey(c) === previewId}
+              aria-pressed={cardKey(c) === previewId}
               aria-label={fresh ? `${label}, ${t("editor.templates.save.new")}` : label}
               tabIndex={i === cursor ? 0 : -1}
               ref={(el) => void (radios.current[i] = el)}
@@ -490,7 +489,7 @@ export function TemplatesPanel({
       )}
       {groups && (
         <div
-          role="radiogroup"
+          role="group"
           aria-label={t("editor.templates.list")}
           className="ed-tpl-list"
           ref={root}
@@ -547,7 +546,10 @@ export function TemplatesPanel({
               void submitSave();
             }}
           />
-          <p className={`ed-hint${nameLength(name) > NAME_MAX ? " error" : ""}`} aria-live="polite">
+          <p
+            className={`ed-hint${nameLength(name) > NAME_MAX ? " error" : ""}`}
+            aria-live={nameLength(name) >= NAME_MAX - 5 ? "polite" : "off"} // silent on every key until the limit is near (F-13)
+          >
             {t("editor.templates.save.counter", { used: nameLength(name), max: NAME_MAX })}
           </p>
           {saveFailure && (

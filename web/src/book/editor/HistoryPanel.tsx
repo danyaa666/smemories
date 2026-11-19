@@ -156,7 +156,7 @@ export function HistoryPanel({
         <p className="ed-hint">{t("editor.history.empty")}</p>
       )}
       {list.status === "ready" && list.rows.length > 0 && (
-        <div role="radiogroup" aria-label={t("editor.history.list")} className="ed-history-list">
+        <div role="group" aria-label={t("editor.history.list")} className="ed-history-list">
           {list.rows.map((r, i) => {
             const when = relativeTime(r.created_at, list.at, loc);
             const kind = t(`editor.history.kind.${r.kind}`, {
@@ -167,8 +167,7 @@ export function HistoryPanel({
               <button
                 key={r.id}
                 type="button"
-                role="radio"
-                aria-checked={r.id === previewId}
+                aria-pressed={r.id === previewId}
                 aria-label={`${when}, ${kind}, ${items}`}
                 aria-busy={loadingId === r.id || undefined}
                 title={absoluteTime(r.created_at, loc)}

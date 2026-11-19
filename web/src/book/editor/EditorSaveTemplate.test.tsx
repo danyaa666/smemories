@@ -8,6 +8,9 @@ import type { LayoutDoc } from "./document";
 import { EditorShell } from "./EditorShell";
 import { mockServer, type MockTemplate } from "./mockServer";
 
+const getPicks = () => Array.from(document.querySelectorAll<HTMLElement>(".ed-tpl-pick"));
+const findPicks = () => waitFor(() => expect(getPicks().length).toBeGreaterThan(0)).then(getPicks);
+
 // T-176: "Save this page as a template" in the Templates panel: the button and its reasons, the name dialog and its rules, settle first, one request,
 // the list read again with the new card focused, a save that changes nothing in the editor, and every error. The real browser path is
 // tools/e2e/editor-save-template.spec.mjs; the model (name rules, error mapping, state machine) is in templates.test.ts.
@@ -83,7 +86,7 @@ const templatesButton = () => screen.getByRole("button", { name: /^Templates$/ }
 const saveButton = () => screen.getByRole("button", { name: "Save this page as a template" });
 const open = async () => {
   await userEvent.click(templatesButton());
-  await screen.findAllByRole("radio");
+  await findPicks();
 };
 const dialog = () => screen.getByRole("dialog", { name: "Save this page as a template" });
 const nameField = () => within(dialog()).getByLabelText("Template name") as HTMLInputElement;
@@ -143,7 +146,7 @@ describe("the button", () => {
       templates: [own("01J9Z3K6V8Q4M7N2P5R8OWN001", "My cover", 5)],
     });
     await open();
-    await userEvent.click(screen.getByRole("radio", { name: /^Template My cover,/ }));
+    await userEvent.click(screen.getByRole("button", { name: /^Template My cover,/ }));
     await screen.findByText(/Previewing the template/);
     expect(saveButton()).toHaveAttribute("aria-disabled", "true");
     expect(note()).toMatch(/Go back to your current page/);
@@ -185,6 +188,11 @@ describe("the dialog", () => {
       "This saves the cover as it is now: 1 item, 1 moved element, a background. 2 images are not saved (your own images are not copied to templates).",
     );
     expect(dialog()).toHaveTextContent("10 of 60 characters");
+    // F-13: the counter is silent on every key and speaks only when the limit is near or passed
+    const counter = () => within(dialog()).getByText(/of 60 characters/);
+    expect(counter()).toHaveAttribute("aria-live", "off");
+    fireEvent.change(nameField(), { target: { value: "x".repeat(55) } });
+    expect(counter()).toHaveAttribute("aria-live", "polite");
     await userEvent.keyboard("{Escape}");
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(saveButton()).toHaveFocus();
@@ -195,7 +203,7 @@ describe("the dialog", () => {
     await i18n.changeLanguage("vi");
     await mount();
     await userEvent.click(screen.getByRole("button", { name: /^Mẫu trang$/ }));
-    await screen.findAllByRole("radio");
+    await findPicks();
     await userEvent.click(screen.getByRole("button", { name: "Lưu trang này thành mẫu" }));
     expect(within(screen.getByRole("dialog")).getByLabelText("Tên mẫu")).toHaveValue(
       "Bìa của tôi 2",
@@ -258,7 +266,7 @@ describe("saving", () => {
     await userEvent.dblClick(confirm());
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(srv.s.creates).toEqual([{ yearbook_id: BOOK, kind: "cover", name: "Bìa mới" }]);
-    const card = await screen.findByRole("radio", {
+    const card = await screen.findByRole("button", {
       name: "Template Bìa mới, 1 item, my template, new",
     });
     await waitFor(() => expect(card).toHaveFocus());
@@ -268,7 +276,8 @@ describe("saving", () => {
     expect(toast()).not.toMatch(/Undo in History/);
     // newest first inside "My templates"
     const names = within(screen.getByRole("group", { name: "My templates" }))
-      .getAllByRole("radio")
+      .getAllByRole("button")
+      .filter((b) => b.classList.contains("ed-tpl-pick"))
       .map((r) => r.getAttribute("aria-label"));
     expect(names[0]).toMatch(/^Template Bìa mới,/);
   });

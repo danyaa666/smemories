@@ -189,7 +189,7 @@ test("a stretching rectangle: added at 40 % by 25 %, dragged to a thin banner, t
     expect(Math.abs(h - 250 * (210 / 148))).toBeLessThan(2);
   });
   await step("drag the bottom handle up: a thin banner, the width is kept", async () => {
-    const handle = page.getByRole("button", { name: "Resize from bottom", exact: true });
+    const handle = page.getByLabel("Resize from bottom", { exact: true });
     const hb = await rect(handle);
     const before = (await storedCover(page)).items[0];
     await page.mouse.move(hb.cx, hb.cy);

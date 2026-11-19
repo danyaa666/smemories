@@ -9,6 +9,7 @@ import { assets } from "../assets";
 import type { LayoutDoc, LayoutItem } from "./document";
 import { EditorShell } from "./EditorShell";
 import { DesignImages } from "./palette/DesignImages";
+import { COUNT_MS } from "./palette/AssetGrid";
 import { Uploads } from "./palette/uploads";
 import type { DesignImages as Images } from "./palette/useDesignImages";
 import { mockServer, type MockMedia } from "./mockServer";
@@ -137,6 +138,21 @@ describe("palette tabs and grid", () => {
     expect(tile("Mặt trời đeo kính")).toBeInTheDocument();
   });
 
+  it("says the count once typing pauses, not on every key (F-14)", async () => {
+    await mount();
+    const count = () => screen.getByText(/ found$/).textContent;
+    const all = count();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      fireEvent.change(screen.getByRole("searchbox"), { target: { value: "sun" } });
+      expect(count()).toBe(all); // still the old text: nothing new to read
+      await act(() => vi.advanceTimersByTimeAsync(COUNT_MS + 50));
+      expect(count()).not.toBe(all);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('searches without diacritics ("mat troi" finds "Mặt trời đeo kính") and says when nothing matches', async () => {
     await mount();
     await act(() => i18n.changeLanguage("vi"));
@@ -145,7 +161,7 @@ describe("palette tabs and grid", () => {
     expect(screen.queryByRole("button", { name: "Ngôi sao vàng" })).toBeNull();
     await userEvent.clear(screen.getByRole("searchbox"));
     await userEvent.type(screen.getByRole("searchbox"), "zzzzzz");
-    expect(screen.getByText(/Không tìm thấy/)).toBeInTheDocument();
+    expect(await screen.findByText(/Không tìm thấy/, {}, { timeout: 3000 })).toBeInTheDocument(); // after the typing pause
   });
 
   it("one tab stop; arrows, Home and End move between the tiles; Enter adds the sticker, selects it and puts the focus on it", async () => {

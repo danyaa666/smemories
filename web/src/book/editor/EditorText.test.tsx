@@ -100,7 +100,7 @@ describe("add text", () => {
     expect(printed(box[0]!.dataset.layoutItem!)).toHaveTextContent("Your text");
     // the panel shows the style it was added with: body font, the middle of 8..96, the first colour token, left, not bold
     expect(screen.getByLabelText("Font")).toHaveValue("body");
-    expect(screen.getByLabelText("Size")).toHaveValue(52);
+    expect(screen.getByLabelText("Size")).toHaveValue("52");
     expect(screen.getByRole("radio", { name: "Ink" })).toHaveAttribute("aria-checked", "true");
     expect(screen.getByRole("button", { name: "Left" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("checkbox", { name: "Bold" })).not.toBeChecked();
@@ -338,7 +338,7 @@ describe("text controls in the property panel", () => {
       fireEvent.change(size, { target: { value: bad } });
       fireEvent.keyDown(size, { key: "Enter" });
       expect(screen.getByRole("alert")).toHaveTextContent("Between 8 and 96");
-      expect(size).toHaveValue(24);
+      expect(size).toHaveValue("24");
     }
     fireEvent.change(size, { target: { value: "40" } });
     fireEvent.keyDown(size, { key: "Enter" });

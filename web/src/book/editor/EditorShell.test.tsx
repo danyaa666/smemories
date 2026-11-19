@@ -81,6 +81,7 @@ const mount = async (layout: LayoutDoc | null = LAYOUT, over: Partial<BookData> 
 };
 const hit = (name: string | RegExp) => screen.getByRole("button", { name });
 const field = (name: string) => screen.getByLabelText(name) as HTMLInputElement;
+const num = (name: string) => parseFloat(field(name).value);
 const sheetKind = () => document.querySelector(".ed-pagebox .bk-sheet")?.getAttribute("data-page");
 const moved = (id: string) =>
   document.querySelector(`.ed-pagebox [data-layout-id="${id}"]`)?.classList.contains("mb-ov");
@@ -183,7 +184,10 @@ describe("selection", () => {
   it("draws the handles of the selection outside the page's clip, as focusable shapes", async () => {
     await mount();
     await userEvent.click(hit("Sticker"));
-    const handles = screen.getAllByRole("button", { name: /^(Resize from|Rotate$)/ });
+    // aria-hidden: pointer only, the keyboard and the panel are the alternative (T-188, F-16)
+    expect(screen.queryAllByRole("button", { name: /^(Resize from|Rotate$)/ })).toHaveLength(0);
+    const handles = [...document.querySelectorAll<HTMLElement>(".ed-handle")];
+    expect(handles.every((h) => h.getAttribute("aria-hidden") === "true")).toBe(true);
     // this sticker is smaller than a hit area on this stage, so only the corner handles and the rotate handle are drawn (the panel and the keys resize it)
     expect(handles.map((h) => h.getAttribute("aria-label")).sort()).toEqual([
       "Resize from bottom left",
@@ -197,12 +201,18 @@ describe("selection", () => {
       h.focus();
       expect(h).toHaveFocus();
     }
-    expect(screen.getAllByRole("button", { name: /^Resize from/ })).toHaveLength(4);
+    expect(handles.filter((h) => /^Resize from/.test(h.getAttribute("aria-label")!))).toHaveLength(
+      4,
+    );
     await userEvent.click(hit("Text: Xin chào lớp 12A1"));
     // a box wide enough for them keeps the top and bottom handles
-    expect(screen.getAllByRole("button", { name: /^Resize from (top|bottom)$/ })).toHaveLength(2);
+    expect(
+      [...document.querySelectorAll(".ed-handle")].filter((h) =>
+        /^Resize from (top|bottom)$/.test(h.getAttribute("aria-label")!),
+      ),
+    ).toHaveLength(2);
     fireEvent.click(document.querySelector(".ed-scroll")!);
-    expect(screen.queryByRole("button", { name: "Rotate" })).toBeNull();
+    expect(document.querySelector(".ed-rotate")).toBeNull();
   });
 
   it("has a labelled stage and a safe margin that can be toggled", async () => {
@@ -245,19 +255,19 @@ describe("property panel", () => {
   it("writes the whole box of an element, one history step per committed input, and undoes it from the keyboard", async () => {
     await mount();
     await userEvent.click(hit("Cover title"));
-    expect(field("Width")).toHaveValue(82.4); // 672 of 816 px, as % of the page
+    expect(field("Width")).toHaveValue("82.4"); // 672 of 816 px, as % of the page
     expect(moved("cover.title")).toBe(false);
     expect(screen.getByRole("button", { name: "Undo" })).toBeDisabled();
     await setNum("Width", "50");
     expect(moved("cover.title")).toBe(true);
-    expect(field("Width")).toHaveValue(50);
+    expect(field("Width")).toHaveValue("50");
     // the other numbers did not jump back to something else
-    expect(field("Left")).toHaveValue(11.8);
+    expect(field("Left")).toHaveValue("11.8");
     expect(screen.getByRole("button", { name: "Undo" })).toBeEnabled();
     await setNum("Rotation (degrees)", "5");
     fireEvent.keyDown(document, { key: "z", ctrlKey: true });
-    expect(field("Rotation (degrees)")).toHaveValue(0);
-    expect(field("Width")).toHaveValue(50); // one step undone, the width step is still there
+    expect(field("Rotation (degrees)")).toHaveValue("0");
+    expect(field("Width")).toHaveValue("50"); // one step undone, the width step is still there
     fireEvent.keyDown(document, { key: "z", metaKey: true });
     expect(moved("cover.title")).toBe(false);
     expect(screen.getByRole("button", { name: "Undo" })).toBeDisabled();
@@ -266,24 +276,24 @@ describe("property panel", () => {
     fireEvent.keyDown(document, { key: "z", metaKey: true }); // undo again
     fireEvent.keyDown(document, { key: "y", ctrlKey: true }); // Ctrl+Y redoes
     expect(moved("cover.title")).toBe(true);
-    expect(field("Rotation (degrees)")).toHaveValue(0);
+    expect(field("Rotation (degrees)")).toHaveValue("0");
     fireEvent.keyDown(document, { key: "y", ctrlKey: true });
-    expect(field("Rotation (degrees)")).toHaveValue(5);
+    expect(field("Rotation (degrees)")).toHaveValue("5");
     expect(screen.getByRole("button", { name: "Redo" })).toBeDisabled();
   });
 
   it("changes an item's place, shows a refusal and keeps the typed number out of the store", async () => {
     await mount();
     await userEvent.click(hit("Sticker"));
-    expect(field("Left")).toHaveValue(60); // x 600 thousandths of the width
+    expect(field("Left")).toHaveValue("60"); // x 600 thousandths of the width
     await setNum("Left", "10");
-    expect(field("Left")).toHaveValue(10);
+    expect(field("Left")).toHaveValue("10");
     const star = () =>
       document.querySelector<HTMLElement>(".ed-pagebox [data-layout-item=starBB]")!;
     expect(parseFloat(star().style.left)).toBeCloseTo(81.6, 0);
     await setNum("Width", "500"); // far outside the limits
     expect(await screen.findByRole("alert")).toHaveTextContent("Between 1 and 200");
-    expect(field("Width")).toHaveValue(15);
+    expect(field("Width")).toHaveValue("15");
     await setNum("Width", "20");
     expect(screen.queryByRole("alert")).toBeNull();
   });
@@ -294,7 +304,7 @@ describe("property panel", () => {
     for (const bad of ["250", "-5", "0.04", ""]) {
       await setNum("Width", bad);
       expect(screen.getByRole("alert")).toHaveTextContent("Between 1 and 200");
-      expect(field("Width")).toHaveValue(82.4);
+      expect(field("Width")).toHaveValue("82.4");
     }
     expect(field("Width")).toHaveAttribute("aria-invalid", "true");
     expect(moved("cover.title")).toBe(false);
@@ -330,13 +340,13 @@ describe("property panel", () => {
     expect(await saved()).toEqual({ ...stored, w: 500 });
     await setNum("Left", "20");
     await setNum("Top", "30"); // Top commits cy from the stored height only
-    await waitFor(() => expect(field("Top")).toHaveValue(30));
+    await waitFor(() => expect(field("Top")).toHaveValue("30"));
     await userEvent.click(screen.getByRole("link", { name: "Print or save as PDF" }));
     await waitFor(() => expect(srv.s.saves.length).toBeGreaterThan(1));
     const ov = srv.s.layout!.pages.cover!.overrides!["cover.title"]!;
     expect(ov).toMatchObject({ x: 200, w: 500, h: 133, r: 0 });
     await setNum("Height", "20"); // keeps the shown Top, moves the centre
-    expect(field("Top")).toHaveValue(30);
+    expect(field("Top")).toHaveValue("30");
     vi.unstubAllGlobals();
   });
 
@@ -416,15 +426,16 @@ describe("gestures (pointer)", () => {
     await mount();
     await userEvent.click(hit("Sticker"));
     stubStage();
-    expect(field("Left")).toHaveValue(60);
+    expect(field("Left")).toHaveValue("60");
+    const top0 = num("Top");
     const up = drag(hit("Sticker"), [100, 100], [140, 100], { altKey: true }); // 40 screen px = 80 design px = 9.8 % of the page
     up();
-    expect(field("Left")).toHaveValue(69.8);
-    expect(field("Top")).toHaveValue(field("Top").valueAsNumber); // unchanged by a horizontal drag
+    expect(field("Left")).toHaveValue("69.8");
+    expect(num("Top")).toBeCloseTo(top0, 5); // unchanged by a horizontal drag
     expect(undoable()).toBe(true);
     expect(live()).toContain("Position 69.8 percent from the left");
     fireEvent.keyDown(document, { key: "z", ctrlKey: true });
-    expect(field("Left")).toHaveValue(60);
+    expect(field("Left")).toHaveValue("60");
     expect(undoable()).toBe(false); // one gesture, one step
   });
 
@@ -434,9 +445,9 @@ describe("gestures (pointer)", () => {
     stubStage();
     drag(hit("Sticker"), [100, 100], [160, 130], { altKey: true });
     await act(() => new Promise((r) => requestAnimationFrame(() => r(0))));
-    expect(field("Left")).not.toHaveValue(60); // the preview shows it
+    expect(field("Left")).not.toHaveValue("60"); // the preview shows it
     fireEvent.keyDown(window, { key: "Escape" });
-    expect(field("Left")).toHaveValue(60);
+    expect(field("Left")).toHaveValue("60");
     expect(undoable()).toBe(false);
     expect(hit("Sticker")).toHaveAttribute("aria-pressed", "true");
     fireEvent(window, pointer("pointerup", 160, 130));
@@ -450,7 +461,7 @@ describe("gestures (pointer)", () => {
     stubStage();
     drag(hit("Sticker"), [100, 100], [160, 130], { altKey: true });
     fireEvent(window, pointer("pointercancel", 160, 130));
-    expect(field("Left")).toHaveValue(60);
+    expect(field("Left")).toHaveValue("60");
     expect(undoable()).toBe(false);
     drag(hit("Sticker"), [100, 100], [101, 100])(); // below the slop: a click
     expect(undoable()).toBe(false);
@@ -458,7 +469,7 @@ describe("gestures (pointer)", () => {
     fireEvent(hit("Sticker"), pointer("pointerdown", 300, 300, { pointerId: 2 }));
     fireEvent(window, pointer("pointermove", 300, 300, { pointerId: 2, altKey: true })); // not the gesture's pointer
     fireEvent(window, pointer("pointerup", 300, 300, { pointerId: 2 }));
-    expect(field("Left")).toHaveValue(60);
+    expect(field("Left")).toHaveValue("60");
     fireEvent(window, pointer("pointercancel", 100, 100));
   });
 
@@ -470,35 +481,32 @@ describe("gestures (pointer)", () => {
     // move the item's centre to 3 screen px (6 design px) beside the page centre: it snaps onto it
     const dx = (816 / 2 + 6 - (600 * 0.816 + 61.2)) * 0.5;
     drag(hit("Sticker"), [100, 100], [100 + dx, 100])();
-    expect(field("Left").valueAsNumber).toBeCloseTo(centreLeft, 1);
+    expect(num("Left")).toBeCloseTo(centreLeft, 1);
     fireEvent.keyDown(document, { key: "z", ctrlKey: true });
     drag(hit("Sticker"), [100, 100], [100 + dx, 100], { altKey: true })();
-    expect(field("Left").valueAsNumber).toBeGreaterThan(centreLeft + 0.5);
+    expect(num("Left")).toBeGreaterThan(centreLeft + 0.5);
   });
 
   it("resizes from a handle along the item's own axes and rotates from the rotate handle", async () => {
     await mount();
     await userEvent.click(hit("Sticker")); // r = 10 degrees
     stubStage();
-    const w0 = field("Width").valueAsNumber;
+    const w0 = num("Width");
     const up = drag(
-      screen.getByRole("button", { name: "Resize from bottom right" }),
+      document.querySelector<HTMLElement>('.ed-handle[aria-label="Resize from bottom right"]')!,
       [200, 200],
       [240, 200],
       { altKey: true },
     );
     up();
     // 40 screen px along x on a box turned 10 degrees: 80 design px * cos(10) of width
-    expect(field("Width").valueAsNumber).toBeCloseTo(
-      w0 + ((80 * Math.cos((10 * Math.PI) / 180)) / 816) * 100,
-      0,
-    );
+    expect(num("Width")).toBeCloseTo(w0 + ((80 * Math.cos((10 * Math.PI) / 180)) / 816) * 100, 0);
     fireEvent.keyDown(document, { key: "z", ctrlKey: true });
     const centre = [(600 * 0.816 + 61.2) * 0.5, 0];
     void centre;
-    const rotate = screen.getByRole("button", { name: "Rotate" });
+    const rotate = document.querySelector<HTMLElement>(".ed-rotate")!;
     drag(rotate, [200, 100], [200, 100])(); // no movement: nothing changes
-    expect(field("Rotation (degrees)")).toHaveValue(10);
+    expect(field("Rotation (degrees)")).toHaveValue("10");
   });
 
   it("touch: a swipe over an unselected item starts nothing, the tap's click selects, then a drag moves", async () => {
@@ -524,16 +532,16 @@ describe("gestures (keyboard and buttons)", () => {
     await mount();
     await userEvent.click(hit("Sticker"));
     hit("Sticker").focus();
-    const left0 = field("Left").valueAsNumber;
+    const left0 = num("Left");
     await key("{ArrowRight}{ArrowRight}{ArrowRight}");
     await key("{Shift>}{ArrowRight}{/Shift}");
-    expect(field("Left").valueAsNumber).toBeCloseTo(left0 + (13 / 816) * 100, 1);
+    expect(num("Left")).toBeCloseTo(left0 + (13 / 816) * 100, 1);
     // a run of keys says its first step at once and the last one when the interval is over (T-182)
     await waitFor(() => expect(live()).toContain("Moved right 10."));
     expect(live()).toContain("percent from the left");
     expect(undoable()).toBe(false); // the burst is still open: nothing committed yet
     await key("{Control>}z{/Control}"); // Ctrl closes the burst, then undo takes the whole burst away
-    expect(field("Left")).toHaveValue(left0);
+    expect(num("Left")).toBeCloseTo(left0, 5);
     expect(undoable()).toBe(false);
   });
 
@@ -541,11 +549,11 @@ describe("gestures (keyboard and buttons)", () => {
     await mount();
     await userEvent.click(hit("Sticker"));
     hit("Sticker").focus();
-    const w0 = field("Width").valueAsNumber;
+    const w0 = num("Width");
     const alt = fireEvent.keyDown(hit("Sticker"), { key: "ArrowLeft", altKey: true });
     expect(alt).toBe(true); // not default-prevented
     await key("{Alt>}{Shift>}{ArrowRight}{/Shift}{/Alt}");
-    expect(field("Width").valueAsNumber).toBeGreaterThan(w0);
+    expect(num("Width")).toBeGreaterThan(w0);
     expect(live()).toContain("Size");
   });
 
@@ -554,11 +562,11 @@ describe("gestures (keyboard and buttons)", () => {
     await userEvent.click(hit("Sticker")); // 10 degrees
     hit("Sticker").focus();
     await key(".");
-    expect(field("Rotation (degrees)")).toHaveValue(11);
+    expect(field("Rotation (degrees)")).toHaveValue("11");
     await key("{Shift>}.{/Shift}"); // Shift+. types >
-    expect(field("Rotation (degrees)")).toHaveValue(26);
+    expect(field("Rotation (degrees)")).toHaveValue("26");
     await key(",");
-    expect(field("Rotation (degrees)")).toHaveValue(25);
+    expect(field("Rotation (degrees)")).toHaveValue("25");
     await waitFor(() => expect(live()).toContain("Rotated to 25 degrees"));
   });
 
@@ -581,13 +589,13 @@ describe("gestures (keyboard and buttons)", () => {
   it("the panel buttons rotate and resize with the same steps", async () => {
     await mount();
     await userEvent.click(hit("Sticker"));
-    const w0 = field("Width").valueAsNumber;
+    const w0 = num("Width");
     await userEvent.click(screen.getByRole("button", { name: "Rotate right 15°" }));
-    expect(field("Rotation (degrees)")).toHaveValue(25);
+    expect(field("Rotation (degrees)")).toHaveValue("25");
     await userEvent.click(screen.getByRole("button", { name: "Rotate left 1°" }));
-    expect(field("Rotation (degrees)")).toHaveValue(24);
+    expect(field("Rotation (degrees)")).toHaveValue("24");
     await userEvent.click(screen.getByRole("button", { name: "Wider" }));
-    expect(field("Width").valueAsNumber).toBeCloseTo(w0 + (10 / 816) * 100, 0);
+    expect(num("Width")).toBeCloseTo(w0 + (10 / 816) * 100, 0);
     await userEvent.click(screen.getByRole("button", { name: "Shorter" }));
     expect(live()).toBe("Shorter");
   });
@@ -652,9 +660,9 @@ describe("toolbar and banners", () => {
     await userEvent.setup({ advanceTimers: vi.advanceTimersByTime }).click(hit("Sticker"));
     await setNum("Left", "10");
     fireEvent.click(screen.getByRole("button", { name: "Undo" }));
-    expect(field("Left")).toHaveValue(60);
+    expect(field("Left")).toHaveValue("60");
     fireEvent.click(screen.getByRole("button", { name: "Redo" }));
-    expect(field("Left")).toHaveValue(10);
+    expect(field("Left")).toHaveValue("10");
     await act(() => vi.advanceTimersByTimeAsync(DEBOUNCE_MS + 10));
     expect(srv.s.saves).toHaveLength(1);
     expect(srv.s.saves[0]!.base_version).toBe(2);
@@ -744,7 +752,7 @@ describe("toolbar and banners", () => {
     expect(screen.getByRole("button", { name: "Undo" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Reset all layout" })).toBeDisabled();
     fireEvent.keyDown(document, { key: "z", ctrlKey: true }); // the shortcut is blocked too
-    expect(field("Left")).toHaveValue(10);
+    expect(field("Left")).toHaveValue("10");
     fireEvent.click(screen.getByRole("button", { name: "Use the saved version" }));
     await act(() => vi.advanceTimersByTimeAsync(0));
     expect(screen.queryByText(/Editing is paused/)).toBeNull();

@@ -267,7 +267,7 @@ test("375x812 touch: select, nudge, widen, type Vietnamese in the sheet, sticker
     await expect(dialog).toBeVisible();
     const box = await dialog.boundingBox();
     expect(box.height).toBeGreaterThan(700); // full height of the 812 px screen
-    await page.getByRole("radio", { name: new RegExp(`^Template ${NAME},`) }).tap();
+    await page.getByRole("button", { name: new RegExp(`^Template ${NAME},`) }).tap();
     const apply = page.getByRole("button", { name: /^Apply to/ });
     await expect(apply).toBeVisible(); // the preview bar: the page shows through
     await expect(page.locator(".ed-pagebox")).toContainText(SRC);
@@ -282,7 +282,7 @@ test("375x812 touch: select, nudge, widen, type Vietnamese in the sheet, sticker
   await step("History opens as a dialog: preview the 'Before template' row and restore it", async () => {
     await page.getByRole("button", { name: "History", exact: true }).tap();
     await expect(page.getByRole("dialog")).toBeVisible();
-    const rows = page.getByRole("radio");
+    const rows = page.locator(".ed-history-row");
     await expect(rows.first()).toBeVisible();
     await rows.first().tap();
     await expect(page.locator(".ed-pagebox")).toContainText(BEFORE);

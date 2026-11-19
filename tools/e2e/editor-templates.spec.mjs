@@ -119,10 +119,10 @@ async function openEditor(page, kind = "cover") {
   await page.evaluate(() => document.fonts.ready);
 }
 const templatesButton = (page) => page.getByRole("toolbar").getByRole("button", { name: "Templates", exact: true });
-const card = (page, name) => page.getByRole("radio", { name: new RegExp(`^Template ${name},`) });
+const card = (page, name) => page.getByRole("button", { name: new RegExp(`^Template ${name},`) });
 async function openTemplates(page) {
   await templatesButton(page).click();
-  await expect(page.getByRole("radiogroup", { name: "Templates" })).toBeVisible();
+  await expect(page.getByRole("group", { name: "Templates", exact: true })).toBeVisible();
 }
 const stage = (page) => page.locator(".ed-pagebox");
 const applyResponse = (page) =>
@@ -218,7 +218,7 @@ test("cover: preview and Back to current leave the page alone; apply, reload, Hi
     await expect(page.getByRole("group", { name: "My templates" }).getByText(/Images not included/)).toBeVisible();
   });
   await step("a shipped template (if the book's template has one): preview, Back to current", async () => {
-    const shipped = page.getByRole("group", { name: "Shipped" }).getByRole("radio");
+    const shipped = page.getByRole("group", { name: "Shipped" }).locator(".ed-tpl-pick");
     if ((await shipped.count()) > 0) {
       await shipped.first().click();
       await expect(page.getByRole("status").filter({ hasText: "Previewing the template" })).toBeVisible();
@@ -252,7 +252,7 @@ test("cover: preview and Back to current leave the page alone; apply, reload, Hi
     expect(res.status()).toBe(200);
     expect(calls.filter((c) => c === "apply-template")).toHaveLength(1);
     await expect(stage(page)).toContainText(SRC);
-    await expect(page.getByRole("radiogroup", { name: "Templates" })).toHaveCount(0);
+    await expect(page.getByRole("group", { name: "Templates", exact: true })).toHaveCount(0);
     await expect(templatesButton(page)).toBeFocused();
     await expect(page.locator(".visually-hidden[role=status]")).toHaveText("Template applied to the cover.");
     await expect(page.getByRole("toolbar").getByRole("button", { name: "Undo", exact: true })).toBeDisabled();
@@ -269,7 +269,7 @@ test("cover: preview and Back to current leave the page alone; apply, reload, Hi
   await step("History has a 'Before template' row; restoring it brings the old cover back", async () => {
     await openEditor(page);
     await page.getByRole("toolbar").getByRole("button", { name: "History" }).click();
-    const rows = page.getByRole("radiogroup", { name: "Earlier versions" }).getByRole("radio");
+    const rows = page.getByRole("group", { name: "Earlier versions" }).getByRole("button");
     await expect(rows.first()).toHaveAccessibleName(/Before template/);
     await rows.first().click();
     await expect(stage(page)).toContainText(`${NOW} cover`);
@@ -290,7 +290,7 @@ test("cover: preview and Back to current leave the page alone; apply, reload, Hi
     await expect(stage(page)).toContainText(SRC);
     await page.getByRole("button", { name: "Undo in History" }).click();
     await expect(
-      page.getByRole("radiogroup", { name: "Earlier versions" }).getByRole("radio").first(),
+      page.getByRole("group", { name: "Earlier versions" }).getByRole("button").first(),
     ).toHaveAccessibleName(/Before template/);
   });
 });
@@ -305,8 +305,8 @@ test("keyboard only: open, walk the cards, preview, apply with the confirm, focu
   await openEditor(page);
   await templatesButton(page).focus();
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("radiogroup", { name: "Templates" })).toBeVisible();
-  const radios = page.getByRole("radiogroup", { name: "Templates" }).getByRole("radio");
+  await expect(page.getByRole("group", { name: "Templates", exact: true })).toBeVisible();
+  const radios = page.getByRole("group", { name: "Templates", exact: true }).locator(".ed-tpl-pick");
   const n = await radios.count();
   expect(n).toBeGreaterThan(0);
   await page.keyboard.press("Tab"); // Refresh
@@ -318,7 +318,7 @@ test("keyboard only: open, walk the cards, preview, apply with the confirm, focu
   await page.keyboard.press("Home");
   await expect(radios.first()).toBeFocused();
   // the own cards follow the shipped ones, newest first: this test's template is the first own card
-  const shipped = await page.getByRole("group", { name: "Shipped" }).getByRole("radio").count();
+  const shipped = await page.getByRole("group", { name: "Shipped" }).locator(".ed-tpl-pick").count();
   for (let i = 0; i < shipped; i++) await page.keyboard.press("ArrowDown");
   await expect(card(page, NAME)).toBeFocused();
   await page.keyboard.press("Enter");

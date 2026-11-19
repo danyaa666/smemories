@@ -956,7 +956,9 @@ export function EditorBody({
             </a>
             <span id="ed-print-hint" className="ed-hint">
               {t("editor.printHint", {
-                size: `${size} (${SIZES[size].w} × ${SIZES[size].h} mm)`,
+                size,
+                w: SIZES[size].w,
+                h: SIZES[size].h,
               })}
             </span>
             <Button variant="primary" busy={finishing} onClick={() => void done()}>
