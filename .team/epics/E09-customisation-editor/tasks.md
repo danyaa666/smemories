@@ -1250,7 +1250,7 @@ Spec: .team/epics/E09-customisation-editor/41-editor-accessibility-i18n-audit.md
 - 2026-11-18 18:23Z · leader · owner approved before merge (D-47)
 
 ### T-183 — [E09] Stage 2 exit check: one journey, performance budgets, parity, docs, report against the PRD exit criteria
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** test
 - **Milestone:** M4
@@ -1258,16 +1258,18 @@ Spec: .team/epics/E09-customisation-editor/41-editor-accessibility-i18n-audit.md
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-183-e09-stage-2-exit-check-one-journey-perfo
-- **PR:** —
-- **Updated:** 2026-11-19 16:25Z by dev
-- **Comments-seen:** 2
+- **PR:** https://github.com/danyaa666/smemories/pull/191
+- **Updated:** 2026-11-19 19:01Z by dev
+- **Comments-seen:** 4
 
 Spec: .team/epics/E09-customisation-editor/42-stage2-exit-check.md (read it from the main checkout). stage2-journey spec (desktop and tablet), parity for every shipped template on A5/A4/Letter, measured budgets (100 items 30 fps at 4x throttle, print time within 10%, bundle, p95s, memory), API coverage table, docs completeness, docs/stage2-exit-report.md with the owner manual checklist
 
 #### Comments
 - 2026-11-06 06:05Z · leader · Leader: docs pass (req 5) also fixes two notes from QA on T-179: docs/layout-storage-budget.md must say that reset only amplifies after a prior limited save; docs must state that a save with a layout nested exactly 16 levels is refused because the request body adds one level (Validate itself accepts 16); decide whether to align the two.
 - 2026-11-18 18:23Z · leader · T-176/T-181/T-182 done; T-186 added as a dependency because the exit check's per-template print parity needs print-check green on Linux. Dev picks it once T-186 merges.
+- 2026-11-19 19:01Z · dev · PR #191 head 5273be2. Story spec passes 3/3 desktop + 3/3 tablet; print-check container 298/298; manual CI run 44587809688 green except image (Trivy stdlib CVE-2026-97054, not this PR); e2e job 77 passed/0 failed. Report: docs/stage2-exit-report.md (verdict: met with notes). FINDINGS: S2-01 print time at max layout +34% (budget 10%; typical +9.4%); S2-02 100-item drag 17.5 fps at 4x on this 2012 i7 PC (59.7 on the T-160 machine; QA to reproduce on a modern machine); S2-03 one 751 KB bundle; S2-04 touch test fails on this PC only (passes in CI); S2-05 no mysql client + xpdf before poppler on this PC; S2-06 image CVE. Not done: History e2e locally (CI ran it); check:api cannot run on Windows. QA: run the story + print-check on the head, reproduce one editor and one server budget number.
+- 2026-11-19 19:01Z · leader · QA brief (leader): PR #191 head 5273be2, CI run 44587809688 (e2e 77/0). Verify against the spec and the E09 PRD exit criteria: (1) stage2-journey.spec.mjs desktop and tablet green on the head (own stack), and a deliberate break of one journey step fails it; (2) full print-check in the Linux container; (3) reproduce one editor budget (S2-02, 100-item drag fps; say your machine and throttle) and one server budget (S2-01, print time at the maximum layout vs typical) and compare with the report's numbers; (4) docs/stage2-exit-report.md: every exit criterion has evidence or a finding, and the verdict follows from them (no criterion marked met without a measurement); (5) the pdftotext -enc UTF-8 change in tools/print-check/lib.mjs changes nothing on Linux (container counts same); (6) check-layout-api-coverage.sh fails when a layout route is removed (scratch, revert). Own compose project/ports; never down -v the main project.
 
 <!-- tasks:end -->
