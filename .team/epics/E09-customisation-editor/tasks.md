@@ -1250,19 +1250,19 @@ Spec: .team/epics/E09-customisation-editor/41-editor-accessibility-i18n-audit.md
 - 2026-11-18 18:23Z · leader · owner approved before merge (D-47)
 
 ### T-183 — [E09] Stage 2 exit check: one journey, performance budgets, parity, docs, report against the PRD exit criteria
-- **Status:** READY_FOR_QA
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** test
 - **Milestone:** M4
 - **Depends-on:** T-176, T-181, T-182, T-186
 - **Risk:** low
 - **Rework:** 1
-- **Owner-approved:** —
+- **Owner-approved:** yes
 - **Assignee:** —
 - **Branch:** task/t-183-e09-stage-2-exit-check-one-journey-perfo
 - **PR:** https://github.com/danyaa666/smemories/pull/191
 - **Updated:** 2026-11-19 22:11Z by dev
-- **Comments-seen:** 9
+- **Comments-seen:** 12
 
 Spec: .team/epics/E09-customisation-editor/42-stage2-exit-check.md (read it from the main checkout). stage2-journey spec (desktop and tablet), parity for every shipped template on A5/A4/Letter, measured budgets (100 items 30 fps at 4x throttle, print time within 10%, bundle, p95s, memory), API coverage table, docs completeness, docs/stage2-exit-report.md with the owner manual checklist
 
@@ -1285,6 +1285,9 @@ Spec: .team/epics/E09-customisation-editor/42-stage2-exit-check.md (read it from
 - 2026-11-19 22:11Z · dev · Rework done, docs/stage2-exit-report.md only, no code. New head 119470f (on QA's 83839f8); go, web, security green. (1) row 2b T-160: 'met with note (S2-02)'. (2) Verdict: functional criteria met; NOT met on S2-01 (print time at max layout +34..+37 % vs 10 %; typical +8..+9.4 %, follow-up T-193) and S2-02 (drag 16.6..18.2 fps at 4x on the 2012 i7 PC vs 30; 59.7 on the T-160 machine; no mid-range device measured); T-194 = flaky A4 editor-stage test, drag-fps test on slow machines, Windows editor-text 0.62 %. Note: S2-02 has no task of its own, as the comment named only T-193/T-194. (3) Section 3 names cover, profile, notes, back, QA's 83839f8 pixel comparisons, and why the 2 px item check is skipped on the A5 profile (prof01 follows the template's own ink: x0 116 vs 109 px).
 - 2026-11-19 22:11Z · dev · Head 119470f: doc-only rework per leader review; leader checks the doc diff, no new QA run.
 - 2026-11-19 22:11Z · leader · review OK; awaiting owner approval: PR #191 head 119470f (doc-only change since QA_PASS on 5273be2+83839f8: report verdict now states two budgets not met). Owner decides on approval whether stage 2 closes with S2-01 (T-193) and S2-02 open; S2-02 needs a measurement on a mid-range tablet, which the team does not have; no task until the owner says which device counts.
+- 2026-11-20 04:27Z · human · owner approved merge
+- 2026-11-20 04:27Z · leader · Owner approved in chat 2026-11-20: "Approve all four" (T-183, T-189, T-191, T-192).
+- 2026-11-20 04:29Z · leader · merged 9e40a1c (PR #191, head 119470f, owner-approved; stage 2 closes with S2-01 open as T-193 and S2-02 unmeasured on a mid-range tablet). Status set to DONE by hand: no READY_FOR_QA -> MERGED step for the leader; the only change since QA_PASS was the report wording.
 
 ### T-193 — [E09] Print time of a book with a maximum layout is +37 % (budget 10 %)
 - **Status:** BACKLOG

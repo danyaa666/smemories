@@ -11,19 +11,17 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 7 | T-023, T-024, T-025, T-031, T-050, T-193, T-194 |
-| READY_FOR_QA | 1 | T-183 |
-| QA_PASS | 3 | T-189, T-191, T-192 |
 | MERGED | 32 | T-184, T-150, T-151, T-152, T-153, T-154, T-155, T-156, T-157, T-158, T-159, T-160, T-161, T-162, T-163, T-164, T-165, T-166, T-167, T-168, T-169, T-170, T-171, T-172, T-173, T-174, T-175, T-176, T-177, T-178, T-179, T-180 |
-| DONE | 143 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138, T-139, T-140, T-141, T-142, T-143, T-144, T-145, T-146, T-147, T-185, T-186, T-190, T-187, T-188, T-149, T-148, T-181, T-182 |
+| DONE | 147 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138, T-139, T-140, T-141, T-142, T-143, T-144, T-145, T-146, T-147, T-185, T-186, T-189, T-190, T-191, T-192, T-187, T-188, T-149, T-148, T-181, T-182, T-183 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Epics (done/total):** E06-go-live 1/1; E09-customisation-editor 34/37; (unfiled) 140/156
+**Epics (done/total):** E06-go-live 1/1; E09-customisation-editor 35/37; (unfiled) 143/156
 
 **Awaiting your review (MERGED):** T-184 ([E01] Unit tests pass on a Windows dev machine (make test with -race)); T-150 ([E09] Spike: layout editor architecture and ADR 0004); T-151 ([E09] Asset pack and registry for stickers, shapes and frames); T-152 ([E09] Backend: student-uploaded design images (backgrounds and decorations)); T-153 ([E09] Layout document model and API (backend)); T-154 ([E09] Web layout runtime: the book draws a layout (Memory Book)); T-155 ([E09] Fix three stale Postman assertions in the customisation-editor collection); T-156 ([E09] Layout version must never go back (reset / template change)); T-157 ([E09] print-check: refuse a foreign server on its port; refresh test counts in docs); T-158 ([E09] Editor state: document store, undo/redo, autosave and conflict handling (web)); T-159 ([E09] Editor route and shell: page strip, zoom, selection overlay, property panel (web)); T-160 ([E09] Editor gestures: move, resize, rotate, snap, guides, with keyboard control (web)); T-161 ([E09] Editor text boxes: add, type in place, font, size, colour, align (web)); T-162 ([E09] Editor palette: stickers, shapes, frames, own images and the page background (web)); T-163 ([E09] Layout version history and restore (backend)); T-164 ([E09] Palette follow-ups: copy, history edge, distinct cap/quota code (web + one small API change)); T-165 ([E09] Editor version history panel: list, preview and restore (web)); T-166 ([E09] Navy Classic: page kinds and editable elements for the layout editor (web + manifest)); T-167 ([E09] Class book carries each member's layout (server cap, privacy, web wiring)); T-168 ([E09] History e2e hardening: friendly mysql-missing message, QA probe cases (tests only)); T-169 ([E09] Spike: Doory-template import and a Fabric.js image studio beside the DOM editor (ADR 0005)); T-170 ([E09] Editor flow: page by page, Save and done, Print, back to the book manage page (web)); T-171 ([E09] Stretching shapes: rectangle and ellipse that fill their box (registry + web)); T-172 ([E09] Page templates: model, shipped storage, validator gate and read route (Go + web preview)); T-173 ([E09] Own page templates and the apply API (Go): save my page, apply a template per section); T-174 ([E09] Stabilise the editor-gestures touch test (flake: 2 to 3 px against 0.5 allowed)); T-175 ([E09] Template gallery and apply, per section (web): shipped and own templates, preview, apply, delete own); T-176 ([E09] Save my page as a template (web): name it, see what is kept, use it again); T-177 ([E09] Shipped page templates for Memory Book: four or more looks per page kind, authored by us); T-178 ([E09] Shipped page templates for Navy Classic: four or more looks per page kind, authored by us); T-179 ([E09] Stage 2 hardening: fuzz the layout parsers, storage budget per user, abuse limits, no content in logs); T-180 ([E09] Make the profile, notes and back template choices a real choice (Memory Book and Navy Classic))
 
 **Open questions for you:** Q-064 (Doory templates: licence route, studio, and template colours (ADR 0005, T-169)); Q-065 (Storage cap per user for layout history (T-179, docs/layout-storage-budget.md): cap now, or watch and decide at go-live?); Q-067 (After the stage 2 exit check (T-183): go live (M2) next, or class yearbook (M3) first?)
 
-_Board last written 2026-11-19 22:12Z_
+_Board last written 2026-11-20 04:29Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -6666,19 +6664,19 @@ Spec: .team/epics/E01-foundation/18-print-check-linux-parity.md (read it from th
 - 2026-11-19 15:26Z · leader · Board sync PR #188 merged f87dda8 (owner approved in the same message).
 
 ### T-189 — [E01] Print check: the notes-page item check cannot see a moved note text
-- **Status:** QA_PASS
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** test
 - **Milestone:** M4
 - **Depends-on:** T-186
 - **Risk:** low
 - **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** leader
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-189-e01-print-check-the-notes-page-item-chec
 - **PR:** https://github.com/danyaa666/smemories/pull/190
-- **Updated:** 2026-11-19 17:51Z by qa
-- **Comments-seen:** 4
+- **Updated:** 2026-11-20 04:28Z by leader
+- **Comments-seen:** 7
 
 Spec: .team/epics/E01-foundation/19-print-check-notes-text-position.md (read it from the main checkout). QA on T-186: a 5-20 px note text shift passes because the check measures the ruled lines.
 
@@ -6693,6 +6691,9 @@ Spec: .team/epics/E01-foundation/19-print-check-notes-text-position.md (read it 
   (5) CI: PR run 44565842494 go/web/security pass (e2e/go-integration/image skipped by D-37/D-38); manual run 44559488055 on c0c639e: go, web, security, go-integration, e2e success, image failure = Trivy stdlib CVE-2026-97054, out of scope (T-191).
   Not run: native Windows print-check, make test-integration (no Go change). Own docker containers only; no compose project touched; containers killed after runs.
 - 2026-11-19 17:51Z · leader · review OK; awaiting owner approval: PR #190 head c0c639e, +32/-1 (tools/print-check/check.test.mjs, docs/e2e.md). New noteTextCheck measures only the note text ink (x0/y0/y1 within 2 px at 192 dpi; Linux A5 3 px from 4 of 4 runs); asserts the text has ink and that at least 2 items were followed; no existing budget changed. QA: container 298/298 on the head, own 5 px and 20 px shifts fail all 6 layout tests (Memory Book only through the new check). Image job red is the Go stdlib CVE, T-191.
+- 2026-11-20 04:27Z · human · owner approved merge
+- 2026-11-20 04:27Z · leader · Owner approved in chat 2026-11-20: "Approve all four" (T-183, T-189, T-191, T-192).
+- 2026-11-20 04:29Z · leader · merged 9cbd7eb (PR #190, head c0c639e, owner-approved).
 
 ### T-190 — [E01] internal/notes: two integration tests fail on develop
 - **Status:** DONE
@@ -6728,19 +6729,19 @@ Spec: .team/epics/E01-foundation/20-notes-integration-tests-on-develop.md (read 
 - 2026-11-19 15:26Z · leader · merged 3941be3 (PR #189, head 7ac339e, owner-approved).
 
 ### T-191 — [E01] Image scan fails: Go stdlib CVE-2026-97054 in the pinned builder image
-- **Status:** QA_PASS
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** security
 - **Milestone:** M4
 - **Depends-on:** —
 - **Risk:** medium
 - **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** leader
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-191-e01-image-scan-fails-go-stdlib-cve-2026-
 - **PR:** https://github.com/danyaa666/smemories/pull/192
-- **Updated:** 2026-11-19 22:07Z by qa
-- **Comments-seen:** 5
+- **Updated:** 2026-11-20 04:28Z by leader
+- **Comments-seen:** 8
 
 Spec: .team/epics/E01-foundation/21-go-stdlib-cve-image-pin.md (read it from the main checkout). Trivy HIGH on Go 1.26.10 stdlib in the image (run 44559488055); re-pin the builder to 1.26.11.
 
@@ -6750,21 +6751,24 @@ Spec: .team/epics/E01-foundation/21-go-stdlib-cve-image-pin.md (read it from the
 - 2026-11-19 19:27Z · leader · QA brief (leader): PR #192, Dockerfile builder re-pinned to Go 1.26.11 (no go.mod change). Verify: (1) the digest is the official golang:1.26.11-bookworm multi-arch index (docker buildx imagetools inspect) and the comment matches; (2) final state of manual run 44595094942: image job green with Trivy reporting no CVE-2026-97054 (quote the scan summary line), e2e result; (3) the binary in the built image reports go1.26.11 (go version -m on the binary, or the image-smoke output); (4) nothing else in the diff. Local make image-scan may time out on the Trivy DB mirror here; the CI scan is acceptable evidence.
 - 2026-11-19 22:07Z · qa · QA_PASS, PR #192 head a9c0d6477caf628328d7c3e7d1f3b0dde6ca432d. (1) Digest: docker buildx imagetools inspect golang:1.26.11-bookworm gives index sha256:dc40a13b61304647ed7e5d581d246b86413dfc29d63c6d018310feb93cd98fc0 (multi-arch OCI index), equal to the Dockerfile pin; comment says 1.26.11. OK. (2) Manual CI run 44595094942 on head a9c0d64: completed, success; jobs image, security, go, web, go-integration, e2e all success. Trivy report summary in the image job: debian 12.15 = 0; usr/local/bin/smemories-api, smemories-media-backfill, smemories-migrate (gobinary) = 0 each, so CVE-2026-97054 is gone. image-smoke in that run: 'image smoke test passed'. PR checks run 44598437306: go, web, security success; image/go-integration/e2e skipped (paused, D-37). (3) Built the image locally from the head (docker build, tag qa-t191:chk, removed afterwards), copied /usr/local/bin/smemories-api out and ran go version -m: go1.26.11. OK. (4) Diff vs develop is Dockerfile only, 2 lines (comment and digest). No go.mod/go.sum change. Not run: local make image-scan (Trivy DB mirror times out on this PC, accepted by the brief), local make test-integration/e2e (no Go or web code in the diff). Non-blocking: none.
 - 2026-11-19 22:12Z · leader · review OK; awaiting owner approval: PR #192 head a9c0d64, Dockerfile only (builder golang:1.26.11-bookworm index digest). Manual run 44595094942 all six jobs green; Trivy 0 findings in all targets; built binary reports go1.26.11. CVE-2026-97054 is in net/http MaxBytesReader, which our middleware and booklayout handler use, so this is a real fix.
+- 2026-11-20 04:27Z · human · owner approved merge
+- 2026-11-20 04:27Z · leader · Owner approved in chat 2026-11-20: "Approve all four" (T-183, T-189, T-191, T-192).
+- 2026-11-20 04:28Z · leader · merged a416522 (PR #192, head a9c0d64, owner-approved).
 
 ### T-192 — [E01] make image-smoke fails on the Windows dev PC (curl file upload path)
-- **Status:** QA_PASS
+- **Status:** DONE
 - **Priority:** P3
 - **Type:** chore
 - **Milestone:** M4
 - **Depends-on:** —
 - **Risk:** low
 - **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** leader
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-192-e01-make-image-smoke-fails-on-the-window
 - **PR:** https://github.com/danyaa666/smemories/pull/193
-- **Updated:** 2026-11-19 22:11Z by qa
-- **Comments-seen:** 4
+- **Updated:** 2026-11-20 04:28Z by leader
+- **Comments-seen:** 7
 
 Spec: .team/epics/E01-foundation/22-image-smoke-on-windows.md (read it from the main checkout). Native curl.exe cannot read the MSYS /tmp path in scripts/image-smoke.sh.
 
@@ -6773,6 +6777,9 @@ Spec: .team/epics/E01-foundation/22-image-smoke-on-windows.md (read it from the 
 - 2026-11-19 20:07Z · leader · QA brief (leader): PR #193 head 09c3967, one line in scripts/image-smoke.sh (cygpath -m when present). Verify: make image-smoke passes on this PC on the head and fails at the upload step on develop; the CI image-smoke step is green in run 44603642660 (the image-scan red there is the Go CVE, T-191, accepted for this task; requirement 2 is met once T-191 merges and a rerun is green); no other change in what the smoke test checks.
 - 2026-11-19 22:11Z · qa · QA_PASS, PR #193 head 09c3967d0840317b0c9f7c1fcb3bc9a7f6876629. (1) Diff vs develop: scripts/image-smoke.sh only, one curl line changed (+ one comment line): -F file=@$(cygpath -m "$TMP/photo.png" 2>/dev/null || echo "$TMP/photo.png"). Nothing in what the smoke test checks changed. (2) Head on this Windows PC: make image-smoke exit 0, all steps ok incl. 'ok - photo upload (image processing and the object store work on a read-only root)', ends 'image smoke test passed' (image 57 MiB, 34 migrations). (3) Baseline: develop's image-smoke.sh against a fresh build of the same tree: exit 1, 'curl: (26) Failed to open/read local data from file/application' then 'SMOKE FAIL: photo upload failed' (after 'ok - register, login and yearbook create'). So the fix is what makes it pass. (4) Linux/CI fallback: with cygpath absent the expression yields the plain /tmp path (checked in bash with PATH=/nonexistent: 'file=@/tmp/x.png;type=image/png', no stderr noise). CI: manual run 44603642660 head 09c3967: step 'make image-smoke' success; 'make image-scan' failed only on CVE-2026-97054 (Total: 1 HIGH, stdlib v1.26.10 in the three gobinaries), which is T-191 scope; requirement 2 (image job fully green) is met after T-191 merges and a rerun (T-191's own run 44595094942 had image green, scan 0 in all targets). Same run: e2e job red at 'Print check' while the editor e2e specs were green and print diffs were under 0.5 %; unrelated to this one-line script change (image-smoke.sh is not used by e2e), looks like the known slow-machine flake (spec 46), not investigated further. PR checks run 44605454344: go, web, security pass; image, go-integration, e2e skipped (D-37). No stray smoke containers left, temp base-script copy and test images removed. Not run: full test-integration/e2e (no Go or web code in the diff).
 - 2026-11-19 22:12Z · leader · review OK; awaiting owner approval: PR #193 head 09c3967, one line in scripts/image-smoke.sh (cygpath -m when present). QA: passes on the Windows PC, develop fails at the upload step; CI image-smoke green. Requirement 2 (image job fully green) needs a rerun after T-191 merges. The e2e red in run 44603642660 is the editor-stage vs book-screen flake (Letter cover 28.6 %), not this change: see T-194.
+- 2026-11-20 04:27Z · human · owner approved merge
+- 2026-11-20 04:27Z · leader · Owner approved in chat 2026-11-20: "Approve all four" (T-183, T-189, T-191, T-192).
+- 2026-11-20 04:28Z · leader · merged fddce76 (PR #193, head 09c3967, owner-approved).
 
 ### T-187 — [E09] Skip link and focus on route change (app-wide)
 - **Status:** DONE
