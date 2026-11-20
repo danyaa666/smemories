@@ -458,13 +458,16 @@ test("the edit view equals the printed view: short, medium, long, 500 runes and 
     }
   }
   numbers.parity = rows;
+  // T-194: 0.6 % everywhere except Windows, where Chromium rasterises glyphs with DirectWrite: three runs on the owner's PC gave 0.75 % for one case of 30 (A5, -4 degrees, 500 runes,
+  // 383 of 51030 px; the next worst is 0.49 %, no pixel differs by more than 48/255) and the same 30 numbers every time. With sub-pixel glyph positioning switched off that case is 0.62 %. docs/e2e.md.
+  const PARITY_LIMIT_PCT = process.platform === "win32" ? 0.8 : 0.6;
   const worst = Math.max(...rows.map((r) => r.pct));
   numbers.parity_summary = { cases: rows.length, worst_pct: worst, zero_cases: rows.filter((r) => r.changed_px === 0).length, over_0_2_pct: rows.filter((r) => r.pct > 0.2).length, max_over48_px: Math.max(...rows.map((r) => r.over48_px)) };
   for (const r of rows) {
     expect(r.edit_px, `${r.paper} ${r.rotation} ${r.text}: the field takes the size the fit rule chose`).toBeCloseTo(r.print_px, 1);
-    // glyph anti-aliasing only: no pixel differs by more than 48 of 255 in any channel, and at most 0.6 % of the box differs at all (about half of the cases are exactly 0)
+    // glyph anti-aliasing only: no pixel differs by more than 48 of 255 in any channel, and at most 0.6 % of the box differs at all (0.8 % on Windows, T-194; about half of the cases are exactly 0)
     expect(r.over48_px, `${r.paper} ${r.rotation} ${r.text}: pixels that differ by more than 48/255`).toBe(0);
-    expect(r.pct, `${r.paper} ${r.rotation} ${r.text}: changed pixels, in percent of the box`).toBeLessThanOrEqual(0.6);
+    expect(r.pct, `${r.paper} ${r.rotation} ${r.text}: changed pixels, in percent of the box`).toBeLessThanOrEqual(PARITY_LIMIT_PCT);
   }
   expect(rows.find((r) => r.text === "clipped").fit).toBe("overflow");
   expect(rows.find((r) => r.text === "500 runes").fit).not.toBe("overflow");

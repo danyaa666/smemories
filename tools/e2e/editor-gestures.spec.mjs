@@ -559,6 +559,22 @@ test("touch at 768 px: the first tap selects, a drag of the selected item moves 
   await page.context().close();
 });
 
+// T-194: the 30 fps budget (S2-02) is asserted on the CI runner (CI is set) and on any machine whose single-thread speed is at least the baseline below; a slower machine
+// (the 2012 laptop of the owner's Windows PC: 16.6 to 18.2 fps) only reports its fps. The speed is the best of 5 runs of a 2e7-step loop in the page, before the throttle; the baseline is in docs/e2e.md.
+const CPU_BASELINE_MS = 120; // ms: 1.4 times as fast as the 2012 i7 (171 to 176 ms, 16.6 to 18.4 fps); on that PC the throttle 2.8 instead of 4 gives the 30 fps
+const cpuMs = (page) =>
+  page.evaluate(() => {
+    let best = Infinity;
+    for (let r = 0; r < 5; r++) {
+      const t = performance.now();
+      let x = 0;
+      for (let i = 0; i < 2e7; i++) x += Math.sqrt(i) % 7;
+      if (x < 0) console.log(x); // keeps the loop from being removed
+      best = Math.min(best, performance.now() - t);
+    }
+    return best;
+  });
+
 test("performance: dragging one item among 100 holds at least 30 fps under a 4x CPU throttle", async ({ browser }) => {
   test.skip(!BASE || !OTP || !bookId, "needs the setup test");
   const page = await ownerPage(browser, { width: 1600, height: 1100 });
@@ -576,6 +592,7 @@ test("performance: dragging one item among 100 holds at least 30 fps under a 4x 
   await expect(page.locator(".ed-hit")).toHaveCount(100 + 3); // the 100 items and the cover's three elements
   const target = drawn(page, items[44].id);
   await page.locator(`[data-target='${items[44].id}'] .ed-hit`).evaluate((el) => el.scrollIntoView({ block: "center", inline: "center" }));
+  const cpu = Math.round(await cpuMs(page));
   const cdp = await page.context().newCDPSession(page);
   await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
   await page.evaluate(() => {
@@ -606,7 +623,14 @@ test("performance: dragging one item among 100 holds at least 30 fps under a 4x 
   const deltas = stamps.slice(1).map((t, i) => t - stamps[i]).sort((a, b) => a - b);
   const fps = (stamps.length - 1) / ((stamps[stamps.length - 1] - stamps[0]) / 1000);
   const p95 = deltas[Math.floor(deltas.length * 0.95)];
-  numbers.push({ fps100: Number(fps.toFixed(1)), p95FrameMs: Number(p95.toFixed(1)), frames: stamps.length });
+  const slow = !process.env.CI && cpu > CPU_BASELINE_MS;
+  numbers.push({ fps100: Number(fps.toFixed(1)), p95FrameMs: Number(p95.toFixed(1)), frames: stamps.length, cpuMs: cpu, cpuBaselineMs: CPU_BASELINE_MS, budgetAsserted: !slow });
+  if (slow) {
+    const note = `this machine is below the CPU baseline (${cpu} ms against ${CPU_BASELINE_MS} ms): ${fps.toFixed(1)} fps measured, the 30 fps budget is not asserted here (docs/e2e.md)`;
+    test.info().annotations.push({ type: "fps-budget-not-asserted", description: note });
+    console.log(`T194-FPS ${note}`);
+    return;
+  }
   expect(fps, `frames per second while dragging among 100 items at 4x throttle (p95 frame ${p95.toFixed(1)} ms)`).toBeGreaterThanOrEqual(30);
 });
 
