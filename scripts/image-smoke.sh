@@ -316,7 +316,8 @@ raw = b"".join(b"\x00" + bytes(v for x in range(w) for v in (x * 4 % 256, y * 4 
 def chunk(t, d): return struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d))
 sys.stdout.buffer.write(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0)) + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b""))
 PY
-curl -fsS -m 60 -X POST "$BASE/api/media/create" -H "Origin: $ORIGIN" -H "Cookie: $COOKIE" -F "yearbook_id=$BOOK" -F "file=@$TMP/photo.png;type=image/png" -o "$TMP/media.json" || { cat "$TMP/media.json" >&2 || true; fail "photo upload failed"; }
+# curl.exe on Windows cannot read an MSYS /tmp path inside -F file=@ (bash converts only whole arguments): hand it the native path (T-192)
+curl -fsS -m 60 -X POST "$BASE/api/media/create" -H "Origin: $ORIGIN" -H "Cookie: $COOKIE" -F "yearbook_id=$BOOK" -F "file=@$(cygpath -m "$TMP/photo.png" 2>/dev/null || echo "$TMP/photo.png");type=image/png" -o "$TMP/media.json" || { cat "$TMP/media.json" >&2 || true; fail "photo upload failed"; }
 ok "photo upload (image processing and the object store work on a read-only root)"
 
 # --- 6. graceful shutdown ----------------------------------------------------------------------------------------
