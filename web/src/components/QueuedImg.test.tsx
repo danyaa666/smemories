@@ -1,7 +1,8 @@
+import { useLayoutEffect } from "react";
 import { act, fireEvent, render, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { usePhotoPreload } from "../book/ready";
-import { LIMIT, queueStats } from "./imageQueue";
+import { LIMIT, loaded, queueStats } from "./imageQueue";
 import { QueuedImg } from "./QueuedImg";
 
 const withSrc = (c: HTMLElement) =>
@@ -50,6 +51,22 @@ describe("gallery image queue (T-116)", () => {
     fireEvent.error(img());
     expect(onError).toHaveBeenCalledTimes(1);
     expect(queueStats().active).toBe(0);
+  });
+
+  it("shows an image whose file another loader finished between its render and its effect (T-194: it stayed without a src for good)", () => {
+    // a layout effect runs after every render and before every passive effect: here it plays the second <img> of the same URL that has just loaded
+    const JustLoaded = ({ src }: { src: string }) => (
+      useLayoutEffect(() => void loaded.add(src), [src]),
+      null
+    );
+    const { container } = render(
+      <>
+        <QueuedImg src="/c" alt="" />
+        <JustLoaded src="/c" />
+      </>,
+    );
+    expect(container.querySelector("img")!.getAttribute("src")).toBe("/c");
+    expect(queueStats()).toEqual({ active: 0, waiting: 0 });
   });
 
   it("gives the slot back when an image leaves the page", () => {

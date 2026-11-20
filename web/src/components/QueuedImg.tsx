@@ -34,7 +34,9 @@ export function QueuedImg({ src, alt, eager, onLoad, onError, ...rest }: Props) 
   }, [near]);
 
   useEffect(() => {
-    if (!near || loaded.has(src)) return;
+    // T-194: no `loaded.has(src)` guard here. Another image of this file can finish between this render (src was still undefined) and this effect; the job below then sets the src
+    // and, seeing it loaded, gives its slot back at once. With the guard the src stayed undefined for good, and the photo never showed.
+    if (!near) return;
     return enqueue((done) => {
       release.current = done;
       setTurn((t) => ({ ...t, src }));

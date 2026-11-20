@@ -116,8 +116,15 @@ export async function openEditor(page) {
 
 /** Waits for the images and the fonts of the stage (the editor has no ready signal: it is not printed). */
 export async function settleStage(page) {
-  await page.evaluate(() => document.fonts.ready);
-  await page.waitForFunction(() => [...document.querySelectorAll(".ed-pagebox img")].every((i) => i.complete), null, { timeout: 30000 });
+  // T-194: `complete` is true for an <img> that has no src. A photo could stay without one for good (QueuedImg, fixed in the same task), and the cover was then shot without its background:
+  // 28 to 30 % different from the book screen, on the Linux runner and in the container (about 1 run in 3 on 2 CPUs). So wait for a src and a width, then for decode()
+  // (what sheetPicture does for the book screen) and two frames to paint.
+  await page.waitForFunction(() => [...document.querySelectorAll(".ed-pagebox img")].every((i) => i.getAttribute("src") && i.complete && i.naturalWidth > 0), null, { timeout: 30000 });
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+    await Promise.all([...document.querySelectorAll(".ed-pagebox img")].map((i) => i.decode().catch(() => {})));
+    await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
+  });
   await page.waitForTimeout(300); // text fitting runs after the fonts; one frame is not enough on a loaded machine
 }
 
