@@ -194,6 +194,15 @@ The web app starts the flow by navigating the browser to `/api/auth/google-start
 a local account is linked to it; if that local account never verified its email it loses its password and sessions first
 (pre-hijacking defence). Social-only accounts have no password; "Forgot password" sets one.
 
+## The layout editor (stage 2) docs
+
+The free-layout editor and what stands behind it, one document each in `docs/`: [editor-flow.md](docs/editor-flow.md) (page by page, Done, Print), [editor-text.md](docs/editor-text.md) (text boxes, Vietnamese input),
+[editor-palette.md](docs/editor-palette.md) (stickers, shapes, frames, own images, background), [editor-templates.md](docs/editor-templates.md) (shipped and own page templates),
+[editor-history.md](docs/editor-history.md) (versions and restore), [editor-phone.md](docs/editor-phone.md) (phone mode), [editor-accessibility.md](docs/editor-accessibility.md) (keyboard, screen readers, contrast),
+[templates.md](docs/templates.md) (templates and print-check coverage), [assets.md](docs/assets.md) (sticker pack), [layout-storage-budget.md](docs/layout-storage-budget.md) (limits),
+[stage2-threat-model.md](docs/stage2-threat-model.md), [class-privacy-review.md](docs/class-privacy-review.md) (what a class admin can read), [e2e.md](docs/e2e.md) (every end-to-end spec and the print check),
+[dev-shortcuts.md](docs/dev-shortcuts.md) and [stage2-exit-report.md](docs/stage2-exit-report.md) (the stage 2 exit check against the PRD).
+
 ## Engineering standards
 
 Code follows the backend skills in `.agents/skills/` as adapted for this project: the API contract ([docs/api-contract.md](docs/api-contract.md)), database conventions

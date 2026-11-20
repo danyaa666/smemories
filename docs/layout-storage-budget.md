@@ -11,7 +11,7 @@ limit. Threat model: [stage2-threat-model.md](stage2-threat-model.md). Format an
 |---|---|---|
 | Current layout of a book | 128 KiB (131 072 bytes) as sent **and** as stored (canonical form; NFC can make a text longer in bytes, so the stored form is checked too) | `Validate`, `MaxBytes` |
 | Items | 40 per page, 150 per document, 500 characters per text | `validate.go` |
-| Nesting of a document | 16 levels (the real maximum is 5), checked before anything is decoded | `tooDeep`, `MaxDepth` |
+| Nesting of a document | 16 levels (the real maximum is 5), checked before anything is decoded. The request body of `save` wraps the document in one more object, so `save` refuses a layout nested exactly 16 levels deep although `Validate` accepts it (found by QA on T-179; left as it is: no real document is deeper than 5) | `tooDeep`, `MaxDepth` |
 | Snapshots per book | 30 (newest kept, pruned in the writing transaction); an automatic one only after 10 minutes, a reset, restore or apply always | `snapshotCurrent` |
 | Own templates per user | 20, each at most 64 KiB (`MaxTemplateBytes`), made under the user's row lock | `createTemplate` |
 | Books per user | **20** (`maxBooksOwned`, `internal/yearbook/validate.go`) | the only cap on how many books can hold a layout |
@@ -91,7 +91,7 @@ read**. The per-user limits share two buckets (key: the internal user id), `book
 |---|---|---|
 | `GET get` | **none** | no body |
 | `POST save` | burst 20 / 10 s and per minute | 132 KiB, nesting and size checked before the document is decoded |
-| `POST reset` | **none** (cannot amplify: it deletes the layout, so the next one has nothing to snapshot, and a layout needs a limited save) | 8 KiB |
+| `POST reset` | **none**. It snapshots the layout it deletes, so it amplifies only after a prior limited `save`: a second reset has nothing to snapshot, and a new layout needs a limited save again | 8 KiB |
 | `POST version-list`, `version-get`, `restore` | burst and per minute | 8 KiB |
 | `POST template-list`, `template-create`, `template-delete`, `apply-template` | burst and per minute | 8 KiB |
 

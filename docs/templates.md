@@ -233,7 +233,7 @@ The book draws the layout with the same React components for the screen, the pri
 
 ### Page templates (T-172, ADR 0005)
 
-A **page template** is the value of `pages.<kind>` of a layout document (`bg`, `overrides`, `items`) plus a name and where it came from. Applying one to a book is T-173 (below); the gallery screen is a later task. This section is what exists now: the file, the gate that keeps a broken one out, the read route and the preview.
+A **page template** is the value of `pages.<kind>` of a layout document (`bg`, `overrides`, `items`) plus a name and where it came from. Applying one to a book is T-173 (below); the gallery screen is the Templates panel of the layout editor (T-175, [editor-templates.md](editor-templates.md)). This section is what exists now: the file, the gate that keeps a broken one out, the read route and the preview.
 
 - **File.** `internal/templates/embed/pagetemplates/<book template id>/<id>.json` (the folder is a template with a `design.layout` block, `memory-book` or `navy-classic`; `id` is lower-case letters, digits and hyphens, at most 40, and equals the file name):
 
