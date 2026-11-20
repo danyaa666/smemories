@@ -2,7 +2,7 @@ import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } 
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { checkAssets, checkSvg } from "../../../scripts/check-assets.mjs";
 import ContactSheet from "./ContactSheet";
 import { AssetSvg, assets, getAsset, loadSvg } from "./index";
@@ -174,6 +174,22 @@ describe("AssetSvg", () => {
       unmount();
     }
   }, 60_000);
+
+  it("parses the SVG of an id once, however many instances draw it (T-193)", async () => {
+    vi.resetModules(); // a fresh cache: the tests above have drawn every asset already
+    const { AssetSvg: Fresh } = await import("./index");
+    const parse = vi.spyOn(DOMParser.prototype, "parseFromString");
+    const { container } = render(
+      <>
+        <Fresh id="shape.burst" />
+        <Fresh id="shape.burst" />
+        <Fresh id="shape.burst" />
+      </>,
+    );
+    await waitFor(() => expect(container.querySelectorAll("svg")).toHaveLength(3));
+    expect(parse).toHaveBeenCalledTimes(1);
+    parse.mockRestore();
+  });
 
   it("tints only a tintable asset", async () => {
     const tintable = assets.find((a) => a.tintable)!;
