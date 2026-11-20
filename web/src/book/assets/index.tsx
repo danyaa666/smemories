@@ -75,6 +75,17 @@ export function svgChildren(text: string): ReactNode[] | null {
     .map((c, i) => convert(c, i));
 }
 
+// The parsed elements of an asset, shared by every instance: a print draws the same sticker on every page (T-193: 450 parses of one path cost 100 ms).
+const parsed = new Map<string, Promise<ReactNode[] | null>>();
+function nodesOf(id: string): Promise<ReactNode[] | null> {
+  let p = parsed.get(id);
+  if (!p) {
+    p = loadSvg(id).then((text) => (text === undefined ? null : svgChildren(text)));
+    parsed.set(id, p);
+  }
+  return p;
+}
+
 export type AssetSvgProps = {
   id: string;
   /** Any CSS colour; only used by a tintable asset (it paints with `currentColor`). */
@@ -94,8 +105,7 @@ export function AssetSvg({ id, tint, size = 64, label, className, fill }: AssetS
   const [kids, setKids] = useState<{ id: string; nodes: ReactNode[] } | null>(null);
   useEffect(() => {
     let live = true;
-    void loadSvg(id).then((text) => {
-      const nodes = text === undefined ? null : svgChildren(text);
+    void nodesOf(id).then((nodes) => {
       if (live && nodes) setKids({ id, nodes });
     });
     return () => {

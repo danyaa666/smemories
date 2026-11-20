@@ -2,7 +2,7 @@ import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } 
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { checkAssets, checkSvg } from "../../../scripts/check-assets.mjs";
 import ContactSheet from "./ContactSheet";
 import { AssetSvg, assets, getAsset, loadSvg } from "./index";
@@ -174,6 +174,50 @@ describe("AssetSvg", () => {
       unmount();
     }
   }, 60_000);
+
+  it("parses the SVG of an id once, however many instances draw it (T-193)", async () => {
+    vi.resetModules(); // a fresh cache: the tests above have drawn every asset already
+    const { AssetSvg: Fresh } = await import("./index");
+    const parse = vi.spyOn(DOMParser.prototype, "parseFromString");
+    const { container } = render(
+      <>
+        <Fresh id="shape.burst" />
+        <Fresh id="shape.burst" />
+        <Fresh id="shape.burst" />
+      </>,
+    );
+    await waitFor(() => expect(container.querySelectorAll("svg")).toHaveLength(3));
+    expect(parse).toHaveBeenCalledTimes(1);
+    parse.mockRestore();
+  });
+
+  it("applies tint, size, label and fill per instance although the parsed elements are shared (T-193)", async () => {
+    const tintable = assets.find((a) => a.tintable)!;
+    const { container } = render(
+      <>
+        <AssetSvg id={tintable.id} tint="rgb(1, 2, 3)" size={40} label="one" />
+        <AssetSvg id={tintable.id} tint="rgb(4, 5, 6)" size="50%" />
+        <AssetSvg id={tintable.id} fill />
+      </>,
+    );
+    await waitFor(() => expect(container.querySelectorAll("svg")).toHaveLength(3));
+    const [a, b, c] = Array.from(container.querySelectorAll("svg")) as unknown as [
+      SVGElement,
+      SVGElement,
+      SVGElement,
+    ];
+    expect([a.style.color, b.style.color, c.style.color]).toEqual([
+      "rgb(1, 2, 3)",
+      "rgb(4, 5, 6)",
+      "",
+    ]);
+    expect([a.style.width, b.style.width, c.style.width]).toEqual(["40px", "50%", "100%"]);
+    expect([a.getAttribute("aria-label"), b.getAttribute("aria-label")]).toEqual(["one", null]);
+    expect(a.innerHTML).toBe(b.innerHTML);
+    expect(a.firstElementChild).not.toBe(b.firstElementChild); // each instance has its own DOM nodes
+    a.firstElementChild?.setAttribute("data-x", "1"); // mutating one instance's DOM leaves the others alone
+    expect(b.firstElementChild?.getAttribute("data-x")).toBeNull();
+  });
 
   it("tints only a tintable asset", async () => {
     const tintable = assets.find((a) => a.tintable)!;
