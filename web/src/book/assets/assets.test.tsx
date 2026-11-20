@@ -191,6 +191,26 @@ describe("AssetSvg", () => {
     parse.mockRestore();
   });
 
+  it("applies tint, size, label and fill per instance although the parsed elements are shared (T-193)", async () => {
+    const tintable = assets.find((a) => a.tintable)!;
+    const { container } = render(
+      <>
+        <AssetSvg id={tintable.id} tint="rgb(1, 2, 3)" size={40} label="one" />
+        <AssetSvg id={tintable.id} tint="rgb(4, 5, 6)" size="50%" />
+        <AssetSvg id={tintable.id} fill />
+      </>,
+    );
+    await waitFor(() => expect(container.querySelectorAll("svg")).toHaveLength(3));
+    const [a, b, c] = Array.from(container.querySelectorAll("svg")) as unknown as [SVGElement, SVGElement, SVGElement];
+    expect([a.style.color, b.style.color, c.style.color]).toEqual(["rgb(1, 2, 3)", "rgb(4, 5, 6)", ""]);
+    expect([a.style.width, b.style.width, c.style.width]).toEqual(["40px", "50%", "100%"]);
+    expect([a.getAttribute("aria-label"), b.getAttribute("aria-label")]).toEqual(["one", null]);
+    expect(a.innerHTML).toBe(b.innerHTML);
+    expect(a.firstElementChild).not.toBe(b.firstElementChild); // each instance has its own DOM nodes
+    a.firstElementChild?.setAttribute("data-x", "1"); // mutating one instance's DOM leaves the others alone
+    expect(b.firstElementChild?.getAttribute("data-x")).toBeNull();
+  });
+
   it("tints only a tintable asset", async () => {
     const tintable = assets.find((a) => a.tintable)!;
     const fixed = assets.find((a) => !a.tintable)!;
