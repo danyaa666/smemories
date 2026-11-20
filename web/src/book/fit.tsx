@@ -117,8 +117,7 @@ export function FitText({
     fit();
     const fonts = typeof document === "undefined" ? undefined : document.fonts;
     const again = () => live && fit();
-    // Only while a font is still loading: once they are all loaded the fit above already used them (T-193: 450 repeated fits on a print).
-    if (fonts?.status !== "loaded") void fonts?.ready.then(again);
+    void fonts?.ready.then(again);
     fonts?.addEventListener?.("loadingdone", again);
     // the editor (T-161) changes the box of a text: it fits again at its new size (a layout size change does not come through a render of this component)
     const seen = { w: el.clientWidth, h: el.clientHeight };
